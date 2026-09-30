@@ -28,4 +28,11 @@ public partial class MainWindow : Window
         }
         base.OnClosing(e);
     }
+
+    // Mở website của đơn vị phát triển bằng trình duyệt mặc định.
+    private void OnRequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        e.Handled = true;
+    }
 }

@@ -8,12 +8,10 @@ namespace DisplayBoard.App;
 /// </summary>
 public static class AboutInfo
 {
-    // TODO: thay bằng thông tin thật của đơn vị phát triển.
-    public const string Developer = "[Tên đơn vị phát triển]";
-    public const string Phone = "[Số điện thoại]";
-    public const string Email = "[Email]";
-    public const string Website = "[Website]";
-    public const string Address = "[Địa chỉ]";
+    public const string Developer = "Công ty TNHH Giải Pháp Sáng Tạo TMT Việt Nam";
+    public const string Phone = "0393 080 822";
+    public const string Website = "https://maytinhdian.com";
+    public static Uri WebsiteUri { get; } = new(Website);
 
     public static string Version { get; } =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
