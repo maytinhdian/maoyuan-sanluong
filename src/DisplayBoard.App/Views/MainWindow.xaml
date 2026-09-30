@@ -108,6 +108,24 @@
                                     <Button DockPanel.Dock="Right" Content="Chọn file…" Command="{Binding ChooseFileCommand}" Margin="8,0,0,0" />
                                     <TextBox Text="{Binding ExcelFile}" IsReadOnly="True" FontWeight="Normal" VerticalContentAlignment="Center" />
                                 </DockPanel>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="200" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Sheet:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBox Grid.Column="1" Text="{Binding SheetName}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Để trống: tự lấy sheet có ngày mới nhất" />
+                                    <TextBlock Grid.Column="2" Text="File nội dung phụ:" FontWeight="Normal" VerticalAlignment="Center" Margin="16,0,8,0" />
+                                    <TextBox Grid.Column="3" Text="{Binding ContentFile}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Để trống: display-content.xlsx cạnh file dữ liệu" />
+                                    <Button Grid.Column="4" Content="Chọn…" Command="{Binding ChooseContentFileCommand}" Margin="8,0,0,0" />
+                                </Grid>
+                                <TextBlock FontWeight="Normal" Margin="0,8,0,0" Foreground="#555" Text="{Binding DataInfoText}"
+                                           Visibility="{Binding DataInfoText, Converter={StaticResource NullToVisibility}}" />
                                 <TextBlock FontWeight="Normal" Margin="0,8,0,0" Foreground="#555">
                                     <Run Text="Trạng thái: " /><Run Text="{Binding StatusText, Mode=OneWay}" FontWeight="SemiBold" />
                                     <Run Text="   Cập nhật lúc: " /><Run Text="{Binding LastLoadedText, Mode=OneWay}" />
@@ -206,7 +224,7 @@
                                 <TextBox Text="{Binding ImagesFolder}" FontWeight="Normal" VerticalContentAlignment="Center" />
                             </DockPanel>
                             <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Để trống = thư mục 'images' cạnh file Excel. Ảnh nhân viên đặt tên theo Mã NV (vd NV001.jpg)." />
+                                       Text="Để trống = thư mục 'images' cạnh file Excel. Ảnh sản phẩm đặt tên theo mã sản phẩm (vd 883.jpg) hoặc khai báo ở sheet SAN_PHAM." />
                         </StackPanel>
                     </GroupBox>
                     <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />

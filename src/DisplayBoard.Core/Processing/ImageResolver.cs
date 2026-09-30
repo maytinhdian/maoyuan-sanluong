@@ -17,6 +17,6 @@ public sealed class ImageResolver(string? imagesFolder)
         return null;
     }
 
-    public string? ResolveEmployeePhoto(string employeeCode, string? fileName) =>
-        ResolveImage(fileName) ?? ResolveImage(employeeCode);
+    public string? ResolveProductImage(string productCode, string? fileName) =>
+        ResolveImage(fileName) ?? ResolveImage(productCode);
 }

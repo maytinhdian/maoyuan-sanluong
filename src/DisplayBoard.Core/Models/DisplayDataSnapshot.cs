@@ -1,32 +1,32 @@
 namespace DisplayBoard.Core.Models;
 
-public sealed record EmployeeDaily(
-    string EmployeeCode,
-    string EmployeeName,
-    string Department,
-    string? Shift,
-    decimal Quantity,
-    decimal? Target,
-    decimal? CompletionRate,
-    bool? IsMet,
-    decimal? Shortfall,
-    int Rank,
-    string? PhotoPath);
+public enum ProgressStatus
+{
+    None,
+    Met,
+    Near,
+    Behind
+}
 
-public sealed record DepartmentSummary(
-    string Name,
-    decimal Quantity,
-    decimal Target,
-    decimal CompletionRate,
+public sealed record ProductDaily(
+    string ProductCode,
+    string DisplayName,
     string Color,
-    string Icon,
-    int Order);
-
-/// <summary>Một mốc giờ trên biểu đồ xu hướng. <see cref="CumulativeQuantity"/> null cho mốc giờ tương lai.</summary>
-public sealed record HourlyPoint(
-    TimeOnly Hour,
-    decimal? CumulativeQuantity,
-    decimal CumulativeTarget);
+    string? ImagePath,
+    decimal DailyTarget,
+    decimal DailyActual,
+    decimal DailyVariance,
+    decimal? DailyRate,
+    ProgressStatus DailyStatus,
+    decimal? MonthTarget,
+    decimal? MonthCumulative,
+    decimal? MonthVariance,
+    decimal? MonthRate,
+    ProgressStatus MonthStatus,
+    decimal? ShiftHours,
+    decimal? HourlyTarget,
+    int Rank,
+    decimal? CarriedShortfall = null);
 
 public sealed record Notice(
     string Title,
@@ -37,30 +37,38 @@ public sealed record Notice(
 public sealed record ProductionSummary(
     DateOnly Date,
     bool IsToday,
-    int EmployeeCount,
-    decimal TotalQuantity,
-    decimal TotalTarget,
-    decimal CompletionRate,
+    int ProductCount,
+    decimal DailyTarget,
+    decimal DailyActual,
+    decimal DailyRate,
+    ProgressStatus DailyStatus,
+    decimal MonthTarget,
+    decimal MonthCumulative,
+    decimal MonthRate,
+    ProgressStatus MonthStatus,
     int MetCount,
-    int NotMetCount);
+    int NotMetCount,
+    DateOnly? CarriedFromDate = null,
+    decimal CarriedShortfall = 0,
+    int CarriedProductCount = 0)
+{
+    public bool HasMonthData => MonthTarget > 0;
+    public decimal MonthVariance => MonthCumulative - MonthTarget;
+}
 
 public sealed record DisplayDataSnapshot(
     DateTimeOffset GeneratedAt,
+    string SheetName,
     ProductionSummary Summary,
-    IReadOnlyList<ProductionRecord> Records,
-    IReadOnlyList<EmployeeDaily> Employees,
-    IReadOnlyList<DepartmentSummary> Departments,
-    IReadOnlyList<HourlyPoint> Hourly,
+    IReadOnlyList<ProductDaily> Products,
     IReadOnlyList<Notice> Notices,
     IReadOnlyList<Slogan> Slogans,
     string Unit,
     string? CompanyName,
     IReadOnlyList<string> Warnings)
 {
-    public bool HasHourlyData => Hourly.Any(p => p.CumulativeQuantity is > 0);
-
     public static DisplayDataSnapshot Empty(DateTimeOffset now) => new(
-        now,
-        new ProductionSummary(DateOnly.FromDateTime(now.LocalDateTime), true, 0, 0, 0, 0, 0, 0),
-        [], [], [], [], [], [], "sản phẩm", null, []);
+        now, "",
+        new ProductionSummary(DateOnly.FromDateTime(now.LocalDateTime), true, 0, 0, 0, 0, ProgressStatus.None, 0, 0, 0, ProgressStatus.None, 0, 0),
+        [], [], [], "PCS", null, []);
 }

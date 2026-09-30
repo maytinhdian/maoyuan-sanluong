@@ -5,11 +5,11 @@ using DisplayBoard.Core.Models;
 
 namespace DisplayBoard.App.ViewModels.Displays;
 
-/// <summary>Template 7 — Bảng chi tiết, tự lật trang thay cho thanh cuộn.</summary>
+/// <summary>Template 7 — Bảng chi tiết giống file khách, tự lật trang thay cho thanh cuộn.</summary>
 public sealed partial class DetailViewModel : DisplayViewModelBase
 {
     private readonly DispatcherTimer _timer;
-    private IReadOnlyList<EmployeeRow> _all = [];
+    private IReadOnlyList<ProductRow> _all = [];
 
     public DetailViewModel(ClockViewModel clock) : base(clock)
     {
@@ -21,18 +21,34 @@ public sealed partial class DetailViewModel : DisplayViewModelBase
     public override string Title => "CHI TIẾT SẢN LƯỢNG";
     public override string IconKind => "list";
 
-    [ObservableProperty] private IReadOnlyList<EmployeeRow> _rows = [];
+    [ObservableProperty] private IReadOnlyList<ProductRow> _rows = [];
     [ObservableProperty] private int _page = 1;
     [ObservableProperty] private int _pageCount = 1;
     [ObservableProperty] private string? _pageText;
-    [ObservableProperty] private bool _hasShift;
+
+    // Dòng tổng
+    [ObservableProperty] private string _totalDailyTarget = "";
+    [ObservableProperty] private string _totalDailyActual = "";
+    [ObservableProperty] private string _totalDailyRate = "";
+    [ObservableProperty] private string? _totalCarried;
+    [ObservableProperty] private string _totalMonthTarget = "";
+    [ObservableProperty] private string _totalMonthCumulative = "";
+    [ObservableProperty] private string _totalMonthVariance = "";
+    [ObservableProperty] private string _totalMonthRate = "";
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        // Bảng chi tiết sắp theo Mã NV để dễ tra cứu.
-        _all = EmployeeRow.From(snapshot.Employees.OrderBy(e => e.EmployeeCode, StringComparer.OrdinalIgnoreCase), snapshot);
-        HasShift = snapshot.Employees.Any(e => e.Shift is not null);
+        _all = ProductRow.From(snapshot.Products);
         PageCount = DetailViewDefinition.PageCount(snapshot);
+        var s = snapshot.Summary;
+        TotalDailyTarget = Format.Number(s.DailyTarget);
+        TotalDailyActual = Format.Number(s.DailyActual);
+        TotalDailyRate = $"{s.DailyRate:0}%";
+        TotalCarried = s.CarriedShortfall > 0 ? Format.Number(s.CarriedShortfall) : null;
+        TotalMonthTarget = s.HasMonthData ? Format.Number(s.MonthTarget) : "—";
+        TotalMonthCumulative = s.HasMonthData ? Format.Number(s.MonthCumulative) : "—";
+        TotalMonthVariance = s.HasMonthData ? Format.Signed(s.MonthVariance) : "—";
+        TotalMonthRate = s.HasMonthData ? $"{s.MonthRate:0}%" : "—";
         ShowPage(Page);
     }
 

@@ -21,12 +21,12 @@
             <!-- ViewModel → View. Preview và fullscreen dùng chung các template này. -->
             <DataTemplate DataType="{x:Type vm:OverviewViewModel}"><d:OverviewView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:RankingViewModel}"><d:RankingView /></DataTemplate>
-            <DataTemplate DataType="{x:Type vm:DepartmentProgressViewModel}"><d:DepartmentProgressView /></DataTemplate>
-            <DataTemplate DataType="{x:Type vm:TopPerformersViewModel}"><d:TopPerformersView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ProductProgressViewModel}"><d:ProductProgressView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:TopProductsViewModel}"><d:TopProductsView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:NotMetViewModel}"><d:NotMetView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:NoticeViewModel}"><d:NoticeView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:DetailViewModel}"><d:DetailView /></DataTemplate>
-            <DataTemplate DataType="{x:Type vm:TrendViewModel}"><d:TrendView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MonthProgressViewModel}"><d:MonthProgressView /></DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -4,7 +4,7 @@ using ClosedXML.Excel;
 namespace DisplayBoard.Core.Excel;
 
 /// <summary>Chuyển giá trị ô Excel sang kiểu .NET, chấp nhận cả ô dạng số/ngày và ô dạng text.</summary>
-internal static class CellParser
+internal static partial class CellParser
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
     private static readonly string[] DateFormats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy", "d-M-yyyy"];
@@ -99,11 +99,21 @@ internal static class CellParser
             number = 0;
             return false;
         }
-        // "1250", "1250.5" hoặc kiểu Việt Nam "1.250", "1.250,5"
-        if (text.Contains(',') || (text.Count(c => c == '.') == 1 && text.Split('.')[1].Length == 3))
+        text = text.Replace(" ", "").Replace("\u00A0", "").TrimEnd('%');
+        // Có phân cách hàng nghìn: "1,000", "1.000", "40,000", "1.250.000"
+        if (ThousandsPattern().IsMatch(text))
+            return decimal.TryParse(text.Replace(",", "").Replace(".", ""), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out number);
+        // Kiểu Việt Nam "1.250,5"
+        if (text.Contains(',') && text.Contains('.') && text.LastIndexOf(',') > text.LastIndexOf('.'))
             return decimal.TryParse(text, NumberStyles.Number, Vi, out number);
+        // Dấu phẩy thập phân "12,5"
+        if (text.Contains(',') && !text.Contains('.'))
+            return decimal.TryParse(text.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out number);
         return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out number);
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^-?\d{1,3}([.,]\d{3})+$")]
+    private static partial System.Text.RegularExpressions.Regex ThousandsPattern();
 
     public static bool IsTruthy(string? text) =>
         text is not null && !text.Equals("0", StringComparison.Ordinal)

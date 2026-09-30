@@ -4,11 +4,6 @@
              xmlns:c="clr-namespace:DisplayBoard.App.Controls"
              xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
              Width="1920" Height="1080">
-    <UserControl.Resources>
-        <Style x:Key="Cols" TargetType="Grid">
-            <Setter Property="Height" Value="74" />
-        </Style>
-    </UserControl.Resources>
     <Grid Background="{StaticResource BoardBackground}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -19,15 +14,15 @@
             <Border Background="{StaticResource TableHeaderBackground}" CornerRadius="10,10,0,0" Padding="20,0">
                 <Grid Height="70">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="110" /><ColumnDefinition Width="210" /><ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="280" /><ColumnDefinition Width="240" /><ColumnDefinition Width="180" /><ColumnDefinition Width="240" />
+                        <ColumnDefinition Width="110" /><ColumnDefinition Width="*" /><ColumnDefinition Width="250" />
+                        <ColumnDefinition Width="250" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" /><ColumnDefinition Width="250" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="#" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="Mã NV" Style="{StaticResource TableHeaderText}" />
-                    <TextBlock Grid.Column="2" Text="Họ tên" Style="{StaticResource TableHeaderText}" />
-                    <TextBlock Grid.Column="3" Text="Bộ phận" Style="{StaticResource TableHeaderText}" />
-                    <TextBlock Grid.Column="4" Text="Sản lượng" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
-                    <TextBlock Grid.Column="5" Text="%" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="1" Text="Sản phẩm" Style="{StaticResource TableHeaderText}" />
+                    <TextBlock Grid.Column="2" Text="Mục tiêu" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="3" Text="Thực tế" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="4" Text="% ngày" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="5" Text="% tháng" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
                     <TextBlock Grid.Column="6" Text="Trạng thái" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Center" />
                 </Grid>
             </Border>
@@ -35,21 +30,23 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border x:Name="Row" Padding="20,0" Background="Transparent">
-                            <Grid Style="{StaticResource Cols}">
+                            <Grid Height="76">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110" /><ColumnDefinition Width="210" /><ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="280" /><ColumnDefinition Width="240" /><ColumnDefinition Width="180" /><ColumnDefinition Width="240" />
+                                    <ColumnDefinition Width="110" /><ColumnDefinition Width="*" /><ColumnDefinition Width="250" />
+                                    <ColumnDefinition Width="250" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" /><ColumnDefinition Width="250" />
                                 </Grid.ColumnDefinitions>
                                 <Border x:Name="RankBadge" Width="56" Height="56" CornerRadius="28" Background="Transparent" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding Rank}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Center" />
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Code}" Style="{StaticResource TableCellText}" />
-                                <TextBlock Grid.Column="2" Text="{Binding Name}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="3" Text="{Binding Department}" Style="{StaticResource TableCellText}" />
-                                <TextBlock Grid.Column="4" Text="{Binding Quantity}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
-                                <TextBlock Grid.Column="5" Text="{Binding Rate}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
-                                <Border Grid.Column="6" Style="{StaticResource StatusPill}" Margin="20,10" Background="{Binding Status, Converter={StaticResource StatusBrush}, ConverterParameter=table}">
-                                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource TableCellText}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="2" Text="{Binding DailyTarget}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                <TextBlock Grid.Column="3" Text="{Binding DailyActual}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                <TextBlock Grid.Column="4" Text="{Binding DailyRate}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0"
+                                           Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                <TextBlock Grid.Column="5" Text="{Binding MonthRate}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0"
+                                           Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                <Border Grid.Column="6" Style="{StaticResource StatusPill}" Margin="20,10" Background="{Binding DailyStatus, Converter={StaticResource StatusBrush}}">
+                                    <TextBlock Text="{Binding DailyStatusText}" Style="{StaticResource TableCellText}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" />
                                 </Border>
                             </Grid>
                         </Border>

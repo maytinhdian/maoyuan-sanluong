@@ -16,25 +16,34 @@ public class SnapshotServiceTests
         public void Save(DisplayConfiguration configuration) { }
     }
 
-    private sealed class FakeReader(Queue<Func<WorkbookData>> results) : IExcelDataReader
+    private sealed class FakeReader(Queue<Func<ProductionSheet>> results) : IExcelDataReader
     {
         public int Calls { get; private set; }
-        public Task<WorkbookData> ReadAsync(string filePath, CancellationToken ct)
+        public Task<ProductionSheet> ReadProductionAsync(string filePath, string? sheetName, CancellationToken ct)
         {
             Calls++;
             return Task.FromResult(results.Dequeue()());
         }
+
+        public Task<ContentData> ReadContentAsync(string filePath, CancellationToken ct) => Task.FromResult(ContentData.Empty);
     }
 
-    private static WorkbookData Data(decimal qty) => new(
-        [new ProductionRecord(2, DateOnly.FromDateTime(DateTime.Today), null, null, "NV001", "A", "Ép", qty, 100, null)],
-        [], [], [], [], new Dictionary<string, string>(), []);
+    private sealed class MemoryHistory : IDailyHistoryStore
+    {
+        public List<DayHistory> Saved { get; } = [];
+        public void Save(DayHistory day) => Saved.Add(day);
+        public DayHistory? GetPreviousDay(DateOnly date) => Saved.Where(d => d.Date < date).MaxBy(d => d.Date);
+    }
 
-    private static (SnapshotService Service, FakeReader Reader, string Path) Create(params Func<WorkbookData>[] results)
+    private static ProductionSheet Data(decimal qty) => new(
+        "Sheet2", DateOnly.FromDateTime(DateTime.Today),
+        [new ProductRecord(3, "A", 10, 10, 100, qty, null, null)], []);
+
+    private static (SnapshotService Service, FakeReader Reader, string Path) Create(params Func<ProductionSheet>[] results)
     {
         var path = System.IO.Path.GetTempFileName();
-        var reader = new FakeReader(new Queue<Func<WorkbookData>>(results));
-        var service = new SnapshotService(reader, new DataProcessor(), new FakeConfig(path), TimeProvider.System, NullLogger<SnapshotService>.Instance);
+        var reader = new FakeReader(new Queue<Func<ProductionSheet>>(results));
+        var service = new SnapshotService(reader, new ProductProcessor(), new MemoryHistory(), new FakeConfig(path), TimeProvider.System, NullLogger<SnapshotService>.Instance);
         return (service, reader, path);
     }
 
@@ -49,7 +58,7 @@ public class SnapshotServiceTests
 
         Assert.Equal(LoadStatus.Updated, service.Status);
         Assert.Same(service.Current, notified);
-        Assert.Equal(10m, service.Current!.Summary.TotalQuantity);
+        Assert.Equal(10m, service.Current!.Summary.DailyActual);
         File.Delete(path);
     }
 
@@ -86,8 +95,8 @@ public class SnapshotServiceTests
     [Fact]
     public async Task Locked_file_gives_up_after_max_attempts_and_keeps_snapshot()
     {
-        var results = new List<Func<WorkbookData>> { () => Data(5) };
-        results.AddRange(Enumerable.Repeat<Func<WorkbookData>>(() => throw new IOException("locked"), SnapshotService.MaxAttempts));
+        var results = new List<Func<ProductionSheet>> { () => Data(5) };
+        results.AddRange(Enumerable.Repeat<Func<ProductionSheet>>(() => throw new IOException("locked"), SnapshotService.MaxAttempts));
         var (service, reader, path) = Create(results.ToArray());
         await service.ReloadAsync();
 
@@ -95,7 +104,7 @@ public class SnapshotServiceTests
 
         Assert.Equal(1 + SnapshotService.MaxAttempts, reader.Calls);
         Assert.Equal(LoadStatus.FileLocked, service.Status);
-        Assert.Equal(5m, service.Current!.Summary.TotalQuantity);
+        Assert.Equal(5m, service.Current!.Summary.DailyActual);
         File.Delete(path);
     }
 
@@ -116,16 +125,13 @@ public class SnapshotServiceTests
     public async Task Real_reader_can_read_while_file_is_open_for_writing()
     {
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lock-{Guid.NewGuid():N}.xlsx");
-        using (var source = WorkbookFactory.Create(wb => wb.AddTable("DATA", WorkbookFactory.DataHeaders,
-                   [DateTime.Today, null, null, "NV001", "A", "Ép", 7, null, null])))
-        await using (var file = File.Create(path))
-            await source.CopyToAsync(file);
+        File.Copy(System.IO.Path.Combine(TestPaths.RepoRoot(), "samples", "SanLuong-khach-mau.xlsx"), path);
 
         // Giống Excel: giữ file mở và cho phép người khác đọc.
         await using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
         {
-            var data = await new ExcelWorkbookReader().ReadAsync(path, CancellationToken.None);
-            Assert.Single(data.Records);
+            var sheet = await new ExcelDataReader().ReadProductionAsync(path, null, CancellationToken.None);
+            Assert.Equal(11, sheet.Records.Count);
         }
         File.Delete(path);
     }

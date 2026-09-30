@@ -1,6 +1,6 @@
 # Display Board – Bảng sản lượng trên TV
 
-App Windows đọc file Excel sản lượng và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
+App Windows đọc file Excel sản lượng của khách (theo sản phẩm) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
 
 ## Yêu cầu
 
@@ -13,55 +13,68 @@ App Windows đọc file Excel sản lượng và trình chiếu dashboard lên 2
 dotnet run --project src/DisplayBoard.App
 ```
 
-1. Bấm **Chọn file…** và chọn `samples/SanLuong-mau.xlsx`.
+1. Bấm **Chọn file…** và chọn `samples/SanLuong-khach-mau.xlsx` (bản mô phỏng file của khách).
 2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
 3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
 
-Tạo lại file mẫu (dữ liệu theo ngày hôm nay):
+Tạo lại file mẫu (tham số thứ hai là ngày ghi ở ô A1):
 
 ```powershell
-dotnet run --project tools/DisplayBoard.SampleGenerator -- samples/SanLuong-mau.xlsx
+dotnet run --project tools/DisplayBoard.SampleGenerator -- samples 2026/09/30
 ```
 
-## Cấu trúc file Excel
+## File Excel của khách
 
-| Sheet | Bắt buộc | Cột |
+App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào file đó**. Mỗi dòng là một sản phẩm:
+
+| Cột | Tiêu đề (Trung / Việt) | Ghi chú |
 |---|---|---|
-| `DATA` | Có | Ngày, Giờ*, Ca*, Mã NV, Họ tên, Bộ phận, Sản lượng, Mục tiêu*, Ghi chú* |
-| `DANH_MUC` | Không | Mã NV, Họ tên, Bộ phận, Trạng thái, Ảnh |
-| `BO_PHAN` | Không | Bộ phận, Mục tiêu, Màu, Icon, Thứ tự |
-| `THONG_BAO` | Không | Tiêu đề, Nội dung, Ảnh nền, Từ ngày, Đến ngày, Thứ tự, Bật |
-| `KHAU_HIEU` | Không | Icon, Dòng 1, Dòng 2 |
-| `CAU_HINH` | Không | Khóa, Giá trị (`GioBatDau`, `GioKetThuc`, `DonVi`, `TenCongTy`) |
+| A | 产品代码 / MÃ SẢN PHẨM | chữ hoặc số |
+| B | 每日工时数 / THỜI GIAN LÊN CA | giờ của ca làm hôm đó |
+| C | 每小时目标产量 / MỤC TIÊU MỖI GIỜ | |
+| D | 每日目标产量 / MỤC TIÊU TRONG NGÀY | trống thì app tính B × C |
+| E | 每日实际产量 / THỰC TẾ | nhân viên nhập |
+| G | 当月总目标产量 / TỔNG SẢN LƯỢNG TRONG THÁNG | mục tiêu tháng |
+| H | 当月累计产能 / LŨY KẾ | |
 
-\* không bắt buộc.
+- Ngày lấy từ ô A1 (`日期：2026/09/30`). Cột được nhận theo tiêu đề (tiếng Trung trước, rồi tiếng Việt), nên đổi thứ tự cột vẫn đọc được.
+- %, chênh lệch và trạng thái do app tự tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
+- File có nhiều sheet: dùng sheet ghi trong **Sheet** ở màn hình chính; để trống thì lấy sheet có ngày mới nhất.
+- **Phần thiếu hôm trước**: mỗi lần đọc file, app lưu kết quả của ngày đó vào `%AppData%\DisplayBoard\daily-history.json`. Hôm sau các màn hình hiện số còn thiếu của ngày làm việc trước (bỏ qua ngày nghỉ).
 
-- Mỗi dòng `Sản lượng` là **số làm được trong lần nhập đó**; app tự cộng các dòng cùng ngày của một nhân viên.
-- `Mục tiêu` là mục tiêu cả ngày; nhập nhiều dòng thì app lấy giá trị lớn nhất, không cộng dồn.
-- Dòng lỗi được bỏ qua và báo ở tab **Nhật ký** kèm số dòng.
-- Icon có sẵn: `factory`, `paint`, `box`, `search`, `gear`, `trophy`, `people`, `chart`, `trend`, `star`, `tool`, `truck`.
+### File nội dung phụ (không bắt buộc)
 
-Ảnh nhân viên và ảnh nền thông báo đặt trong thư mục `images` cạnh file Excel (hoặc thư mục chọn trong **Cài đặt**). Ảnh nhân viên đặt tên theo Mã NV, ví dụ `NV001.jpg`.
+`display-content.xlsx` đặt cạnh file khách (hoặc chọn file khác ở màn hình chính):
+
+| Sheet | Cột |
+|---|---|
+| `SAN_PHAM` | Mã sản phẩm, Tên hiển thị, Màu, Ảnh, Thứ tự |
+| `THONG_BAO` | Tiêu đề, Nội dung, Ảnh nền, Từ ngày, Đến ngày, Thứ tự, Bật |
+| `KHAU_HIEU` | Icon, Dòng 1, Dòng 2 |
+| `CAU_HINH` | Khóa, Giá trị (`DonVi`, `TenCongTy`) |
+
+Ảnh sản phẩm và ảnh nền thông báo đặt trong thư mục `images` cạnh file Excel. Ảnh sản phẩm đặt tên theo mã, ví dụ `883.jpg`.
 
 ## 8 nội dung hiển thị
 
 | Id | Nội dung |
 |---|---|
-| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, biểu đồ theo bộ phận |
-| `ranking` | Bảng xếp hạng top 10 nhân viên |
-| `department-progress` | Tiến độ từng bộ phận |
-| `top-performers` | Top 5 nhân viên xuất sắc (có ảnh) |
-| `not-met` | Nhân viên chưa đạt |
+| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, cột theo sản phẩm, phần thiếu hôm trước |
+| `ranking` | Xếp hạng sản phẩm theo % hoàn thành |
+| `product-progress` | Thẻ tiến độ từng sản phẩm (ngày và tháng) |
+| `top-products` | Sản phẩm vượt mục tiêu |
+| `not-met` | Sản phẩm chưa đạt |
 | `notice` | Thông báo / thông điệp |
-| `detail` | Bảng chi tiết, tự lật trang |
-| `trend` | Biểu đồ xu hướng lũy kế theo giờ |
+| `detail` | Bảng chi tiết giống file khách, tự lật trang |
+| `month-progress` | Lũy kế tháng so với mục tiêu tháng |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 
 ## Cấu hình và log
 
 - Cấu hình: `%AppData%\DisplayBoard\display-config.json`
+- Lịch sử từng ngày: `%AppData%\DisplayBoard\daily-history.json`
 - Log: `%LocalAppData%\DisplayBoard\logs\display-board-YYYYMMDD.log`
 
 ## Cấu trúc mã nguồn

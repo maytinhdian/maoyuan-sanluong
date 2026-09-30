@@ -94,7 +94,7 @@ public sealed class NullToVisibilityConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
-/// <summary>Trạng thái đạt/chậm → màu. Parameter "text" trả màu chữ (vd % hoàn thành).</summary>
+/// <summary>Trạng thái Đạt/Gần đạt/Chậm → xanh/vàng/đỏ. bool = chênh lệch âm? Parameter "text": không có trạng thái thì trả màu chữ trắng.</summary>
 public sealed class StatusToBrushConverter : IValueConverter
 {
     private static readonly Brush Met = Frozen("#22C55E");
@@ -112,10 +112,11 @@ public sealed class StatusToBrushConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        ViewModels.Displays.StatusKind.Met => Met,
-        ViewModels.Displays.StatusKind.Near => parameter is "table" ? NotMet : Near,
-        ViewModels.Displays.StatusKind.NotMet => NotMet,
-        bool b => b ? Met : Near,
+        DisplayBoard.Core.Models.ProgressStatus.Met => Met,
+        DisplayBoard.Core.Models.ProgressStatus.Near => Near,
+        DisplayBoard.Core.Models.ProgressStatus.Behind => NotMet,
+        // bool: true = âm/thiếu (đỏ), false = xanh
+        bool negative => negative ? NotMet : Met,
         _ => parameter is "text" ? NoneText : None
     };
 

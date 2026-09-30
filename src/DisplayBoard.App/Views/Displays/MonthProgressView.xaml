@@ -1,0 +1,67 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.MonthProgressView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource BoardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader />
+        <Grid Grid.Row="1" Margin="40,30,40,36">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="620" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- Tổng tháng -->
+            <Border Style="{StaticResource Card}" Margin="0,0,30,0">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="LŨY KẾ THÁNG" Style="{StaticResource CardTitle}" FontSize="40" HorizontalAlignment="Center" Foreground="White" />
+                    <Grid Width="360" Height="360" Margin="0,30">
+                        <c:ProgressRing Value="{Binding Rate}" Thickness="34" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="{Binding RateText}" Style="{StaticResource BoardText}" FontSize="96" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="{Binding Cumulative}" Style="{StaticResource KpiValue}" HorizontalAlignment="Center" />
+                    <TextBlock Style="{StaticResource BoardText}" FontSize="36" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}">
+                        <Run Text="Mục tiêu " /><Run Text="{Binding Target, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding Unit, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding Variance}" Style="{StaticResource BoardText}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16,0,0"
+                               Foreground="{Binding VarianceNegative, Converter={StaticResource StatusBrush}}" />
+                </StackPanel>
+            </Border>
+            <!-- Từng sản phẩm, thiếu nhiều nhất ở trên -->
+            <Border Grid.Column="1" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="THEO SẢN PHẨM" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Height="72">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="260" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="330" />
+                                        <ColumnDefinition Width="140" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <c:ProgressLine Grid.Column="1" Height="26" Margin="10,0,20,0" Fraction="{Binding MonthFraction}"
+                                                    Fill="{Binding MonthStatus, Converter={StaticResource StatusBrush}}" />
+                                    <TextBlock Grid.Column="2" Style="{StaticResource TableCellText}" FontSize="28" HorizontalAlignment="Right" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="{Binding MonthCumulative, Mode=OneWay}" Foreground="White" /><Run Text=" / " /><Run Text="{Binding MonthTarget, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="3" Text="{Binding MonthRate}" Style="{StaticResource TableCellText}" FontSize="34" FontWeight="Bold" HorizontalAlignment="Right"
+                                               Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding MoreText}" Style="{StaticResource TableCellText}" FontSize="28" Foreground="{StaticResource TextSecondary}" Margin="0,10,0,0"
+                               Visibility="{Binding MoreText, Converter={StaticResource NullToVisibility}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

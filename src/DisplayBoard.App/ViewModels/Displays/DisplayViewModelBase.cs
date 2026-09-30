@@ -17,7 +17,7 @@ public abstract partial class DisplayViewModelBase(ClockViewModel clock) : Obser
 
     public void Update(DisplayDataSnapshot snapshot)
     {
-        DataDateNote = snapshot.Summary.IsToday || snapshot.Summary.EmployeeCount == 0
+        DataDateNote = snapshot.Summary.IsToday || snapshot.Summary.ProductCount == 0
             ? null
             : $"Dữ liệu ngày {snapshot.Summary.Date:dd/MM/yyyy}";
         OnUpdate(snapshot);

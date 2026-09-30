@@ -9,7 +9,8 @@ namespace DisplayBoard.Core.Services;
 /// <summary>Đọc Excel có retry khi file bị khóa, build snapshot và thay thế nguyên khối. Lỗi thì giữ Last Good Snapshot.</summary>
 public sealed class SnapshotService(
     IExcelDataReader reader,
-    DataProcessor processor,
+    ProductProcessor processor,
+    IDailyHistoryStore history,
     IConfigurationService configuration,
     TimeProvider time,
     ILogger<SnapshotService> logger) : ISnapshotService
@@ -64,12 +65,16 @@ public sealed class SnapshotService(
         {
             try
             {
-                var data = await reader.ReadAsync(path, ct).ConfigureAwait(false);
-                var snapshot = processor.Build(data, time.GetLocalNow(), config.ResolveImagesFolder());
+                var sheet = await reader.ReadProductionAsync(path, config.SheetName, ct).ConfigureAwait(false);
+                var content = await ReadContentAsync(config.ResolveContentFile(), ct).ConfigureAwait(false);
+                var now = time.GetLocalNow();
+                var date = sheet.Date ?? DateOnly.FromDateTime(now.LocalDateTime);
+                var snapshot = processor.Build(sheet, content, now, config.ResolveImagesFolder(), history.GetPreviousDay(date));
+                history.Save(ProductProcessor.ToHistory(snapshot));
                 Volatile.Write(ref _current, snapshot);
                 LastLoadedAt = snapshot.GeneratedAt;
-                logger.LogInformation("Đọc Excel xong: {Rows} dòng, {Warnings} cảnh báo, {Elapsed} ms",
-                    data.Records.Count, snapshot.Warnings.Count, (int)time.GetElapsedTime(started).TotalMilliseconds);
+                logger.LogInformation("Đọc Excel xong: sheet {Sheet}, ngày {Date}, {Rows} sản phẩm, {Warnings} cảnh báo, {Elapsed} ms",
+                    sheet.SheetName, sheet.Date, sheet.Records.Count, snapshot.Warnings.Count, (int)time.GetElapsedTime(started).TotalMilliseconds);
                 foreach (var warning in snapshot.Warnings)
                     logger.LogWarning("{Warning}", warning);
                 SetStatus(LoadStatus.Updated, snapshot.Warnings.Count > 0 ? $"{snapshot.Warnings.Count} cảnh báo dữ liệu" : null);
@@ -108,6 +113,29 @@ public sealed class SnapshotService(
                 logger.LogError(ex, "Không đọc được file Excel");
                 SetStatus(LoadStatus.InvalidData, $"Không đọc được file Excel: {ex.Message}");
                 return;
+            }
+        }
+    }
+
+    /// <summary>File nội dung phụ là tùy chọn: thiếu hoặc lỗi thì chạy tiếp với nội dung rỗng + cảnh báo.</summary>
+    private async Task<ContentData> ReadContentAsync(string? path, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return ContentData.Empty;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await reader.ReadContentAsync(path, ct).ConfigureAwait(false);
+            }
+            catch (IOException) when (attempt < MaxAttempts)
+            {
+                await Task.Delay(RetryDelay, time, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Không đọc được file nội dung {Path}", path);
+                return ContentData.Empty with { Warnings = [$"Không đọc được file nội dung {Path.GetFileName(path)}: {ex.Message}"] };
             }
         }
     }

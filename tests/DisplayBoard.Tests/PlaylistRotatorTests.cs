@@ -6,17 +6,18 @@ namespace DisplayBoard.Tests;
 
 public class PlaylistRotatorTests
 {
-    private static DisplayDataSnapshot Snapshot(int employees = 3, bool notices = false, bool hourly = false)
+    private static DisplayDataSnapshot Snapshot(int products = 3, bool notices = false, bool month = false)
     {
-        var list = Enumerable.Range(1, employees)
-            .Select(i => new EmployeeDaily($"NV{i:000}", "A", "Ép", null, 100, 100, 100, true, 0, i, null))
+        var list = Enumerable.Range(1, products)
+            .Select(i => new ProductDaily($"P{i}", $"P{i}", "#fff", null, 100, 100, 0, 100, ProgressStatus.Met,
+                null, null, null, null, ProgressStatus.None, null, null, i))
             .ToList();
         var empty = DisplayDataSnapshot.Empty(DateTimeOffset.Now);
         return empty with
         {
-            Employees = list,
+            Products = list,
             Notices = notices ? [new Notice("T", "N", null, 1)] : [],
-            Hourly = hourly ? [new HourlyPoint(new TimeOnly(8, 0), 10, 10)] : [],
+            Summary = empty.Summary with { MonthTarget = month ? 1000 : 0 },
         };
     }
 
@@ -46,12 +47,12 @@ public class PlaylistRotatorTests
     public void Skips_views_without_content()
     {
         var time = new FakeTimeProvider();
-        var snapshot = Snapshot(notices: false, hourly: false);
+        var snapshot = Snapshot(notices: false, month: false);
         using var rotator = new PlaylistRotator(ViewCatalog.CreateDefault(), () => snapshot, time);
         var seen = new List<string>();
         rotator.ViewChanged += (_, id) => seen.Add(id);
 
-        rotator.Start(Playlist(ViewIds.Ranking, ViewIds.Notice, ViewIds.Trend, ViewIds.Overview), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(60));
+        rotator.Start(Playlist(ViewIds.Ranking, ViewIds.Notice, ViewIds.MonthProgress, ViewIds.Overview), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(60));
         time.Advance(TimeSpan.FromSeconds(15));
         time.Advance(TimeSpan.FromSeconds(15));
 
@@ -62,10 +63,10 @@ public class PlaylistRotatorTests
     public void Falls_back_to_overview_when_nothing_has_content()
     {
         var time = new FakeTimeProvider();
-        var snapshot = Snapshot(employees: 0);
+        var snapshot = Snapshot(products: 0);
         using var rotator = new PlaylistRotator(ViewCatalog.CreateDefault(), () => snapshot, time);
 
-        rotator.Start(Playlist(ViewIds.Notice, ViewIds.Trend), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(60));
+        rotator.Start(Playlist(ViewIds.Notice, ViewIds.MonthProgress), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(60));
 
         Assert.Equal(ViewIds.Overview, rotator.CurrentViewId);
     }
@@ -74,7 +75,7 @@ public class PlaylistRotatorTests
     public void Paged_view_stays_until_all_pages_shown_capped_by_max()
     {
         var time = new FakeTimeProvider();
-        var snapshot = Snapshot(employees: 25); // 3 trang × 8 giây = 24 giây
+        var snapshot = Snapshot(products: 25); // 3 trang × 8 giây = 24 giây
         using var rotator = new PlaylistRotator(ViewCatalog.CreateDefault(), () => snapshot, time);
 
         rotator.Start(Playlist(ViewIds.Detail, ViewIds.Overview), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(20));

@@ -19,8 +19,8 @@ public class RenderViewsTests
 {
     public static TheoryData<string> ViewIdsData() =>
     [
-        ViewIds.Overview, ViewIds.Ranking, ViewIds.DepartmentProgress, ViewIds.TopPerformers,
-        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.Trend
+        ViewIds.Overview, ViewIds.Ranking, ViewIds.ProductProgress, ViewIds.TopProducts,
+        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress
     ];
 
     [Theory]
@@ -63,12 +63,20 @@ public class RenderViewsTests
 
     private static DisplayDataSnapshot LoadSampleSnapshot()
     {
-        using var stream = File.OpenRead(Path.Combine(RepoRoot(), "samples", "SanLuong-mau.xlsx"));
-        var data = ExcelWorkbookReader.Read(stream);
-        var date = data.Records.Max(r => r.Date);
-        // Giữa ngày làm việc để biểu đồ xu hướng có cả phần đã qua và phần tương lai.
+        var samples = Path.Combine(RepoRoot(), "samples");
+        ProductionSheet sheet;
+        using (var stream = File.OpenRead(Path.Combine(samples, "SanLuong-khach-mau.xlsx")))
+            sheet = ProductionWorkbookReader.Read(stream, null);
+        ContentData content;
+        using (var stream = File.OpenRead(Path.Combine(samples, "display-content.xlsx")))
+            content = ContentWorkbookReader.Read(stream);
+        var date = sheet.Date ?? DateOnly.FromDateTime(DateTime.Today);
         var now = new DateTimeOffset(date.ToDateTime(new TimeOnly(14, 30)));
-        return new DataProcessor().Build(data, now, Path.Combine(RepoRoot(), "samples", "images"));
+        // Ngày trước: mỗi sản phẩm thứ hai thiếu 10% để ảnh chụp có phần "thiếu hôm trước".
+        var previous = new DayHistory(date.AddDays(-1), sheet.Records
+            .Select((r, i) => new ProductDayResult(r.ProductCode, r.DailyTarget, i % 2 == 0 ? r.DailyTarget * 0.9m : r.DailyTarget))
+            .ToList());
+        return new ProductProcessor().Build(sheet, content, now, Path.Combine(samples, "images"), previous);
     }
 
     private static void Save(BitmapSource bitmap, string name)

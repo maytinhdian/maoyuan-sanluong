@@ -9,12 +9,12 @@ public sealed class DisplayViewFactory(ClockViewModel clock)
     public DisplayViewModelBase Create(string viewId) => viewId switch
     {
         ViewIds.Ranking => new RankingViewModel(clock),
-        ViewIds.DepartmentProgress => new DepartmentProgressViewModel(clock),
-        ViewIds.TopPerformers => new TopPerformersViewModel(clock),
+        ViewIds.ProductProgress => new ProductProgressViewModel(clock),
+        ViewIds.TopProducts => new TopProductsViewModel(clock),
         ViewIds.NotMet => new NotMetViewModel(clock),
         ViewIds.Notice => new NoticeViewModel(clock),
         ViewIds.Detail => new DetailViewModel(clock),
-        ViewIds.Trend => new TrendViewModel(clock),
+        ViewIds.MonthProgress => new MonthProgressViewModel(clock),
         _ => new OverviewViewModel(clock)
     };
 }

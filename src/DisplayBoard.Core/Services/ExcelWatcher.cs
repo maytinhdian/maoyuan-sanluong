@@ -4,67 +4,80 @@ using Microsoft.Extensions.Logging;
 namespace DisplayBoard.Core.Services;
 
 /// <summary>
-/// Theo dõi thư mục chứa file Excel. Excel lưu bằng cách ghi file tạm rồi đổi tên,
-/// nên phải nghe cả Changed, Created và Renamed. Mỗi sự kiện reset bộ đếm debounce.
+/// Theo dõi các file Excel. Excel lưu bằng cách ghi file tạm rồi đổi tên,
+/// nên phải nghe cả Changed, Created và Renamed. Mỗi sự kiện reset bộ đếm debounce chung.
 /// </summary>
 public sealed class ExcelWatcher(ILogger<ExcelWatcher> logger) : IExcelWatcher
 {
     private readonly object _lock = new();
-    private FileSystemWatcher? _watcher;
+    private readonly List<FileSystemWatcher> _watchers = [];
+    private readonly HashSet<string> _fileNames = new(StringComparer.OrdinalIgnoreCase);
     private Timer? _debounce;
     private int _debounceMs;
-    private string? _fileName;
 
     public event EventHandler? FileChanged;
 
-    public void Watch(string filePath, int debounceMilliseconds)
+    public void Watch(IReadOnlyList<string> filePaths, int debounceMilliseconds)
     {
         Stop();
-        var directory = Path.GetDirectoryName(Path.GetFullPath(filePath));
-        if (directory is null || !Directory.Exists(directory))
-        {
-            logger.LogWarning("Không theo dõi được {Path}: thư mục không tồn tại", filePath);
-            return;
-        }
-
         lock (_lock)
         {
-            _fileName = Path.GetFileName(filePath);
             _debounceMs = Math.Max(100, debounceMilliseconds);
             _debounce = new Timer(_ => FileChanged?.Invoke(this, EventArgs.Empty));
-            _watcher = new FileSystemWatcher(directory)
+            foreach (var group in filePaths
+                         .Where(p => !string.IsNullOrWhiteSpace(p))
+                         .Select(Path.GetFullPath)
+                         .GroupBy(p => Path.GetDirectoryName(p)!, StringComparer.OrdinalIgnoreCase))
             {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.CreationTime,
-                IncludeSubdirectories = false
-            };
-            _watcher.Changed += OnEvent;
-            _watcher.Created += OnEvent;
-            _watcher.Deleted += OnEvent;
-            _watcher.Renamed += OnRenamed;
-            _watcher.Error += (_, e) => logger.LogError(e.GetException(), "FileSystemWatcher lỗi");
-            _watcher.EnableRaisingEvents = true;
+                if (!Directory.Exists(group.Key))
+                {
+                    logger.LogWarning("Không theo dõi được thư mục {Directory}: không tồn tại", group.Key);
+                    continue;
+                }
+                foreach (var path in group)
+                    _fileNames.Add(Path.GetFileName(path));
+                var watcher = new FileSystemWatcher(group.Key)
+                {
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.CreationTime,
+                    IncludeSubdirectories = false
+                };
+                watcher.Changed += OnEvent;
+                watcher.Created += OnEvent;
+                watcher.Deleted += OnEvent;
+                watcher.Renamed += OnRenamed;
+                watcher.Error += (_, e) => logger.LogError(e.GetException(), "FileSystemWatcher lỗi");
+                watcher.EnableRaisingEvents = true;
+                _watchers.Add(watcher);
+            }
         }
-        logger.LogInformation("Bắt đầu theo dõi {Path}", filePath);
+        logger.LogInformation("Bắt đầu theo dõi {Files}", string.Join(", ", filePaths));
     }
 
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
         if (IsTarget(e.Name) || IsTarget(e.OldName))
-            Trigger(e.ChangeType.ToString());
+            Trigger(e.ChangeType.ToString(), e.Name);
     }
 
     private void OnEvent(object sender, FileSystemEventArgs e)
     {
         if (IsTarget(e.Name))
-            Trigger(e.ChangeType.ToString());
+            Trigger(e.ChangeType.ToString(), e.Name);
     }
 
-    private bool IsTarget(string? name) =>
-        name is not null && string.Equals(Path.GetFileName(name), _fileName, StringComparison.OrdinalIgnoreCase);
-
-    private void Trigger(string kind)
+    private bool IsTarget(string? name)
     {
-        logger.LogDebug("Watcher: {Kind} {File}", kind, _fileName);
+        if (name is null)
+            return false;
+        lock (_lock)
+        {
+            return _fileNames.Contains(Path.GetFileName(name));
+        }
+    }
+
+    private void Trigger(string kind, string? file)
+    {
+        logger.LogDebug("Watcher: {Kind} {File}", kind, file);
         lock (_lock)
         {
             _debounce?.Change(_debounceMs, Timeout.Infinite);
@@ -75,8 +88,10 @@ public sealed class ExcelWatcher(ILogger<ExcelWatcher> logger) : IExcelWatcher
     {
         lock (_lock)
         {
-            _watcher?.Dispose();
-            _watcher = null;
+            foreach (var watcher in _watchers)
+                watcher.Dispose();
+            _watchers.Clear();
+            _fileNames.Clear();
             _debounce?.Dispose();
             _debounce = null;
         }

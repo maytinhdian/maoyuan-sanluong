@@ -4,44 +4,65 @@ using DisplayBoard.Core.Models;
 
 namespace DisplayBoard.App.ViewModels.Displays;
 
-public sealed record DepartmentBar(string Name, string Quantity, string Color, double BarHeight);
+/// <summary>Cột sản lượng một sản phẩm; <see cref="TargetOffset"/> là vị trí vạch mục tiêu tính từ đáy.</summary>
+public sealed record ProductBar(string Name, string Actual, string Color, double BarHeight, double TargetOffset, bool HasTarget);
 
 /// <summary>Template 1 — Sản lượng hôm nay.</summary>
 public sealed partial class OverviewViewModel(ClockViewModel clock) : DisplayViewModelBase(clock)
 {
-    private const double MaxBarHeight = 330;
+    private const double MaxBarHeight = 300;
 
     public override string ViewId => ViewIds.Overview;
     public override string Title => "SẢN LƯỢNG HÔM NAY";
     public override string IconKind => "clock";
 
-    [ObservableProperty] private string _totalQuantity = "0";
-    [ObservableProperty] private string _totalTarget = "0";
-    [ObservableProperty] private double _completionRate;
-    [ObservableProperty] private string _completionText = "0%";
-    [ObservableProperty] private StatusKind _status;
-    [ObservableProperty] private string _unit = "sản phẩm";
+    [ObservableProperty] private string _dailyActual = "0";
+    [ObservableProperty] private string _dailyTarget = "0";
+    [ObservableProperty] private double _dailyRate;
+    [ObservableProperty] private string _dailyRateText = "0%";
+    [ObservableProperty] private ProgressStatus _dailyStatus;
+    [ObservableProperty] private string _unit = "PCS";
+    [ObservableProperty] private string? _monthText;
+    [ObservableProperty] private ProgressStatus _monthStatus;
     [ObservableProperty] private string _metSummary = "";
-    [ObservableProperty] private IReadOnlyList<DepartmentBar> _departments = [];
+    [ObservableProperty] private string? _carriedText;
+    [ObservableProperty] private IReadOnlyList<ProductBar> _bars = [];
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        var summary = snapshot.Summary;
-        TotalQuantity = Format.Number(summary.TotalQuantity);
-        TotalTarget = Format.Number(summary.TotalTarget);
-        CompletionRate = (double)summary.CompletionRate;
-        CompletionText = $"{summary.CompletionRate:0}%";
-        Status = summary.TotalTarget <= 0 ? StatusKind.None
-            : summary.CompletionRate >= 100 ? StatusKind.Met
-            : summary.CompletionRate >= 90 ? StatusKind.Near
-            : StatusKind.NotMet;
+        var s = snapshot.Summary;
+        DailyActual = Format.Number(s.DailyActual);
+        DailyTarget = Format.Number(s.DailyTarget);
+        DailyRate = (double)s.DailyRate;
+        DailyRateText = $"{s.DailyRate:0}%";
+        DailyStatus = s.DailyStatus;
         Unit = snapshot.Unit;
-        MetSummary = $"{summary.EmployeeCount} nhân viên · {summary.MetCount} đạt · {summary.NotMetCount} chưa đạt";
+        MonthStatus = s.MonthStatus;
+        MonthText = s.HasMonthData
+            ? $"Tháng: lũy kế {Format.Number(s.MonthCumulative)} / {Format.Number(s.MonthTarget)} {snapshot.Unit} · {s.MonthRate:0}% · chênh lệch {Format.Signed(s.MonthVariance)}"
+            : null;
+        CarriedText = s.CarriedProductCount > 0
+            ? $"Ngày {s.CarriedFromDate:dd/MM} còn thiếu {Format.Number(s.CarriedShortfall)} {snapshot.Unit} ({s.CarriedProductCount} sản phẩm), cần bù"
+            : null;
+        MetSummary = $"{s.ProductCount} sản phẩm · {s.MetCount} đạt · {s.NotMetCount} chưa đạt";
 
-        var max = snapshot.Departments.Select(d => d.Quantity).DefaultIfEmpty(0).Max();
-        Departments = snapshot.Departments
-            .Select(d => new DepartmentBar(d.Name, Format.Number(d.Quantity), d.Color,
-                max > 0 ? Math.Max(6, (double)(d.Quantity / max) * MaxBarHeight) : 6))
+        var max = snapshot.Products.Select(p => Math.Max(p.DailyActual, p.DailyTarget)).DefaultIfEmpty(0).Max();
+        Bars = snapshot.Products
+            .Select(p => new ProductBar(
+                p.DisplayName,
+                Format.Number(p.DailyActual),
+                StatusColor(p.DailyStatus, p.Color),
+                max > 0 ? Math.Max(6, (double)(p.DailyActual / max) * MaxBarHeight) : 6,
+                max > 0 ? (double)(p.DailyTarget / max) * MaxBarHeight : 0,
+                p.DailyTarget > 0))
             .ToList();
     }
+
+    private static string StatusColor(ProgressStatus status, string fallback) => status switch
+    {
+        ProgressStatus.Met => "#22C55E",
+        ProgressStatus.Near => "#F5B301",
+        ProgressStatus.Behind => "#EF4444",
+        _ => fallback
+    };
 }

@@ -45,7 +45,7 @@ public partial class App : Application
             }
         };
         if (!string.IsNullOrWhiteSpace(config.ExcelFile) && config.AutoReload)
-            watcher.Watch(config.ExcelFile, config.DebounceMilliseconds);
+            watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
         await snapshots.ReloadAsync();
 
         var display = _services.GetRequiredService<IDisplayManager>();
@@ -93,8 +93,9 @@ public partial class App : Application
         services.AddSingleton(TimeProvider.System);
 
         services.AddSingleton<IConfigurationService>(sp => new ConfigurationService(sp.GetRequiredService<ILogger<ConfigurationService>>()));
-        services.AddSingleton<IExcelDataReader, ExcelWorkbookReader>();
-        services.AddSingleton<DataProcessor>();
+        services.AddSingleton<IExcelDataReader, ExcelDataReader>();
+        services.AddSingleton<ProductProcessor>();
+        services.AddSingleton<IDailyHistoryStore>(sp => new JsonDailyHistoryStore(sp.GetRequiredService<ILogger<JsonDailyHistoryStore>>()));
         services.AddSingleton<ISnapshotService, SnapshotService>();
         services.AddSingleton<IExcelWatcher, ExcelWatcher>();
         services.AddSingleton<IScreenManager, ScreenManager>();

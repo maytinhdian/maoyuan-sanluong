@@ -57,9 +57,12 @@ public sealed partial class MainViewModel : ObservableObject
     public DisplayHostViewModel PreviewHost { get; }
 
     [ObservableProperty] private string? _excelFile;
+    [ObservableProperty] private string? _sheetName;
+    [ObservableProperty] private string? _contentFile;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private LoadStatus _status;
     [ObservableProperty] private string? _lastLoadedText;
+    [ObservableProperty] private string? _dataInfoText;
     [ObservableProperty] private string? _lastError;
     [ObservableProperty] private bool _isMirror = true;
     [ObservableProperty] private bool _isRunning;
@@ -83,6 +86,8 @@ public sealed partial class MainViewModel : ObservableObject
     private void LoadFromConfiguration(DisplayConfiguration config)
     {
         ExcelFile = config.ExcelFile;
+        SheetName = config.SheetName;
+        ContentFile = config.ContentFile;
         IsMirror = config.DisplayMode == DisplayMode.Mirror;
         DefaultViewSeconds = config.DefaultViewSeconds.ToString();
         MaxPagedViewSeconds = config.MaxPagedViewSeconds.ToString();
@@ -104,6 +109,8 @@ public sealed partial class MainViewModel : ObservableObject
     public DisplayConfiguration BuildConfiguration() => new()
     {
         ExcelFile = ExcelFile,
+        SheetName = string.IsNullOrWhiteSpace(SheetName) ? null : SheetName.Trim(),
+        ContentFile = string.IsNullOrWhiteSpace(ContentFile) ? null : ContentFile,
         DisplayMode = IsMirror ? DisplayMode.Mirror : DisplayMode.Independent,
         AutoReload = AutoReload,
         DebounceMilliseconds = ParseInt(DebounceMilliseconds, 800, 100, 10000),
@@ -145,6 +152,19 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ChooseContentFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Chọn file nội dung phụ (thông báo, tên sản phẩm)",
+            Filter = "Excel (*.xlsx;*.xlsm)|*.xlsx;*.xlsm",
+            FileName = ContentFile ?? ""
+        };
+        if (dialog.ShowDialog() == true)
+            ContentFile = dialog.FileName;
+    }
+
+    [RelayCommand]
     private void ChooseImagesFolder()
     {
         var dialog = new OpenFolderDialog { Title = "Chọn thư mục ảnh" };
@@ -168,7 +188,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         if (!string.IsNullOrWhiteSpace(config.ExcelFile) && config.AutoReload)
-            _watcher.Watch(config.ExcelFile, config.DebounceMilliseconds);
+            _watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
         else
             _watcher.Stop();
 
@@ -239,6 +259,8 @@ public sealed partial class MainViewModel : ObservableObject
         LastLoadedText = _snapshots.LastLoadedAt is { } at ? at.LocalDateTime.ToString("HH:mm:ss dd/MM/yyyy") : null;
         OnPropertyChanged(nameof(IsHealthy));
 
+        if (_snapshots.Current is { } current && current.SheetName.Length > 0)
+            DataInfoText = $"Sheet \"{current.SheetName}\" · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm";
         if (Status == LoadStatus.Updated && _snapshots.Current is { } snapshot)
         {
             Warnings.Clear();

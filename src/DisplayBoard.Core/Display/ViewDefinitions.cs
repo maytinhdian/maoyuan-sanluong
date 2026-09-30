@@ -18,10 +18,26 @@ public sealed class DetailViewDefinition : IDisplayViewDefinition
 
     public string Id => ViewIds.Detail;
     public string Name => "Chi tiết sản lượng";
-    public bool HasContent(DisplayDataSnapshot snapshot) => snapshot.Employees.Count > 0;
+    public bool HasContent(DisplayDataSnapshot snapshot) => snapshot.Products.Count > 0;
 
     public static int PageCount(DisplayDataSnapshot snapshot) =>
-        Math.Max(1, (int)Math.Ceiling(snapshot.Employees.Count / (double)RowsPerPage));
+        Math.Max(1, (int)Math.Ceiling(snapshot.Products.Count / (double)RowsPerPage));
+
+    public TimeSpan? GetRequiredDuration(DisplayDataSnapshot snapshot) => PageDuration * PageCount(snapshot);
+}
+
+/// <summary>Lưới thẻ sản phẩm: tối đa 9 thẻ/trang, nhiều hơn thì lật trang.</summary>
+public sealed class ProductProgressViewDefinition : IDisplayViewDefinition
+{
+    public const int CardsPerPage = 9;
+    public static readonly TimeSpan PageDuration = TimeSpan.FromSeconds(10);
+
+    public string Id => ViewIds.ProductProgress;
+    public string Name => "Tiến độ theo sản phẩm";
+    public bool HasContent(DisplayDataSnapshot snapshot) => snapshot.Products.Count > 0;
+
+    public static int PageCount(DisplayDataSnapshot snapshot) =>
+        Math.Max(1, (int)Math.Ceiling(snapshot.Products.Count / (double)CardsPerPage));
 
     public TimeSpan? GetRequiredDuration(DisplayDataSnapshot snapshot) => PageDuration * PageCount(snapshot);
 }
@@ -31,13 +47,13 @@ public static class ViewCatalog
     public static IReadOnlyList<IDisplayViewDefinition> CreateDefault() =>
     [
         new ViewDefinition(ViewIds.Overview, "Sản lượng hôm nay", _ => true),
-        new ViewDefinition(ViewIds.Ranking, "Bảng xếp hạng nhân viên", s => s.Employees.Count > 0),
-        new ViewDefinition(ViewIds.DepartmentProgress, "Tiến độ thực hiện", s => s.Departments.Count > 0),
-        new ViewDefinition(ViewIds.TopPerformers, "Top 5 nhân viên xuất sắc", s => s.Employees.Any(e => e.Quantity > 0)),
-        // Không ai chưa đạt vẫn hiển thị màn hình chúc mừng.
-        new ViewDefinition(ViewIds.NotMet, "Nhân viên chưa đạt", s => s.Employees.Any(e => e.Target > 0)),
+        new ViewDefinition(ViewIds.Ranking, "Bảng xếp hạng sản phẩm", s => s.Products.Count > 0),
+        new ProductProgressViewDefinition(),
+        new ViewDefinition(ViewIds.TopProducts, "Sản phẩm vượt mục tiêu", s => s.Products.Any(p => p.DailyRate is not null)),
+        // Tất cả đạt vẫn hiển thị màn hình chúc mừng.
+        new ViewDefinition(ViewIds.NotMet, "Sản phẩm chưa đạt", s => s.Products.Any(p => p.DailyRate is not null)),
         new ViewDefinition(ViewIds.Notice, "Thông báo / Thông điệp", s => s.Notices.Count > 0),
         new DetailViewDefinition(),
-        new ViewDefinition(ViewIds.Trend, "Xu hướng sản lượng trong ngày", s => s.HasHourlyData),
+        new ViewDefinition(ViewIds.MonthProgress, "Tiến độ tháng", s => s.Summary.HasMonthData),
     ];
 }
