@@ -29,10 +29,13 @@ Stored per user under `%LOCALAPPDATA%\DisplayBoard\`:
 ## Excel data
 
 `ExcelDataReader` reads the `DATA` sheet read-only with ClosedXML, sharing the file so it works while Excel has it open.
-A sample workbook lives at `samples/SanLuong.xlsx`.
+A sample workbook lives at `samples/SanLuong.xlsx`; regenerate it with `dotnet run --project samples/generator -- samples/SanLuong.xlsx`.
 
 - Headers are matched ignoring case, extra spaces and column order; unknown columns are ignored.
-- Required: `Ngày`, `Mã NV`, `Họ tên`, `Bộ phận`, `Sản lượng`. Optional: `Mục tiêu`, `Ghi chú`.
+- Required: `Ngày`, `Mã NV`, `Họ tên`, `Bộ phận`, `Sản lượng`. Optional: `Giờ`, `Ca`, `Mục tiêu`, `Ghi chú`.
+- Every row becomes one `ProductionRecord`; an employee's hourly entries are returned as separate records and are
+  not summed by the reader.
+- `Giờ` accepts Excel times, date-times, or text like `08:00`, `8:05`, `9h30`.
 - A missing file, missing `DATA` sheet, missing required columns or a duplicated header throws `ExcelValidationException`.
 - A bad row (empty required cell, invalid date, non-numeric or negative number) is skipped and reported in
   `ExcelReadResult.Warnings` with its Excel row number. Blank rows are ignored.

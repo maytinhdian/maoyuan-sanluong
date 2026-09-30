@@ -6,7 +6,7 @@ namespace DisplayBoard.Tests.Excel;
 internal sealed class TestWorkbook : IDisposable
 {
     public static readonly string[] StandardHeaders =
-        ["Ngày", "Mã NV", "Họ tên", "Bộ phận", "Sản lượng", "Mục tiêu", "Ghi chú"];
+        ["Ngày", "Giờ", "Ca", "Mã NV", "Họ tên", "Bộ phận", "Sản lượng", "Mục tiêu", "Ghi chú"];
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "DisplayBoardTests", Guid.NewGuid().ToString("N"));
 
@@ -46,6 +46,19 @@ internal sealed class TestWorkbook : IDisposable
 
     public string CreateStandard(params object?[][] rows) => Create(StandardHeaders, rows);
 
+    /// <summary>A row in <see cref="StandardHeaders"/> order.</summary>
+    public static object?[] Row(
+        object? date,
+        object? code,
+        object? name,
+        object? department,
+        object? quantity,
+        object? target = null,
+        object? note = null,
+        object? time = null,
+        object? shift = null) =>
+        [date, time, shift, code, name, department, quantity, target, note];
+
     public string WriteRaw(byte[] content)
     {
         var path = Path.Combine(_directory, $"{Guid.NewGuid():N}.xlsx");
@@ -75,6 +88,7 @@ internal sealed class TestWorkbook : IDisposable
         double d => d,
         decimal m => (double)m,
         DateTime dt => dt,
+        TimeSpan ts => ts,
         bool b => b,
         _ => throw new ArgumentException($"Unsupported test value type {value.GetType()}"),
     };

@@ -12,6 +12,8 @@ public static class DataSheetSchema
     public const string SheetName = "DATA";
 
     public const string Date = "Ngày";
+    public const string Time = "Giờ";
+    public const string Shift = "Ca";
     public const string EmployeeCode = "Mã NV";
     public const string EmployeeName = "Họ tên";
     public const string Department = "Bộ phận";
@@ -22,7 +24,7 @@ public static class DataSheetSchema
     public static IReadOnlyList<string> RequiredColumns { get; } =
         [Date, EmployeeCode, EmployeeName, Department, Quantity];
 
-    public static IReadOnlyList<string> OptionalColumns { get; } = [Target, Note];
+    public static IReadOnlyList<string> OptionalColumns { get; } = [Time, Shift, Target, Note];
 
     public static IReadOnlyList<string> AllColumns { get; } = [.. RequiredColumns, .. OptionalColumns];
 

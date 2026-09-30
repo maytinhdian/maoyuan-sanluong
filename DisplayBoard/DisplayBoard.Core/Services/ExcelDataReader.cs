@@ -19,6 +19,9 @@ public sealed partial class ExcelDataReader : IExcelDataReader
     private static readonly string[] DateFormats =
         ["d/M/yyyy", "dd/MM/yyyy", "d-M-yyyy", "dd-MM-yyyy", "d.M.yyyy", "yyyy-MM-dd", "yyyy/MM/dd"];
 
+    private static readonly string[] TimeFormats =
+        [@"h\:mm", @"hh\:mm", @"h\:mm\:ss", @"hh\:mm\:ss", @"h\hmm", @"h\h"];
+
     private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
 
     private readonly ILogger<ExcelDataReader> _logger;
@@ -195,6 +198,7 @@ public sealed partial class ExcelDataReader : IExcelDataReader
         public ProductionRecord? Parse()
         {
             if (!TryGetDate(DataSheetSchema.Date, out var date)
+                || !TryGetTime(DataSheetSchema.Time, out var time)
                 || !TryGetRequiredText(DataSheetSchema.EmployeeCode, out var employeeCode)
                 || !TryGetRequiredText(DataSheetSchema.EmployeeName, out var employeeName)
                 || !TryGetRequiredText(DataSheetSchema.Department, out var department)
@@ -204,8 +208,9 @@ public sealed partial class ExcelDataReader : IExcelDataReader
                 return null;
             }
 
+            var shift = GetOptionalText(DataSheetSchema.Shift);
             var note = GetOptionalText(DataSheetSchema.Note);
-            return new ProductionRecord(date, employeeCode, employeeName, department, quantity!.Value, target, note);
+            return new ProductionRecord(date, time, shift, employeeCode, employeeName, department, quantity!.Value, target, note);
         }
 
         private XLCellValue? Value(string column) =>
@@ -251,6 +256,47 @@ public sealed partial class ExcelDataReader : IExcelDataReader
             }
 
             return Fail(column, $"'{Describe(v)}' không phải là ngày hợp lệ (dd/MM/yyyy).");
+        }
+
+        private bool TryGetTime(string column, out TimeOnly? time)
+        {
+            time = null;
+            var value = Value(column);
+            if (value is null || IsBlank(value.Value))
+            {
+                return true;
+            }
+
+            var v = value.Value;
+            if (v.IsTimeSpan)
+            {
+                var span = v.GetTimeSpan();
+                if (span >= TimeSpan.Zero && span < TimeSpan.FromDays(1))
+                {
+                    time = TimeOnly.FromTimeSpan(span);
+                }
+            }
+            else if (v.IsDateTime)
+            {
+                time = TimeOnly.FromDateTime(v.GetDateTime());
+            }
+            else if (v.IsNumber)
+            {
+                // Excel stores a time as a fraction of a day; a full date-time serial keeps the fractional part.
+                var serial = v.GetNumber();
+                if (serial >= 0 && double.IsFinite(serial) && serial < 2958466)
+                {
+                    time = TimeOnly.FromDateTime(DateTime.FromOADate(serial));
+                }
+            }
+            else if (v.IsText
+                && TimeSpan.TryParseExact(v.GetText().Trim(), TimeFormats, CultureInfo.InvariantCulture, out var parsed)
+                && parsed < TimeSpan.FromDays(1))
+            {
+                time = TimeOnly.FromTimeSpan(parsed);
+            }
+
+            return time is not null || Fail(column, $"'{Describe(v)}' không phải là giờ hợp lệ (HH:mm).");
         }
 
         private bool TryGetRequiredText(string column, out string text)
