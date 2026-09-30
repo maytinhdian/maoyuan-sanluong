@@ -18,7 +18,7 @@ public sealed partial class ProductProgressViewModel : DisplayViewModelBase
     }
 
     public override string ViewId => ViewIds.ProductProgress;
-    public override string Title => "TIẾN ĐỘ THEO SẢN PHẨM";
+    public override string Title => "TIẾN ĐỘ TỪNG CHUYỀN";
     public override string IconKind => "factory";
 
     [ObservableProperty] private IReadOnlyList<ProductRow> _cards = [];
@@ -31,7 +31,7 @@ public sealed partial class ProductProgressViewModel : DisplayViewModelBase
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        _all = ProductRow.From(snapshot.Products, snapshot.HasMultipleLines);
+        _all = ProductRow.From(snapshot.Products);
         Unit = snapshot.Unit;
         PageCount = ProductProgressViewDefinition.PageCount(snapshot);
         ShowPage(Page);

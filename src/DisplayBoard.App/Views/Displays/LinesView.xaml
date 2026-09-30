@@ -28,6 +28,7 @@
                                                Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource BoardText}" FontSize="48" FontWeight="Bold" VerticalAlignment="Center" />
                                 </DockPanel>
+                                <TextBlock Text="{Binding Product}" Style="{StaticResource BoardText}" FontSize="32" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis" />
                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                     <TextBlock Text="{Binding DailyActual}" Style="{StaticResource BoardText}" FontSize="80" FontWeight="Bold" />
                                     <TextBlock Style="{StaticResource BoardText}" FontSize="40" VerticalAlignment="Bottom" Margin="14,0,0,12" Foreground="{StaticResource TextSecondary}">
@@ -41,7 +42,7 @@
                                         <Run Text="Tháng " Foreground="{StaticResource TextSecondary}" /><Run Text="{Binding MonthRate, Mode=OneWay}" FontWeight="Bold"
                                              Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
                                     </TextBlock>
-                                    <TextBlock Text="{Binding MetText}" Style="{StaticResource BoardText}" FontSize="30" Foreground="{StaticResource TextSecondary}" />
+                                    <TextBlock Text="{Binding HourlyText}" Style="{StaticResource BoardText}" FontSize="30" Foreground="{StaticResource TextSecondary}" />
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource BoardText}" FontSize="30" Margin="0,10,0,0" Foreground="{StaticResource NearBrush}"
                                            Visibility="{Binding CarriedShortfall, Converter={StaticResource NullToVisibility}}">

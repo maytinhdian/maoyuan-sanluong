@@ -94,8 +94,7 @@ public partial class App : Application
 
         services.AddSingleton<IConfigurationService>(sp => new ConfigurationService(sp.GetRequiredService<ILogger<ConfigurationService>>()));
         services.AddSingleton<IExcelDataReader, ExcelDataReader>();
-        services.AddSingleton<ProductProcessor>();
-        services.AddSingleton<IDailyHistoryStore>(sp => new JsonDailyHistoryStore(sp.GetRequiredService<ILogger<JsonDailyHistoryStore>>()));
+        services.AddSingleton<SnapshotBuilder>();
         services.AddSingleton<ISnapshotService, SnapshotService>();
         services.AddSingleton<IExcelWatcher, ExcelWatcher>();
         services.AddSingleton<IScreenManager, ScreenManager>();

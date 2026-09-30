@@ -64,19 +64,15 @@ public class RenderViewsTests
     private static DisplayDataSnapshot LoadSampleSnapshot()
     {
         var samples = Path.Combine(RepoRoot(), "samples");
-        ProductionSheet sheet;
-        using (var stream = File.OpenRead(Path.Combine(samples, "SanLuong-khach-mau.xlsx")))
-            sheet = ProductionWorkbookReader.Read(stream, null);
+        DisplaySheet sheet;
+        using (var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V18_mau.xlsx")))
+            sheet = DisplaySheetReader.Read(stream);
         ContentData content;
         using (var stream = File.OpenRead(Path.Combine(samples, "display-content.xlsx")))
             content = ContentWorkbookReader.Read(stream);
         var date = sheet.Date ?? DateOnly.FromDateTime(DateTime.Today);
         var now = new DateTimeOffset(date.ToDateTime(new TimeOnly(14, 30)));
-        // Ngày trước: mỗi sản phẩm thứ hai thiếu 10% để ảnh chụp có phần "thiếu hôm trước".
-        var previous = new DayHistory(date.AddDays(-1), sheet.Records
-            .Select((r, i) => new ProductDayResult(r.ProductCode, r.DailyTarget, i % 2 == 0 ? r.DailyTarget * 0.9m : r.DailyTarget, r.Line))
-            .ToList());
-        return new ProductProcessor().Build(sheet, content, now, Path.Combine(samples, "images"), previous);
+        return new SnapshotBuilder().Build(sheet, content, now, Path.Combine(samples, "images"));
     }
 
     private static void Save(BitmapSource bitmap, string name)

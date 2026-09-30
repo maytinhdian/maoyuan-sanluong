@@ -23,7 +23,7 @@ public sealed class DisplayConfiguration
 {
     public string? ExcelFile { get; set; }
 
-    /// <summary>Tên sheet cố định. Null = tự chọn sheet có ngày mới nhất.</summary>
+    /// <summary>Sheet hiển thị. Null = HIEN_THI.</summary>
     public string? SheetName { get; set; }
 
     /// <summary>File nội dung phụ (thông báo, khẩu hiệu, tên sản phẩm). Null = display-content.xlsx cạnh file dữ liệu.</summary>

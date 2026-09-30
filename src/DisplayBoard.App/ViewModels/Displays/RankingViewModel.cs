@@ -10,11 +10,11 @@ public sealed partial class RankingViewModel(ClockViewModel clock) : DisplayView
     public const int MaxRows = 10;
 
     public override string ViewId => ViewIds.Ranking;
-    public override string Title => "BẢNG XẾP HẠNG SẢN PHẨM";
+    public override string Title => "BẢNG XẾP HẠNG CHUYỀN";
     public override string IconKind => "chart";
 
     [ObservableProperty] private IReadOnlyList<ProductRow> _rows = [];
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot) =>
-        Rows = ProductRow.From(snapshot.Products.OrderBy(p => p.Rank).Take(MaxRows), snapshot.HasMultipleLines);
+        Rows = ProductRow.From(snapshot.Products.OrderBy(p => p.Rank).Take(MaxRows));
 }

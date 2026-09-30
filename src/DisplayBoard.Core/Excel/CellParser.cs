@@ -10,12 +10,20 @@ internal static partial class CellParser
     private static readonly string[] DateFormats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy", "d-M-yyyy"];
     private static readonly string[] TimeFormats = ["HH:mm", "H:mm", "HH:mm:ss", "H:mm:ss", "H'h'mm", "H'h'"];
 
+    /// <summary>
+    /// Giá trị ô, với ô công thức thì lấy giá trị Excel đã tính và lưu trong file (không để ClosedXML tự tính lại).
+    /// File chưa từng được lưu bằng Excel thì ô công thức trả về rỗng.
+    /// </summary>
+    public static XLCellValue Raw(IXLCell cell) => cell.HasFormula ? cell.CachedValue : cell.Value;
+
     public static string? GetText(IXLCell cell)
     {
-        var value = cell.Value;
+        var value = Raw(cell);
         if (value.IsBlank)
             return null;
-        var text = value.IsText ? value.GetText() : cell.GetFormattedString();
+        var text = value.IsText ? value.GetText()
+            : cell.HasFormula ? value.ToString(CultureInfo.InvariantCulture)
+            : cell.GetFormattedString();
         text = text.Trim();
         return text.Length == 0 ? null : text;
     }
@@ -24,7 +32,7 @@ internal static partial class CellParser
 
     public static bool TryGetDate(IXLCell cell, out DateOnly date)
     {
-        var value = cell.Value;
+        var value = Raw(cell);
         if (value.IsDateTime)
         {
             date = DateOnly.FromDateTime(value.GetDateTime());
@@ -51,7 +59,7 @@ internal static partial class CellParser
 
     public static bool TryGetTime(IXLCell cell, out TimeOnly time)
     {
-        var value = cell.Value;
+        var value = Raw(cell);
         if (value.IsTimeSpan)
         {
             var span = value.GetTimeSpan();
@@ -87,7 +95,7 @@ internal static partial class CellParser
 
     public static bool TryGetDecimal(IXLCell cell, out decimal number)
     {
-        var value = cell.Value;
+        var value = Raw(cell);
         if (value.IsNumber)
         {
             number = (decimal)value.GetNumber();

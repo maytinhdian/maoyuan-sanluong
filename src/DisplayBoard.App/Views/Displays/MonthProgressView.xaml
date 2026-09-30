@@ -19,23 +19,18 @@
             <Border Style="{StaticResource Card}" Margin="0,0,30,0">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="LŨY KẾ THÁNG" Style="{StaticResource CardTitle}" FontSize="40" HorizontalAlignment="Center" Foreground="White" />
-                    <Grid Width="360" Height="360" Margin="0,30">
-                        <c:ProgressRing Value="{Binding Rate}" Thickness="34" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                        <TextBlock Text="{Binding RateText}" Style="{StaticResource BoardText}" FontSize="96" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Grid>
-                    <TextBlock Text="{Binding Cumulative}" Style="{StaticResource KpiValue}" HorizontalAlignment="Center" />
-                    <TextBlock Style="{StaticResource BoardText}" FontSize="36" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}">
-                        <Run Text="Mục tiêu " /><Run Text="{Binding Target, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding Unit, Mode=OneWay}" />
-                    </TextBlock>
-                    <TextBlock Text="{Binding Variance}" Style="{StaticResource BoardText}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16,0,0"
-                               Foreground="{Binding VarianceNegative, Converter={StaticResource StatusBrush}}" />
+                    <TextBlock Text="{Binding Cumulative}" Style="{StaticResource KpiValue}" FontSize="120" HorizontalAlignment="Center" Margin="0,40,0,0" />
+                    <TextBlock Text="{Binding Unit}" Style="{StaticResource BoardText}" FontSize="40" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Tổng 6 chuyền trong tháng" Style="{StaticResource BoardText}" FontSize="32" HorizontalAlignment="Center" Margin="0,30,0,0"
+                               Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="% tháng xem theo từng chuyền bên phải" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,8,0,0"
+                               Foreground="{StaticResource TextSecondary}" />
                 </StackPanel>
             </Border>
-            <!-- Từng sản phẩm, thiếu nhiều nhất ở trên -->
+            <!-- Từng chuyền, % tháng thấp nhất ở trên -->
             <Border Grid.Column="1" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="THEO SẢN PHẨM" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
+                    <TextBlock Text="THEO TỪNG CHUYỀN" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
                     <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

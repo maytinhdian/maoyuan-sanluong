@@ -9,15 +9,18 @@ public class PlaylistRotatorTests
     private static DisplayDataSnapshot Snapshot(int products = 3, bool notices = false, bool month = false)
     {
         var list = Enumerable.Range(1, products)
-            .Select(i => new ProductDaily($"P{i}", $"P{i}", "#fff", null, 100, 100, 0, 100, ProgressStatus.Met,
-                null, null, null, null, ProgressStatus.None, null, null, i))
+            .Select(i => new ProductDaily
+            {
+                Line = $"Chuyền {i}", ProductCode = $"P{i}", DisplayName = $"P{i}", Color = "#fff",
+                DailyTarget = 100, DailyActual = 100, HasActual = true, DailyRate = 100, DailyStatus = ProgressStatus.Met,
+                MonthTarget = month ? 1000 : null, Rank = i,
+            })
             .ToList();
         var empty = DisplayDataSnapshot.Empty(DateTimeOffset.Now);
         return empty with
         {
             Products = list,
             Notices = notices ? [new Notice("T", "N", null, 1)] : [],
-            Summary = empty.Summary with { MonthTarget = month ? 1000 : 0 },
         };
     }
 

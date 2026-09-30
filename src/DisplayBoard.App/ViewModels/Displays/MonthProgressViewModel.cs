@@ -14,32 +14,21 @@ public sealed partial class MonthProgressViewModel(ClockViewModel clock) : Displ
     public override string IconKind => "trend";
 
     [ObservableProperty] private string _cumulative = "0";
-    [ObservableProperty] private string _target = "0";
-    [ObservableProperty] private string _rateText = "0%";
-    [ObservableProperty] private double _rate;
-    [ObservableProperty] private ProgressStatus _status;
-    [ObservableProperty] private string _variance = "0";
-    [ObservableProperty] private bool _varianceNegative;
     [ObservableProperty] private string _unit = "PCS";
     [ObservableProperty] private IReadOnlyList<ProductRow> _rows = [];
     [ObservableProperty] private string? _moreText;
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        var s = snapshot.Summary;
-        Cumulative = Format.Number(s.MonthCumulative);
-        Target = Format.Number(s.MonthTarget);
-        Rate = (double)s.MonthRate;
-        RateText = $"{s.MonthRate:0}%";
-        Status = s.MonthStatus;
-        Variance = Format.Signed(s.MonthVariance);
-        VarianceNegative = s.MonthVariance < 0;
+        // Dòng TỔNG CỘNG không cộng mục tiêu tháng (mã hàng có thể trùng giữa các chuyền),
+        // nên thẻ tổng chỉ hiện lũy kế tháng của các chuyền.
+        Cumulative = Format.Number(snapshot.Summary.LineMonthCumulative);
         Unit = snapshot.Unit;
 
         // Sản phẩm đang thiếu nhiều nhất nằm trên.
         var withMonth = snapshot.Products.Where(p => p.MonthTarget > 0).OrderBy(p => p.MonthRate).ToList();
         var shown = withMonth.Count > MaxRows ? MaxRows - 1 : withMonth.Count;
-        Rows = ProductRow.From(withMonth.Take(shown), snapshot.HasMultipleLines);
-        MoreText = withMonth.Count > shown ? $"+{withMonth.Count - shown} sản phẩm khác" : null;
+        Rows = ProductRow.From(withMonth.Take(shown));
+        MoreText = withMonth.Count > shown ? $"+{withMonth.Count - shown} chuyền khác" : null;
     }
 }

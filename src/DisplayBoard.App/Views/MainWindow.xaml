@@ -118,7 +118,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Sheet:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
                                     <TextBox Grid.Column="1" Text="{Binding SheetName}" FontWeight="Normal" VerticalContentAlignment="Center"
-                                             ToolTip="Để trống: đọc mọi sheet có ngày mới nhất, mỗi sheet là một chuyền. Ghi tên sheet để chỉ chiếu một chuyền." />
+                                             ToolTip="Để trống: đọc sheet HIEN_THI. Chỉ ghi tên khi sheet hiển thị được đổi tên." />
                                     <TextBlock Grid.Column="2" Text="File nội dung phụ:" FontWeight="Normal" VerticalAlignment="Center" Margin="16,0,8,0" />
                                     <TextBox Grid.Column="3" Text="{Binding ContentFile}" FontWeight="Normal" VerticalContentAlignment="Center"
                                              ToolTip="Để trống: display-content.xlsx cạnh file dữ liệu" />

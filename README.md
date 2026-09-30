@@ -1,6 +1,6 @@
 # Display Board – Bảng sản lượng trên TV
 
-App Windows đọc file Excel sản lượng của khách (theo sản phẩm) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
+App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_THI`) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
 
 ## Yêu cầu
 
@@ -13,44 +13,35 @@ App Windows đọc file Excel sản lượng của khách (theo sản phẩm) v�
 dotnet run --project src/DisplayBoard.App
 ```
 
-1. Bấm **Chọn file…** và chọn `samples/SanLuong-khach-mau.xlsx` (bản mô phỏng file của khách).
+1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V18_mau.xlsx` (file V18 với số liệu thử).
 2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
 3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
 
-Tạo lại file mẫu (tham số thứ hai là ngày ghi ở ô A1):
+Tạo lại file nội dung phụ mẫu `samples/display-content.xlsx`:
 
 ```powershell
-dotnet run --project tools/DisplayBoard.SampleGenerator -- samples 2026/09/30
+dotnet run --project tools/DisplayBoard.SampleGenerator -- samples
 ```
 
-## File Excel của khách
+## File Excel sản lượng
 
-App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào file đó**. Mỗi dòng là một sản phẩm:
+**Mọi con số đều do công thức Excel tính**, để nhân viên dùng chính file đó kiểm tra. App chỉ đọc sheet `HIEN_THI` (bảng `tblHienThi`) và **không bao giờ ghi vào file**, không tự tính %, chênh lệch hay phần thiếu.
 
-| Cột | Tiêu đề (Trung / Việt) | Ghi chú |
-|---|---|---|
-| A | 产品代码 / MÃ SẢN PHẨM | chữ hoặc số |
-| B | 每日工时数 / THỜI GIAN LÊN CA | giờ của ca làm hôm đó |
-| C | 每小时目标产量 / MỤC TIÊU MỖI GIỜ | |
-| D | 每日目标产量 / MỤC TIÊU TRONG NGÀY | trống thì app tính B × C |
-| E | 每日实际产量 / THỰC TẾ | nhân viên nhập |
-| G | 当月总目标产量 / TỔNG SẢN LƯỢNG TRONG THÁNG | mục tiêu tháng |
-| H | 当月累计产能 / LŨY KẾ | |
-
-- Ngày lấy từ ô A1 (`日期：2026/09/30`). Cột được nhận theo tiêu đề (tiếng Trung trước, rồi tiếng Việt), nên đổi thứ tự cột vẫn đọc được.
-- Dòng tổng cuối bảng (`TỔNG`, `TỔNG CỘNG`, `合计`, `Total`) được bỏ qua, không tính là một sản phẩm.
-- %, chênh lệch và trạng thái do app tự tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
-- **Mỗi sheet là một chuyền** (khách có 6 chuyền). App đọc mọi sheet có ngày mới nhất; sheet của ngày cũ còn sót lại bị bỏ qua. Cùng một mã sản phẩm ở 2 chuyền được tính riêng. Ghi tên sheet vào ô **Sheet** ở màn hình chính nếu chỉ muốn chiếu một chuyền.
-- **Phần thiếu hôm trước**: mỗi lần đọc file, app lưu kết quả của ngày đó vào `%AppData%\DisplayBoard\daily-history.json`. Hôm sau các màn hình hiện số còn thiếu của ngày làm việc trước (bỏ qua ngày nghỉ), tính riêng theo từng chuyền và sản phẩm.
+- 6 dòng dữ liệu, mỗi dòng một chuyền, và dòng **TỔNG CỘNG** ở cuối.
+- Cột được nhận theo tiêu đề tiếng Việt (hàng 3): CHUYỀN, MÃ HÀNG, MỤC TIÊU TRONG NGÀY, THỰC TẾ TRONG NGÀY, % ĐẠT NGÀY, CÒN THIẾU, THIẾU NGÀY TRƯỚC, lũy kế và % tháng, GIỜ 1–12… Thiếu cột CHUYỀN, MỤC TIÊU TRONG NGÀY hoặc THỰC TẾ TRONG NGÀY thì app báo lỗi rõ tên cột.
+- Ngày lấy từ cột NGÀY (hoặc ô ngày ở hàng tiêu đề).
+- Trạng thái màu theo % Excel tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
+- Dòng TỔNG CỘNG không cộng mục tiêu/lũy kế tháng theo mã hàng (mã có thể trùng giữa các chuyền), nên màn hình tháng hiện % theo từng chuyền và tổng lũy kế tháng của các chuyền.
+- **File phải được Excel tính và lưu ít nhất một lần.** App đọc giá trị Excel đã tính sẵn trong file; file tạo bằng công cụ khác chưa mở bằng Excel sẽ bị báo "File chưa được Excel tính công thức".
 
 ### File nội dung phụ (không bắt buộc)
 
-`display-content.xlsx` đặt cạnh file khách (hoặc chọn file khác ở màn hình chính):
+`display-content.xlsx` đặt cạnh file sản lượng (hoặc chọn file khác ở màn hình chính):
 
 | Sheet | Cột |
 |---|---|
-| `SAN_PHAM` | Mã sản phẩm, Tên hiển thị, Màu, Ảnh, Thứ tự |
+| `SAN_PHAM` | Mã hàng, Tên hiển thị, Màu, Ảnh, Thứ tự |
 | `THONG_BAO` | Tiêu đề, Nội dung, Ảnh nền, Từ ngày, Đến ngày, Thứ tự, Bật |
 | `KHAU_HIEU` | Icon, Dòng 1, Dòng 2 |
 | `CAU_HINH` | Khóa, Giá trị (`DonVi`, `TenCongTy`) |
@@ -61,32 +52,31 @@ App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào
 
 | Id | Nội dung |
 |---|---|
-| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, cột theo chuyền (hoặc theo sản phẩm nếu chỉ 1 chuyền), phần thiếu hôm trước |
-| `ranking` | Xếp hạng sản phẩm theo % hoàn thành |
-| `product-progress` | Thẻ tiến độ từng sản phẩm (ngày và tháng) |
-| `top-products` | Sản phẩm vượt mục tiêu |
-| `not-met` | Sản phẩm chưa đạt |
+| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, cột theo chuyền, phần thiếu hôm trước |
+| `ranking` | Xếp hạng chuyền theo % hoàn thành |
+| `product-progress` | Thẻ tiến độ từng chuyền (ngày và tháng) |
+| `top-products` | Chuyền dẫn đầu / vượt mục tiêu |
+| `not-met` | Chuyền chưa đạt |
 | `notice` | Thông báo / thông điệp |
-| `detail` | Bảng chi tiết giống file khách, tự lật trang |
-| `month-progress` | Lũy kế tháng so với mục tiêu tháng |
-| `lines` | So sánh các chuyền: thực tế/mục tiêu, %, số sản phẩm đạt, phần thiếu hôm trước |
+| `detail` | Bảng chi tiết từng chuyền, tự lật trang |
+| `month-progress` | Lũy kế và % tháng từng chuyền |
+| `lines` | Thẻ từng chuyền: mã hàng, thực tế/mục tiêu, %, tiến độ theo giờ, phần thiếu hôm trước |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 
 ## Cấu hình và log
 
 - Cấu hình: `%AppData%\DisplayBoard\display-config.json`
-- Lịch sử từng ngày: `%AppData%\DisplayBoard\daily-history.json`
 - Log: `%LocalAppData%\DisplayBoard\logs\display-board-YYYYMMDD.log`
 
 ## Cấu trúc mã nguồn
 
 ```text
-src/DisplayBoard.Core      Đọc Excel, tổng hợp dữ liệu, snapshot, theo dõi file, xoay trang (không phụ thuộc WPF)
-src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 8 view, khay hệ thống
+src/DisplayBoard.Core      Đọc Excel (HIEN_THI), dựng snapshot, theo dõi file, xoay trang (không phụ thuộc WPF)
+src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 9 view, khay hệ thống
 tests/DisplayBoard.Tests   Unit test cho Core (chạy được trên mọi hệ điều hành)
 tests/DisplayBoard.App.Tests  Render từng view ra PNG và bắt lỗi binding (chỉ Windows)
-tools/DisplayBoard.SampleGenerator  Tạo file Excel mẫu
+tools/DisplayBoard.SampleGenerator  Tạo file nội dung phụ mẫu
 ```
 
 Đặc tả chi tiết: xem `display-board-app-spec.md` trong project.

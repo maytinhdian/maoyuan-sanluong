@@ -33,7 +33,7 @@ public sealed class ProductProgressViewDefinition : IDisplayViewDefinition
     public static readonly TimeSpan PageDuration = TimeSpan.FromSeconds(10);
 
     public string Id => ViewIds.ProductProgress;
-    public string Name => "Tiến độ theo sản phẩm";
+    public string Name => "Tiến độ từng chuyền";
     public bool HasContent(DisplayDataSnapshot snapshot) => snapshot.Products.Count > 0;
 
     public static int PageCount(DisplayDataSnapshot snapshot) =>
@@ -47,14 +47,14 @@ public static class ViewCatalog
     public static IReadOnlyList<IDisplayViewDefinition> CreateDefault() =>
     [
         new ViewDefinition(ViewIds.Overview, "Sản lượng hôm nay", _ => true),
-        new ViewDefinition(ViewIds.Ranking, "Bảng xếp hạng sản phẩm", s => s.Products.Count > 0),
+        new ViewDefinition(ViewIds.Ranking, "Bảng xếp hạng chuyền", s => s.Products.Count > 0),
         new ProductProgressViewDefinition(),
-        new ViewDefinition(ViewIds.TopProducts, "Sản phẩm vượt mục tiêu", s => s.Products.Any(p => p.DailyRate is not null)),
+        new ViewDefinition(ViewIds.TopProducts, "Chuyền dẫn đầu", s => s.Products.Any(p => p.DailyRate is not null)),
         // Tất cả đạt vẫn hiển thị màn hình chúc mừng.
-        new ViewDefinition(ViewIds.NotMet, "Sản phẩm chưa đạt", s => s.Products.Any(p => p.DailyRate is not null)),
+        new ViewDefinition(ViewIds.NotMet, "Chuyền chưa đạt", s => s.Products.Any(p => p.DailyRate is not null)),
         new ViewDefinition(ViewIds.Notice, "Thông báo / Thông điệp", s => s.Notices.Count > 0),
         new DetailViewDefinition(),
-        new ViewDefinition(ViewIds.MonthProgress, "Tiến độ tháng", s => s.Summary.HasMonthData),
+        new ViewDefinition(ViewIds.MonthProgress, "Tiến độ tháng", s => s.HasMonthData),
         new ViewDefinition(ViewIds.Lines, "So sánh các chuyền", s => s.HasMultipleLines),
     ];
 }

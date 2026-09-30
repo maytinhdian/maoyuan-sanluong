@@ -34,27 +34,23 @@ public sealed partial class OverviewViewModel(ClockViewModel clock) : DisplayVie
         var s = snapshot.Summary;
         DailyActual = Format.Number(s.DailyActual);
         DailyTarget = Format.Number(s.DailyTarget);
-        DailyRate = (double)s.DailyRate;
-        DailyRateText = $"{s.DailyRate:0}%";
+        DailyRate = (double)(s.DailyRate ?? 0);
+        DailyRateText = Format.Percent(s.DailyRate);
         DailyStatus = s.DailyStatus;
         Unit = snapshot.Unit;
-        MonthStatus = s.MonthStatus;
-        MonthText = s.HasMonthData
-            ? $"Tháng: lũy kế {Format.Number(s.MonthCumulative)} / {Format.Number(s.MonthTarget)} {snapshot.Unit} · {s.MonthRate:0}% · chênh lệch {Format.Signed(s.MonthVariance)}"
+        MonthStatus = ProgressStatus.None;
+        MonthText = s.LineMonthCumulative is > 0
+            ? $"Lũy kế tháng các chuyền: {Format.Number(s.LineMonthCumulative)} {snapshot.Unit}"
+                + (s.HourlyProgress is null ? "" : $" · Tiến độ theo giờ: {Format.Percent(s.HourlyProgress)}")
             : null;
-        CarriedText = s.CarriedProductCount > 0
-            ? $"Ngày {s.CarriedFromDate:dd/MM} còn thiếu {Format.Number(s.CarriedShortfall)} {snapshot.Unit} ({s.CarriedProductCount} sản phẩm), cần bù"
+        CarriedText = s.CarriedShortfall > 0
+            ? $"Ngày {s.CarriedFromDate:dd/MM} còn thiếu {Format.Number(s.CarriedShortfall)} {snapshot.Unit} ({s.CarriedProductCount} chuyền), cần bù"
             : null;
-        MetSummary = $"{s.ProductCount} sản phẩm · {s.MetCount} đạt · {s.NotMetCount} chưa đạt";
+        MetSummary = $"{s.ProductCount} chuyền · {s.MetCount} đạt · {s.NotMetCount} chưa đạt";
 
-        // Nhiều chuyền: mỗi cột là một chuyền (6 cột dễ đọc hơn vài chục cột sản phẩm).
-        MetSummary = snapshot.HasMultipleLines
-            ? $"{snapshot.Lines.Count} chuyền · {s.ProductCount} sản phẩm · {s.MetCount} đạt · {s.NotMetCount} chưa đạt"
-            : MetSummary;
-        ChartTitle = snapshot.HasMultipleLines ? "SẢN LƯỢNG THEO CHUYỀN" : "SẢN LƯỢNG THEO SẢN PHẨM";
-        var items = snapshot.HasMultipleLines
-            ? snapshot.Lines.Select(l => (l.Name, l.DailyActual, l.DailyTarget, l.DailyStatus, Color: "#2E86DE")).ToList()
-            : snapshot.Products.Select(p => (Name: p.DisplayName, p.DailyActual, p.DailyTarget, p.DailyStatus, p.Color)).ToList();
+        // Mỗi cột là một chuyền, màu theo % đạt do Excel tính.
+        ChartTitle = "SẢN LƯỢNG THEO CHUYỀN";
+        var items = snapshot.Products.Select(p => (Name: p.Line, p.DailyActual, p.DailyTarget, p.DailyStatus, p.Color)).ToList();
         var max = items.Select(i => Math.Max(i.DailyActual, i.DailyTarget)).DefaultIfEmpty(0).Max();
         Bars = items
             .Select(i => new ProductBar(

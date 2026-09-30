@@ -34,7 +34,7 @@
                         <ColumnDefinition Width="160" /><ColumnDefinition Width="110" /><ColumnDefinition Width="170" /><ColumnDefinition Width="180" />
                         <ColumnDefinition Width="180" /><ColumnDefinition Width="170" /><ColumnDefinition Width="130" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Mã sản phẩm" Style="{StaticResource Head}" HorizontalAlignment="Left" TextAlignment="Left" />
+                    <TextBlock Text="Chuyền · Mã hàng" Style="{StaticResource Head}" HorizontalAlignment="Left" TextAlignment="Left" />
                     <TextBlock Grid.Column="1" Text="Giờ ca" Style="{StaticResource Head}" />
                     <TextBlock Grid.Column="2" Text="MT / giờ" Style="{StaticResource Head}" />
                     <TextBlock Grid.Column="3" Text="MT ngày" Style="{StaticResource Head}" />
@@ -43,7 +43,7 @@
                     <TextBlock Grid.Column="6" Text="Thiếu hôm trước" Style="{StaticResource Head}" />
                     <TextBlock Grid.Column="7" Text="MT tháng" Style="{StaticResource Head}" />
                     <TextBlock Grid.Column="8" Text="Lũy kế" Style="{StaticResource Head}" />
-                    <TextBlock Grid.Column="9" Text="Chênh lệch" Style="{StaticResource Head}" />
+                    <TextBlock Grid.Column="9" Text="Còn thiếu tháng" Style="{StaticResource Head}" />
                     <TextBlock Grid.Column="10" Text="% tháng" Style="{StaticResource Head}" />
                 </Grid>
             </Border>
@@ -71,8 +71,8 @@
                                 <TextBlock Grid.Column="6" Text="{Binding CarriedShortfall}" Style="{StaticResource Num}" Foreground="{StaticResource NearBrush}" />
                                 <TextBlock Grid.Column="7" Text="{Binding MonthTarget}" Style="{StaticResource Num}" />
                                 <TextBlock Grid.Column="8" Text="{Binding MonthCumulative}" Style="{StaticResource Num}" />
-                                <TextBlock Grid.Column="9" Text="{Binding MonthVariance}" Style="{StaticResource Num}"
-                                           Foreground="{Binding MonthVarianceNegative, Converter={StaticResource StatusBrush}}" />
+                                <TextBlock Grid.Column="9" Text="{Binding MonthRemaining}" Style="{StaticResource Num}"
+                                           Foreground="{Binding MonthBehind, Converter={StaticResource StatusBrush}}" />
                                 <TextBlock Grid.Column="10" Text="{Binding MonthRate}" Style="{StaticResource Num}"
                                            Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
                             </Grid>
@@ -100,7 +100,7 @@
                     <TextBlock Grid.Column="6" Text="{Binding TotalCarried}" Style="{StaticResource Num}" FontWeight="Bold" Foreground="{StaticResource NearBrush}" />
                     <TextBlock Grid.Column="7" Text="{Binding TotalMonthTarget}" Style="{StaticResource Num}" FontWeight="Bold" />
                     <TextBlock Grid.Column="8" Text="{Binding TotalMonthCumulative}" Style="{StaticResource Num}" FontWeight="Bold" />
-                    <TextBlock Grid.Column="9" Text="{Binding TotalMonthVariance}" Style="{StaticResource Num}" FontWeight="Bold" />
+                    <TextBlock Grid.Column="9" Text="{Binding TotalMonthRemaining}" Style="{StaticResource Num}" FontWeight="Bold" />
                     <TextBlock Grid.Column="10" Text="{Binding TotalMonthRate}" Style="{StaticResource Num}" FontWeight="Bold" />
                 </Grid>
             </Border>

@@ -9,8 +9,7 @@ namespace DisplayBoard.Core.Services;
 /// <summary>Đọc Excel có retry khi file bị khóa, build snapshot và thay thế nguyên khối. Lỗi thì giữ Last Good Snapshot.</summary>
 public sealed class SnapshotService(
     IExcelDataReader reader,
-    ProductProcessor processor,
-    IDailyHistoryStore history,
+    SnapshotBuilder builder,
     IConfigurationService configuration,
     TimeProvider time,
     ILogger<SnapshotService> logger) : ISnapshotService
@@ -65,16 +64,13 @@ public sealed class SnapshotService(
         {
             try
             {
-                var sheet = await reader.ReadProductionAsync(path, config.SheetName, ct).ConfigureAwait(false);
+                var sheet = await reader.ReadDisplayAsync(path, config.SheetName, ct).ConfigureAwait(false);
                 var content = await ReadContentAsync(config.ResolveContentFile(), ct).ConfigureAwait(false);
-                var now = time.GetLocalNow();
-                var date = sheet.Date ?? DateOnly.FromDateTime(now.LocalDateTime);
-                var snapshot = processor.Build(sheet, content, now, config.ResolveImagesFolder(), history.GetPreviousDay(date));
-                history.Save(ProductProcessor.ToHistory(snapshot));
+                var snapshot = builder.Build(sheet, content, time.GetLocalNow(), config.ResolveImagesFolder());
                 Volatile.Write(ref _current, snapshot);
                 LastLoadedAt = snapshot.GeneratedAt;
                 logger.LogInformation("Đọc Excel xong: sheet {Sheet}, ngày {Date}, {Rows} sản phẩm, {Warnings} cảnh báo, {Elapsed} ms",
-                    sheet.SheetName, sheet.Date, sheet.Records.Count, snapshot.Warnings.Count, (int)time.GetElapsedTime(started).TotalMilliseconds);
+                    sheet.SheetName, sheet.Date, sheet.Lines.Count, snapshot.Warnings.Count, (int)time.GetElapsedTime(started).TotalMilliseconds);
                 foreach (var warning in snapshot.Warnings)
                     logger.LogWarning("{Warning}", warning);
                 SetStatus(LoadStatus.Updated, snapshot.Warnings.Count > 0 ? $"{snapshot.Warnings.Count} cảnh báo dữ liệu" : null);

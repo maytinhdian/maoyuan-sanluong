@@ -8,7 +8,7 @@ namespace DisplayBoard.App.ViewModels.Displays;
 public sealed partial class TopProductsViewModel(ClockViewModel clock) : DisplayViewModelBase(clock)
 {
     public override string ViewId => ViewIds.TopProducts;
-    public override string Title => AnyMet ? "SẢN PHẨM VƯỢT MỤC TIÊU" : "SẢN PHẨM DẪN ĐẦU";
+    public override string Title => AnyMet ? "CHUYỀN VƯỢT MỤC TIÊU" : "CHUYỀN DẪN ĐẦU";
     public override string IconKind => "star";
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Title))] private bool _anyMet;
@@ -17,6 +17,6 @@ public sealed partial class TopProductsViewModel(ClockViewModel clock) : Display
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
         AnyMet = snapshot.Products.Any(p => p.DailyStatus == ProgressStatus.Met);
-        Top = ProductRow.From(snapshot.Products.Where(p => p.DailyRate is not null).OrderBy(p => p.Rank).Take(5), snapshot.HasMultipleLines);
+        Top = ProductRow.From(snapshot.Products.Where(p => p.DailyRate is not null).OrderBy(p => p.Rank).Take(5));
     }
 }

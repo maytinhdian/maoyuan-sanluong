@@ -76,7 +76,7 @@
         <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
                     Visibility="{Binding AllMet, Converter={StaticResource NullToVisibility}}">
             <c:Icon Kind="check" Width="220" Height="220" Fill="{StaticResource MetBrush}" />
-            <TextBlock Text="Tất cả sản phẩm đã đạt mục tiêu" Style="{StaticResource BoardText}" FontSize="80" FontWeight="Bold" Margin="0,40,0,0" HorizontalAlignment="Center" />
+            <TextBlock Text="Tất cả chuyền đã đạt mục tiêu" Style="{StaticResource BoardText}" FontSize="80" FontWeight="Bold" Margin="0,40,0,0" HorizontalAlignment="Center" />
             <TextBlock Text="Cảm ơn sự cố gắng của mọi người!" Style="{StaticResource BoardText}" FontSize="44" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
         </StackPanel>
     </Grid>

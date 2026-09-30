@@ -6,10 +6,10 @@ namespace DisplayBoard.Core.Excel;
 /// <summary>Mở file với FileShare.ReadWrite để đọc được khi Excel đang mở file; copy ra bộ nhớ để giữ file trong thời gian ngắn nhất.</summary>
 public sealed class ExcelDataReader : IExcelDataReader
 {
-    public async Task<ProductionSheet> ReadProductionAsync(string filePath, string? sheetName, CancellationToken ct)
+    public async Task<DisplaySheet> ReadDisplayAsync(string filePath, string? sheetName, CancellationToken ct)
     {
         using var buffer = await CopyAsync(filePath, ct).ConfigureAwait(false);
-        return await Task.Run(() => ProductionWorkbookReader.Read(buffer, sheetName), ct).ConfigureAwait(false);
+        return await Task.Run(() => DisplaySheetReader.Read(buffer, sheetName), ct).ConfigureAwait(false);
     }
 
     public async Task<ContentData> ReadContentAsync(string filePath, CancellationToken ct)
