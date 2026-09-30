@@ -133,6 +133,16 @@ public class ProductionWorkbookReaderTests
         Assert.Equal("Ngay29", ProductionWorkbookReader.Read(stream, "ngay29").SheetName);
     }
 
+    [Theory]
+    [InlineData("TỔNG / 合计", true)]
+    [InlineData("Tổng cộng", true)]
+    [InlineData("TOTAL", true)]
+    [InlineData("总计", true)]
+    [InlineData("883", false)]
+    [InlineData("ĐAI LƯNG", false)]
+    public void Detects_total_row(string code, bool expected) =>
+        Assert.Equal(expected, ProductionWorkbookReader.IsTotalRow(code));
+
     [Fact]
     public void Same_date_sheets_are_read_as_lines()
     {

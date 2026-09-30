@@ -195,6 +195,8 @@ public static partial class ProductionWorkbookReader
             var code = Text(sheet, row, columns, Column.ProductCode);
             if (code is null)
                 continue; // dòng trống có kẻ khung cuối bảng
+            if (IsTotalRow(code))
+                continue; // dòng tổng do khách tự thêm: app tự cộng, không tính là một sản phẩm
 
             var hours = Number(sheet, row, columns, Column.ShiftHours);
             var hourly = Number(sheet, row, columns, Column.HourlyTarget);
@@ -217,6 +219,17 @@ public static partial class ProductionWorkbookReader
         }
 
         return new ProductionSheet(sheet.Name, layout.Date, records, warnings) { Lines = [sheet.Name.Trim()] };
+    }
+
+    private static readonly string[] TotalWords = ["tong", "tongcong", "total", "sum"];
+
+    /// <summary>Dòng tổng cuối bảng: "TỔNG", "TỔNG CỘNG", "Total", "合计", "总计", "小计".</summary>
+    public static bool IsTotalRow(string code)
+    {
+        if (code.Contains("合计", StringComparison.Ordinal) || code.Contains("总计", StringComparison.Ordinal) || code.Contains("小计", StringComparison.Ordinal))
+            return true;
+        var letters = new string(SheetTable.NormalizeHeader(code).Where(char.IsAsciiLetter).ToArray());
+        return TotalWords.Contains(letters);
     }
 
     private static string Label(Column column) => Columns.First(c => c.Column == column).Label;

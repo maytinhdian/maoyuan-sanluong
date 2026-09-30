@@ -88,6 +88,22 @@ static void WriteSheet(IXLWorksheet sheet, DateTime date, (object Code, double H
             sheet.Cell(r, c).Style.NumberFormat.Format = "#,##0";
         r++;
     }
+    // Dòng tổng: cộng các cột số lượng, % đạt tính bằng công thức từ tổng (không cộng các %).
+    var first = 3;
+    var last = r - 1;
+    sheet.Cell(r, 1).Value = "TỔNG / 合计";
+    foreach (var c in new[] { "D", "E", "G", "H", "I" })
+        sheet.Cell($"{c}{r}").FormulaA1 = $"SUM({c}{first}:{c}{last})";
+    sheet.Cell(r, 6).FormulaA1 = $"IF(D{r}=0,\"\",E{r}/D{r})";
+    sheet.Cell(r, 10).FormulaA1 = $"IF(G{r}=0,\"\",H{r}/G{r})";
+    sheet.Cell(r, 6).Style.NumberFormat.Format = "0%";
+    sheet.Cell(r, 10).Style.NumberFormat.Format = "0%";
+    foreach (var c in new[] { 4, 5, 7, 8, 9 })
+        sheet.Cell(r, c).Style.NumberFormat.Format = "#,##0";
+    sheet.Range(r, 1, r, 10).Style.Font.Bold = true;
+    sheet.Range(r, 1, r, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#FFF2CC");
+    r++;
+
     // Hai dòng trống có kẻ khung như file thật.
     var table = sheet.Range(2, 1, r + 1, 11);
     table.Style.Border.InsideBorder = XLBorderStyleValues.Thin;

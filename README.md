@@ -39,6 +39,7 @@ App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào
 | H | 当月累计产能 / LŨY KẾ | |
 
 - Ngày lấy từ ô A1 (`日期：2026/09/30`). Cột được nhận theo tiêu đề (tiếng Trung trước, rồi tiếng Việt), nên đổi thứ tự cột vẫn đọc được.
+- Dòng tổng cuối bảng (`TỔNG`, `TỔNG CỘNG`, `合计`, `Total`) được bỏ qua, không tính là một sản phẩm.
 - %, chênh lệch và trạng thái do app tự tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
 - **Mỗi sheet là một chuyền** (khách có 6 chuyền). App đọc mọi sheet có ngày mới nhất; sheet của ngày cũ còn sót lại bị bỏ qua. Cùng một mã sản phẩm ở 2 chuyền được tính riêng. Ghi tên sheet vào ô **Sheet** ở màn hình chính nếu chỉ muốn chiếu một chuyền.
 - **Phần thiếu hôm trước**: mỗi lần đọc file, app lưu kết quả của ngày đó vào `%AppData%\DisplayBoard\daily-history.json`. Hôm sau các màn hình hiện số còn thiếu của ngày làm việc trước (bỏ qua ngày nghỉ), tính riêng theo từng chuyền và sản phẩm.
