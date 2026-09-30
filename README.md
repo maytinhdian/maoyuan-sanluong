@@ -67,6 +67,7 @@ Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang
 ## Cấu hình và log
 
 - Cấu hình: `%AppData%\DisplayBoard\display-config.json`
+- Tên ứng dụng: khách tự đặt ở tab **Cài đặt → Tên ứng dụng** (để trống = Display Board)
 - Log: `%LocalAppData%\DisplayBoard\logs\display-board-YYYYMMDD.log`
 
 ## Cấu trúc mã nguồn

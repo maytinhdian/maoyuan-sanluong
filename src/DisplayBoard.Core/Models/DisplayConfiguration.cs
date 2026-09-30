@@ -23,6 +23,9 @@ public sealed class DisplayConfiguration
 {
     public string? ExcelFile { get; set; }
 
+    /// <summary>Tên hiện ở cửa sổ chính và khay hệ thống. Null = "Display Board".</summary>
+    public string? AppName { get; set; }
+
     /// <summary>Sheet hiển thị. Null = HIEN_THI.</summary>
     public string? SheetName { get; set; }
 
@@ -37,6 +40,9 @@ public sealed class DisplayConfiguration
     public List<ScreenAssignment> Screens { get; set; } = [];
 
     public const string DefaultContentFileName = "display-content.xlsx";
+    public const string DefaultAppName = "Display Board";
+
+    public string ResolveAppName() => string.IsNullOrWhiteSpace(AppName) ? DefaultAppName : AppName.Trim();
 
     public string? ResolveContentFile()
     {

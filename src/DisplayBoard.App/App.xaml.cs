@@ -71,6 +71,12 @@ public partial class App : Application
                 _mainWindow.Close();
             });
         display.RunningChanged += (_, _) => _tray.SetRunning(display.IsRunning);
+        _tray.SetName(viewModel.AppTitle);
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.AppTitle))
+                _tray.SetName(viewModel.AppTitle);
+        };
 
         _mainWindow.Show();
         viewModel.PreviewCommand.Execute(null);

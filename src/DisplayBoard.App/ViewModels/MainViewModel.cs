@@ -56,6 +56,9 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<string> Log { get; } = [];
     public DisplayHostViewModel PreviewHost { get; }
 
+    [ObservableProperty] private string? _appName;
+    /// <summary>Tên đang dùng (đã lưu); để trống ô tên thì là "Display Board".</summary>
+    [ObservableProperty] private string _appTitle = DisplayConfiguration.DefaultAppName;
     [ObservableProperty] private string? _excelFile;
     [ObservableProperty] private string? _sheetName;
     [ObservableProperty] private string? _contentFile;
@@ -85,6 +88,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void LoadFromConfiguration(DisplayConfiguration config)
     {
+        AppName = config.AppName;
+        AppTitle = config.ResolveAppName();
         ExcelFile = config.ExcelFile;
         SheetName = config.SheetName;
         ContentFile = config.ContentFile;
@@ -108,6 +113,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public DisplayConfiguration BuildConfiguration() => new()
     {
+        AppName = string.IsNullOrWhiteSpace(AppName) ? null : AppName.Trim(),
         ExcelFile = ExcelFile,
         SheetName = string.IsNullOrWhiteSpace(SheetName) ? null : SheetName.Trim(),
         ContentFile = string.IsNullOrWhiteSpace(ContentFile) ? null : ContentFile,
@@ -177,6 +183,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task ApplySettingsAsync()
     {
         var config = BuildConfiguration();
+        AppTitle = config.ResolveAppName();
         try
         {
             _config.Save(config);
@@ -184,7 +191,7 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogError(ex, "Không lưu được cấu hình");
-            MessageBox.Show($"Không lưu được cấu hình: {ex.Message}", "Display Board", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show($"Không lưu được cấu hình: {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         if (!string.IsNullOrWhiteSpace(config.ExcelFile) && config.AutoReload)
@@ -223,13 +230,13 @@ public sealed partial class MainViewModel : ObservableObject
         var assigned = config.Screens.Where(s => !string.IsNullOrWhiteSpace(s.MonitorId)).ToList();
         if (assigned.Count == 0)
         {
-            MessageBox.Show("Chưa chọn màn hình cho TV1/TV2.", "Display Board", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Chưa chọn màn hình cho TV1/TV2.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var primary = Monitors.FirstOrDefault(m => m.IsPrimary);
         if (primary is not null && assigned.Any(s => string.Equals(s.MonitorId, primary.Id, StringComparison.OrdinalIgnoreCase))
             && MessageBox.Show("Một TV đang được gán vào màn hình chính. Cửa sổ trình chiếu sẽ che màn hình làm việc. Tiếp tục?",
-                "Display Board", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                AppTitle, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         try
