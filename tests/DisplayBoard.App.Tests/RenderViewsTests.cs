@@ -20,7 +20,7 @@ public class RenderViewsTests
     public static TheoryData<string> ViewIdsData() =>
     [
         ViewIds.Overview, ViewIds.Ranking, ViewIds.ProductProgress, ViewIds.TopProducts,
-        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress, ViewIds.Lines
+        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress, ViewIds.Lines, ViewIds.Hourly
     ];
 
     [Theory]

@@ -28,6 +28,7 @@
             <DataTemplate DataType="{x:Type vm:DetailViewModel}"><d:DetailView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:MonthProgressViewModel}"><d:MonthProgressView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:LinesViewModel}"><d:LinesView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:HourlyViewModel}"><d:HourlyView /></DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

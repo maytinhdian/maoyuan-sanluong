@@ -48,7 +48,7 @@ dotnet run --project tools/DisplayBoard.SampleGenerator -- samples
 
 Ảnh sản phẩm và ảnh nền thông báo đặt trong thư mục `images` cạnh file Excel. Ảnh sản phẩm đặt tên theo mã, ví dụ `883.jpg`.
 
-## 9 nội dung hiển thị
+## 10 nội dung hiển thị
 
 | Id | Nội dung |
 |---|---|
@@ -61,6 +61,7 @@ dotnet run --project tools/DisplayBoard.SampleGenerator -- samples
 | `detail` | Bảng chi tiết từng chuyền, tự lật trang |
 | `month-progress` | Lũy kế và % tháng từng chuyền |
 | `lines` | Thẻ từng chuyền: mã hàng, thực tế/mục tiêu, %, tiến độ theo giờ, phần thiếu hôm trước |
+| `hourly` | Sản lượng từng giờ (GIỜ 1–12) của mỗi chuyền, tô màu so với mục tiêu mỗi giờ, kèm % tiến độ theo giờ |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 
@@ -74,7 +75,7 @@ Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang
 
 ```text
 src/DisplayBoard.Core      Đọc Excel (HIEN_THI), dựng snapshot, theo dõi file, xoay trang (không phụ thuộc WPF)
-src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 9 view, khay hệ thống
+src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 10 view, khay hệ thống
 tests/DisplayBoard.Tests   Unit test cho Core (chạy được trên mọi hệ điều hành)
 tests/DisplayBoard.App.Tests  Render từng view ra PNG và bắt lỗi binding (chỉ Windows)
 tools/DisplayBoard.SampleGenerator  Tạo file nội dung phụ mẫu

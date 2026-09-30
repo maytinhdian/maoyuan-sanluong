@@ -1,0 +1,84 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.HourlyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource BoardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader />
+        <StackPanel Grid.Row="1" Margin="40,30,40,0">
+            <!-- Tiêu đề cột: Chuyền | Giờ 1..n | Tiến độ -->
+            <Border Background="{StaticResource TableHeaderBackground}" CornerRadius="10,10,0,0" Padding="20,0">
+                <Grid Height="70">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="360" /><ColumnDefinition Width="*" /><ColumnDefinition Width="200" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Chuyền" Style="{StaticResource TableHeaderText}" />
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Hours}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" Columns="{Binding DataContext.HourCount, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource TableHeaderText}" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Grid.Column="2" Text="Tiến độ" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" />
+                </Grid>
+            </Border>
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="Row" Padding="20,0">
+                            <Grid Height="118">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="360" /><ColumnDefinition Width="*" /><ColumnDefinition Width="200" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Line}" Style="{StaticResource TableCellText}" FontSize="36" FontWeight="Bold" />
+                                    <TextBlock Style="{StaticResource TableCellText}" FontSize="24" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Product, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding HourlyTarget, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                                <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="{Binding DataContext.HourCount, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="4,0" Height="84" CornerRadius="8" Background="{StaticResource CardBackground}"
+                                                    BorderBrush="{Binding Status, Converter={StaticResource StatusBrush}}" BorderThickness="0,0,0,8">
+                                                <TextBlock Text="{Binding Text}" Style="{StaticResource BoardText}" FontSize="32" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{Binding Status, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Grid.Column="2" Text="{Binding Progress}" Style="{StaticResource TableCellText}" FontSize="44" FontWeight="Bold"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Foreground="{Binding ProgressStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                            </Grid>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsAlternate}" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{StaticResource TableRowAlt}" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+        <TextBlock Grid.Row="2" Margin="40,0,40,28" Style="{StaticResource BoardText}" FontSize="26" Foreground="{StaticResource TextSecondary}"
+                   Text="Màu ô: xanh ≥ mục tiêu giờ · vàng 90–99% · đỏ &lt; 90% · dấu chấm = chưa nhập. Tiến độ = % so với mục tiêu tới giờ đã nhập (Excel tính)." />
+    </Grid>
+</UserControl>
