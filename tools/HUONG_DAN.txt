@@ -1,0 +1,21 @@
+DISPLAY BOARD - HƯỚNG DẪN NHANH
+================================
+
+Yêu cầu: Windows 10/11 64-bit. Không cần cài .NET.
+
+1. Giải nén cả thư mục DisplayBoard ra một nơi cố định, ví dụ C:\DisplayBoard.
+2. Chạy DisplayBoard.exe.
+   Lần đầu Windows có thể hiện "Windows protected your PC": bấm "More info" rồi "Run anyway".
+3. Bấm "Chọn file..." và chọn file Excel theo dõi sản lượng (sheet HIEN_THI).
+   Muốn thử trước: chọn samples\Theo_doi_san_luong_V18_mau.xlsx.
+   Lưu ý: file Excel phải được mở bằng Excel và bấm Lưu (Ctrl+S) ít nhất một lần.
+4. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, rồi bấm "Bắt đầu trình chiếu".
+5. Bấm X chỉ ẩn app xuống khay hệ thống (góc phải thanh taskbar). Thoát hẳn: chuột phải icon ở khay > Thoát.
+
+File nội dung phụ (tên hiển thị, thông báo, khẩu hiệu, tên công ty): samples\display-content.xlsx,
+đặt cạnh file Excel sản lượng.
+
+Cấu hình lưu tại: %AppData%\DisplayBoard\display-config.json
+Nhật ký lỗi:      %LocalAppData%\DisplayBoard\logs
+
+Hỗ trợ: Công ty TNHH Giải Pháp Sáng Tạo TMT Việt Nam - Hotline 0393 080 822 - https://maytinhdian.com

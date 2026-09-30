@@ -24,6 +24,14 @@ Tạo lại file nội dung phụ mẫu `samples/display-content.xlsx`:
 dotnet run --project tools/DisplayBoard.SampleGenerator -- samples
 ```
 
+## Đóng gói để cài cho khách
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/publish.ps1
+```
+
+Tạo `dist/DisplayBoard-win-x64.zip`: một file `DisplayBoard.exe` chạy được trên Windows 10/11 64-bit mà không cần cài .NET, kèm thư mục `samples` và `HUONG_DAN.txt`.
+
 ## File Excel sản lượng
 
 **Mọi con số đều do công thức Excel tính**, để nhân viên dùng chính file đó kiểm tra. App chỉ đọc sheet `HIEN_THI` (bảng `tblHienThi`) và **không bao giờ ghi vào file**, không tự tính %, chênh lệch hay phần thiếu.
