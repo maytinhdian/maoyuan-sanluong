@@ -1,0 +1,259 @@
+<Window x:Class="DisplayBoard.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:DisplayBoard.App.Views"
+        xmlns:app="clr-namespace:DisplayBoard.App"
+        Title="{Binding AppTitle}" Icon="/Assets/app.ico" Width="1180" Height="800" MinWidth="960" MinHeight="640"
+        WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" FontSize="14" Background="#F3F5F9">
+    <Window.Resources>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,14" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="MinWidth" Value="90" />
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#2563EB" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+
+        <!-- Trình chỉnh playlist của một TV -->
+        <DataTemplate x:Key="ScreenEditor">
+            <GroupBox Header="{Binding Name}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,8">
+                        <TextBlock Text="Màn hình:" Style="{StaticResource Label}" />
+                        <ComboBox ItemsSource="{Binding DataContext.Monitors, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="DisplayName" FontWeight="Normal" />
+                    </DockPanel>
+                    <TextBlock Text="Nội dung (tick để bật, ↑↓ để sắp thứ tự, số giây trống = mặc định):" FontWeight="Normal" Foreground="#555" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Entries}" FontWeight="Normal">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1" Text="{Binding Seconds, UpdateSourceTrigger=PropertyChanged}" ToolTip="Số giây hiển thị" Margin="6,0" />
+                                    <Button Grid.Column="2" Content="↑" MinWidth="30" Padding="6,0" Margin="0,0,2,0"
+                                            Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="3" Content="↓" MinWidth="30" Padding="6,0" Margin="0"
+                                            Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </GroupBox>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#0F2447" Padding="20,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="12" Height="12" Margin="0,0,8,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#F59E0B" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsHealthy}" Value="True">
+                                        <Setter Property="Fill" Value="#22C55E" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding StatusText}" Foreground="White" />
+                    <TextBlock Text="{Binding LastLoadedText}" Foreground="#B7C6E0" Margin="12,0,0,0" />
+                    <TextBlock Text="  ·  ĐANG TRÌNH CHIẾU" Foreground="#22C55E" FontWeight="Bold"
+                               Visibility="{Binding IsRunning, Converter={StaticResource NullToVisibility}}" />
+                </StackPanel>
+                <TextBlock Text="{Binding AppTitle}" Foreground="White" FontSize="20" FontWeight="Bold" />
+            </DockPanel>
+        </Border>
+
+        <!-- Cảnh báo khi đọc Excel lỗi; TV vẫn giữ dữ liệu cũ -->
+        <Border DockPanel.Dock="Top" Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="0,0,0,1" Padding="20,8"
+                Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
+            <TextBlock TextWrapping="Wrap"><Run Text="⚠ " /><Run Text="{Binding LastError, Mode=OneWay}" /><Run Text=" — TV vẫn hiển thị dữ liệu hợp lệ gần nhất." /></TextBlock>
+        </Border>
+
+        <!-- Footer: thông tin đơn vị phát triển -->
+        <Border DockPanel.Dock="Bottom" Background="#0F2447" Padding="20,7">
+            <DockPanel TextBlock.FontSize="12" TextBlock.Foreground="#B7C6E0">
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Run Text="Phiên bản " /><Run Text="{x:Static app:AboutInfo.Version}" />
+                </TextBlock>
+                <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                    <Run Text="Phát triển bởi " /><Run Text="{x:Static app:AboutInfo.Developer}" Foreground="White" FontWeight="SemiBold" />
+                    <Run Text="  ·  Hotline " /><Run Text="{x:Static app:AboutInfo.Phone}" Foreground="White" FontWeight="SemiBold" />
+                    <Run Text="  ·  " /><Hyperlink NavigateUri="{x:Static app:AboutInfo.WebsiteUri}" RequestNavigate="OnRequestNavigate" Foreground="#7CC4FF"><Run Text="{x:Static app:AboutInfo.Website}" /></Hyperlink>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <TabControl TabStripPlacement="Left" BorderThickness="0" Background="Transparent" Padding="20">
+            <TabItem Header="Trang chủ">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <GroupBox Header="FILE DỮ LIỆU">
+                            <StackPanel>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Đọc lại" Command="{Binding ReloadCommand}" Margin="8,0,0,0" />
+                                    <Button DockPanel.Dock="Right" Content="Chọn file…" Command="{Binding ChooseFileCommand}" Margin="8,0,0,0" />
+                                    <TextBox Text="{Binding ExcelFile}" IsReadOnly="True" FontWeight="Normal" VerticalContentAlignment="Center" />
+                                </DockPanel>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="200" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Sheet:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBox Grid.Column="1" Text="{Binding SheetName}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Để trống: đọc sheet HIEN_THI. Chỉ ghi tên khi sheet hiển thị được đổi tên." />
+                                    <TextBlock Grid.Column="2" Text="File nội dung phụ:" FontWeight="Normal" VerticalAlignment="Center" Margin="16,0,8,0" />
+                                    <TextBox Grid.Column="3" Text="{Binding ContentFile}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Để trống: display-content.xlsx cạnh file dữ liệu" />
+                                    <Button Grid.Column="4" Content="Chọn…" Command="{Binding ChooseContentFileCommand}" Margin="8,0,0,0" />
+                                </Grid>
+                                <TextBlock FontWeight="Normal" Margin="0,8,0,0" Foreground="#555" Text="{Binding DataInfoText}"
+                                           Visibility="{Binding DataInfoText, Converter={StaticResource NullToVisibility}}" />
+                                <TextBlock FontWeight="Normal" Margin="0,8,0,0" Foreground="#555">
+                                    <Run Text="Trạng thái: " /><Run Text="{Binding StatusText, Mode=OneWay}" FontWeight="SemiBold" />
+                                    <Run Text="   Cập nhật lúc: " /><Run Text="{Binding LastLoadedText, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="MÀN HÌNH">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <RadioButton Content="Đồng bộ (2 TV cùng nội dung)" IsChecked="{Binding IsMirror}" FontWeight="Normal" Margin="0,0,24,0" />
+                                    <RadioButton Content="Độc lập (mỗi TV một nội dung)" IsChecked="{Binding IsIndependent}" FontWeight="Normal" Margin="0,0,24,0" />
+                                    <Button Content="Dò lại màn hình" Command="{Binding RefreshMonitorsCommand}" />
+                                </StackPanel>
+                                <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,0,0,8" TextWrapping="Wrap"
+                                           Text="Chế độ Đồng bộ: cả 2 TV dùng danh sách nội dung của TV1 và chuyển trang cùng lúc." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentControl Content="{Binding Screens[0]}" ContentTemplate="{StaticResource ScreenEditor}" />
+                                    <ContentControl Grid.Column="2" Content="{Binding Screens[1]}" ContentTemplate="{StaticResource ScreenEditor}" />
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Lưu &amp; xem trước" Command="{Binding ApplySettingsCommand}" />
+                            <Button Content="Bắt đầu trình chiếu" Style="{StaticResource PrimaryButton}" Command="{Binding StartPresentationCommand}" />
+                            <Button Content="Dừng trình chiếu" Command="{Binding StopPresentationCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Xem trước">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="Xem nội dung của:" Style="{StaticResource Label}" />
+                        <ComboBox SelectedIndex="{Binding PreviewScreenIndex}" Width="120" Margin="0,0,12,0">
+                            <ComboBoxItem Content="TV1" />
+                            <ComboBoxItem Content="TV2" />
+                        </ComboBox>
+                        <Button Content="Chạy lại" Command="{Binding PreviewCommand}" />
+                        <Button Content="Trang tiếp ›" Command="{Binding NextPreviewViewCommand}" />
+                    </StackPanel>
+                    <Border Background="Black" BorderBrush="#333" BorderThickness="1">
+                        <v:DisplayHostControl DataContext="{Binding PreviewHost}" />
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Nhật ký">
+                <DockPanel>
+                    <GroupBox DockPanel.Dock="Top" Header="CẢNH BÁO DỮ LIỆU" MaxHeight="260">
+                        <ListBox ItemsSource="{Binding Warnings}" FontWeight="Normal" BorderThickness="0" />
+                    </GroupBox>
+                    <GroupBox Header="HOẠT ĐỘNG">
+                        <ListBox ItemsSource="{Binding Log}" FontWeight="Normal" FontFamily="Consolas" BorderThickness="0" />
+                    </GroupBox>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Cài đặt">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="720" HorizontalAlignment="Left" Margin="0,0,0,20">
+                    <GroupBox Header="TÊN ỨNG DỤNG">
+                        <StackPanel>
+                            <TextBox Text="{Binding AppName}" FontWeight="Normal" VerticalContentAlignment="Center" />
+                            <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="Tên hiện trên thanh tiêu đề, góc trên cửa sổ và khay hệ thống. Để trống = Display Board. Bấm Lưu cài đặt để áp dụng." />
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="XOAY NỘI DUNG">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition /><RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Thời gian mặc định mỗi trang (giây)" Style="{StaticResource Label}" />
+                            <TextBox Grid.Column="1" Text="{Binding DefaultViewSeconds}" Margin="0,4" />
+                            <TextBlock Grid.Row="1" Text="Tối đa cho bảng nhiều trang (giây)" Style="{StaticResource Label}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxPagedViewSeconds}" Margin="0,4" />
+                        </Grid>
+                    </GroupBox>
+                    <GroupBox Header="THEO DÕI FILE">
+                        <StackPanel>
+                            <CheckBox Content="Tự cập nhật khi file Excel được lưu" IsChecked="{Binding AutoReload}" FontWeight="Normal" Margin="0,0,0,8" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Chờ sau khi lưu (ms)" Style="{StaticResource Label}" Width="280" />
+                                <TextBox Text="{Binding DebounceMilliseconds}" Width="120" />
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="THƯ MỤC ẢNH">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Chọn…" Command="{Binding ChooseImagesFolderCommand}" Margin="8,0,0,0" />
+                                <TextBox Text="{Binding ImagesFolder}" FontWeight="Normal" VerticalContentAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="Để trống = thư mục 'images' cạnh file Excel. Ảnh sản phẩm đặt tên theo mã sản phẩm (vd 883.jpg) hoặc khai báo ở sheet SAN_PHAM." />
+                        </StackPanel>
+                    </GroupBox>
+                    <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />
+                </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

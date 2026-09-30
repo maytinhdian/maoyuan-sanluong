@@ -1,0 +1,66 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.RankingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource BoardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader />
+        <StackPanel Grid.Row="1" Margin="40,30,40,30">
+            <Border Background="{StaticResource TableHeaderBackground}" CornerRadius="10,10,0,0" Padding="20,0">
+                <Grid Height="70">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" /><ColumnDefinition Width="*" /><ColumnDefinition Width="250" />
+                        <ColumnDefinition Width="250" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" /><ColumnDefinition Width="250" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="#" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="Sản phẩm" Style="{StaticResource TableHeaderText}" />
+                    <TextBlock Grid.Column="2" Text="Mục tiêu" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="3" Text="Thực tế" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="4" Text="% ngày" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="5" Text="% tháng" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                    <TextBlock Grid.Column="6" Text="Trạng thái" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Center" />
+                </Grid>
+            </Border>
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="Row" Padding="20,0" Background="Transparent">
+                            <Grid Height="76">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" /><ColumnDefinition Width="*" /><ColumnDefinition Width="250" />
+                                    <ColumnDefinition Width="250" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" /><ColumnDefinition Width="250" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="RankBadge" Width="56" Height="56" CornerRadius="28" Background="Transparent" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Rank}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Center" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="2" Text="{Binding DailyTarget}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                <TextBlock Grid.Column="3" Text="{Binding DailyActual}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                <TextBlock Grid.Column="4" Text="{Binding DailyRate}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0"
+                                           Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                <TextBlock Grid.Column="5" Text="{Binding MonthRate}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0"
+                                           Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                <Border Grid.Column="6" Style="{StaticResource StatusPill}" Margin="20,10" Background="{Binding DailyStatus, Converter={StaticResource StatusBrush}}">
+                                    <TextBlock Text="{Binding DailyStatusText}" Style="{StaticResource TableCellText}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsAlternate}" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{StaticResource TableRowAlt}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsTop3}" Value="True">
+                                <Setter TargetName="RankBadge" Property="Background" Value="{StaticResource NearBrush}" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Grid>
+</UserControl>

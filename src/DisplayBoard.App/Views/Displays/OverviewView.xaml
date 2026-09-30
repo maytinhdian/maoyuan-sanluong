@@ -1,0 +1,112 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource BoardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="380" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader />
+
+        <Grid Grid.Row="1" Margin="40,30,40,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.4*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" Margin="0,0,20,0" Background="#154A8A">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="THỰC TẾ HÔM NAY" Style="{StaticResource CardTitle}" FontSize="38" HorizontalAlignment="Center" Foreground="White" />
+                    <TextBlock Text="{Binding DailyActual}" Style="{StaticResource KpiValue}" FontSize="150" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Unit}" Style="{StaticResource CardTitle}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="MỤC TIÊU HÔM NAY" Style="{StaticResource CardTitle}" FontSize="38" HorizontalAlignment="Center" Foreground="White" />
+                    <TextBlock Text="{Binding DailyTarget}" Style="{StaticResource KpiValue}" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Unit}" Style="{StaticResource CardTitle}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="20,0,0,0" Background="#0E3A2A" BorderBrush="#1C6B45">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="HOÀN THÀNH" Style="{StaticResource CardTitle}" FontSize="38" HorizontalAlignment="Center" Foreground="White" />
+                    <!-- Không cố định kích thước: vòng tròn tự co theo chỗ trống của thẻ để không bị cắt. -->
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                        <c:ProgressRing Value="{Binding DailyRate}" Thickness="26" Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="{Binding DailyRateText}" Style="{StaticResource BoardText}" FontSize="70" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="40,20,40,0" CornerRadius="12" Background="{StaticResource HeaderBackground}" Padding="28,12"
+                Visibility="{Binding MonthText, Converter={StaticResource NullToVisibility}}">
+            <DockPanel>
+                <Ellipse DockPanel.Dock="Left" Width="22" Height="22" Margin="0,0,18,0" Fill="{Binding MonthStatus, Converter={StaticResource StatusBrush}}" />
+                <TextBlock Text="{Binding MonthText}" Style="{StaticResource BoardText}" FontSize="34" />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="3" Margin="40,12,40,0" CornerRadius="12" Background="#3A2A06" BorderBrush="{StaticResource NearBrush}" BorderThickness="2" Padding="28,10"
+                Visibility="{Binding CarriedText, Converter={StaticResource NullToVisibility}}">
+            <DockPanel>
+                <c:Icon DockPanel.Dock="Left" Kind="warning" Width="36" Height="36" Margin="0,0,18,0" Fill="{StaticResource NearBrush}" />
+                <TextBlock Text="{Binding CarriedText}" Style="{StaticResource BoardText}" FontSize="32" FontWeight="SemiBold" />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource Card}" Margin="40,20,40,36">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding MetSummary}" Style="{StaticResource CardTitle}" FontWeight="Normal" />
+                    <TextBlock Style="{StaticResource CardTitle}" Foreground="White">
+                        <Run Text="{Binding ChartTitle, Mode=OneWay}" /><Run Text="   ▬ mục tiêu" FontSize="24" Foreground="{StaticResource TextSecondary}" />
+                    </TextBlock>
+                </DockPanel>
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Bars}" Margin="0,8,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="14,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <!-- Cột thực tế + vạch mục tiêu, cùng gốc ở đáy -->
+                                <Grid VerticalAlignment="Bottom">
+                                    <StackPanel VerticalAlignment="Bottom">
+                                        <TextBlock Text="{Binding Actual}" Style="{StaticResource BoardText}" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                        <Border Height="{Binding BarHeight}" CornerRadius="8,8,0,0" Background="{Binding Color, Converter={StaticResource HexToBrush}}" Margin="10,0" />
+                                    </StackPanel>
+                                    <Border Height="{Binding TargetOffset}" BorderBrush="White" BorderThickness="0,5,0,0" VerticalAlignment="Bottom"
+                                            Visibility="{Binding HasTarget, Converter={StaticResource NullToVisibility}}" />
+                                </Grid>
+                                <TextBlock Grid.Row="1" Text="{Binding Name}" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

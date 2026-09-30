@@ -1,0 +1,9 @@
+<UserControl x:Class="DisplayBoard.App.Views.DisplayHostControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- DataContext: DisplayHostViewModel. Layout thiết kế ở 1920×1080 và được co giãn theo kích thước thật.
+         Dùng chung cho cửa sổ TV và khung Xem trước. -->
+    <Viewbox Stretch="Uniform">
+        <ContentControl Width="1920" Height="1080" Content="{Binding CurrentView}" Focusable="False" />
+    </Viewbox>
+</UserControl>

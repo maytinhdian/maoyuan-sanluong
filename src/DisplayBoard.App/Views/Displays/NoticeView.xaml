@@ -1,0 +1,55 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.NoticeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <!-- Nền: ảnh (nếu có) + lớp phủ tối; không có ảnh thì gradient mặc định -->
+        <Border Grid.RowSpan="3">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#0F2A5C" Offset="0" />
+                    <GradientStop Color="#4A2C5E" Offset="0.6" />
+                    <GradientStop Color="#C0632B" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Image Grid.RowSpan="3" Stretch="UniformToFill"
+               Source="{Binding BackgroundPath, Converter={StaticResource PathToImageLarge}}" />
+        <Border Grid.RowSpan="3" Background="#80000000" />
+
+        <s:DisplayHeader Background="Transparent" HeaderBackground="#990F2447" />
+
+        <Viewbox Grid.Row="1" Margin="120,40" StretchDirection="DownOnly">
+            <TextBlock Text="{Binding Content}" Style="{StaticResource BoardText}" FontSize="96" FontWeight="Bold"
+                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="1680" TextTrimming="None">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.9" />
+                </TextBlock.Effect>
+            </TextBlock>
+        </Viewbox>
+
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Slogans}" Margin="60,0,60,50">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel HorizontalAlignment="Center">
+                        <c:Icon Kind="{Binding Icon}" Width="100" Height="100" Fill="{StaticResource NearBrush}" />
+                        <TextBlock Text="{Binding Line1}" Style="{StaticResource BoardText}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16,0,0" />
+                        <TextBlock Text="{Binding Line2}" Style="{StaticResource BoardText}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>
