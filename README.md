@@ -32,6 +32,8 @@ powershell -ExecutionPolicy Bypass -File tools/publish.ps1
 
 Tạo `dist/DisplayBoard-win-x64.zip`: một file `DisplayBoard.exe` chạy được trên Windows 10/11 64-bit mà không cần cài .NET, kèm thư mục `samples` và `HUONG_DAN.txt`.
 
+Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở `tools/installer/DisplayBoard.iss`) được tạo tự động và đưa lên trang **Releases**: vào Actions > Release > Run workflow và nhập số phiên bản, hoặc đẩy tag dạng `v1.0.1`.
+
 ## File Excel sản lượng
 
 **Mọi con số đều do công thức Excel tính**, để nhân viên dùng chính file đó kiểm tra. App chỉ đọc sheet `HIEN_THI` (bảng `tblHienThi`) và **không bao giờ ghi vào file**, không tự tính %, chênh lệch hay phần thiếu.
