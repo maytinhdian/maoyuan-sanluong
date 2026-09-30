@@ -24,3 +24,12 @@ jobs:
           name: screenshots
           path: TestResults/screenshots
           if-no-files-found: ignore
+      - name: Package
+        run: powershell -ExecutionPolicy Bypass -File tools/publish.ps1
+      # File cài để tải về: trang Actions > lần chạy > Artifacts > DisplayBoard-win-x64.
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DisplayBoard-win-x64
+          path: dist/DisplayBoard
+          retention-days: 30
