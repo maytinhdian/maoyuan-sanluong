@@ -98,6 +98,20 @@
             <TextBlock TextWrapping="Wrap"><Run Text="⚠ " /><Run Text="{Binding LastError, Mode=OneWay}" /><Run Text=" — TV vẫn hiển thị dữ liệu hợp lệ gần nhất." /></TextBlock>
         </Border>
 
+        <!-- Footer: thông tin đơn vị phát triển -->
+        <Border DockPanel.Dock="Bottom" Background="#0F2447" Padding="20,7">
+            <DockPanel TextBlock.FontSize="12" TextBlock.Foreground="#B7C6E0">
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Run Text="Phiên bản " /><Run Text="{x:Static app:AboutInfo.Version}" />
+                </TextBlock>
+                <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                    <Run Text="Phát triển bởi " /><Run Text="{x:Static app:AboutInfo.Developer}" Foreground="White" FontWeight="SemiBold" />
+                    <Run Text="  ·  Hotline " /><Run Text="{x:Static app:AboutInfo.Phone}" Foreground="White" FontWeight="SemiBold" />
+                    <Run Text="  ·  " /><Hyperlink NavigateUri="{x:Static app:AboutInfo.WebsiteUri}" RequestNavigate="OnRequestNavigate" Foreground="#7CC4FF"><Run Text="{x:Static app:AboutInfo.Website}" /></Hyperlink>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
         <TabControl TabStripPlacement="Left" BorderThickness="0" Background="Transparent" Padding="20">
             <TabItem Header="Trang chủ">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -236,27 +250,7 @@
                                        Text="Để trống = thư mục 'images' cạnh file Excel. Ảnh sản phẩm đặt tên theo mã sản phẩm (vd 883.jpg) hoặc khai báo ở sheet SAN_PHAM." />
                         </StackPanel>
                     </GroupBox>
-                    <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" Margin="0,0,0,14" />
-                    <GroupBox Header="ĐƠN VỊ PHÁT TRIỂN" Padding="16">
-                        <Grid TextBlock.FontWeight="Normal" TextBlock.FontSize="13">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Text="{x:Static app:AboutInfo.Developer}" TextWrapping="Wrap" Grid.ColumnSpan="2" FontWeight="Bold" Margin="0,0,0,6" />
-                            <TextBlock Grid.Row="1" Text="Hotline:" Margin="0,3" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{x:Static app:AboutInfo.Phone}" IsReadOnly="True" BorderThickness="0" Background="Transparent" FontSize="13" FontWeight="Bold" Padding="0" Margin="0,3" VerticalAlignment="Center" />
-                            <TextBlock Grid.Row="2" Text="Website:" Margin="0,3" />
-                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3">
-                                <Hyperlink NavigateUri="{x:Static app:AboutInfo.WebsiteUri}" RequestNavigate="OnRequestNavigate"><Run Text="{x:Static app:AboutInfo.Website}" /></Hyperlink>
-                            </TextBlock>
-                            <TextBlock Grid.Row="3" Text="Phiên bản:" Margin="0,3" Foreground="#555" />
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Static app:AboutInfo.Version}" Margin="0,3" Foreground="#555" />
-                        </Grid>
-                    </GroupBox>
+                    <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />
                 </StackPanel>
                 </ScrollViewer>
             </TabItem>
