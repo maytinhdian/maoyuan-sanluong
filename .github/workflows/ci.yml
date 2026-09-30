@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    # WPF only runs on Windows; building there also catches XAML issues.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build DisplayBoard.slnx -c Release
+      - run: dotnet test DisplayBoard.slnx -c Release --no-build

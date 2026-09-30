@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DisplayBoard.App/DisplayBoard.App.csproj" />
+  <Project Path="DisplayBoard.Core/DisplayBoard.Core.csproj" />
+  <Project Path="DisplayBoard.Tests/DisplayBoard.Tests.csproj" />
+</Solution>
