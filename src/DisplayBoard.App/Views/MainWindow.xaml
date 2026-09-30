@@ -193,7 +193,8 @@
             </TabItem>
 
             <TabItem Header="Cài đặt">
-                <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="720" HorizontalAlignment="Left" Margin="0,0,0,20">
                     <GroupBox Header="TÊN ỨNG DỤNG">
                         <StackPanel>
                             <TextBox Text="{Binding AppName}" FontWeight="Normal" VerticalContentAlignment="Center" />
@@ -236,27 +237,28 @@
                         </StackPanel>
                     </GroupBox>
                     <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" Margin="0,0,0,14" />
-                    <GroupBox Header="ĐƠN VỊ PHÁT TRIỂN">
+                    <GroupBox Header="ĐƠN VỊ PHÁT TRIỂN" Padding="16">
                         <Grid TextBlock.FontWeight="Normal">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="{x:Static app:AboutInfo.Developer}" Grid.ColumnSpan="2" FontSize="16" FontWeight="Bold" Margin="0,0,0,6" />
-                            <TextBlock Grid.Row="1" Text="Hotline:" Margin="0,3" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{x:Static app:AboutInfo.Phone}" IsReadOnly="True" BorderThickness="0" Background="Transparent" FontWeight="Bold" Margin="0,3" />
-                            <TextBlock Grid.Row="2" Text="Website:" Margin="0,3" />
-                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3">
+                            <TextBlock Text="{x:Static app:AboutInfo.Developer}" TextWrapping="Wrap" Grid.ColumnSpan="2" FontSize="16" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock Grid.Row="1" Text="Hotline:" Margin="0,6" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{x:Static app:AboutInfo.Phone}" IsReadOnly="True" BorderThickness="0" Background="Transparent" FontWeight="Bold" Padding="0" Margin="0,6" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="Website:" Margin="0,6" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,6">
                                 <Hyperlink NavigateUri="{x:Static app:AboutInfo.WebsiteUri}" RequestNavigate="OnRequestNavigate"><Run Text="{x:Static app:AboutInfo.Website}" /></Hyperlink>
                             </TextBlock>
-                            <TextBlock Grid.Row="3" Text="Phiên bản:" Margin="0,3" Foreground="#555" />
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Static app:AboutInfo.Version}" Margin="0,3" Foreground="#555" />
+                            <TextBlock Grid.Row="3" Text="Phiên bản:" Margin="0,6" Foreground="#555" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Static app:AboutInfo.Version}" Margin="0,6" Foreground="#555" />
                         </Grid>
                     </GroupBox>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </DockPanel>
