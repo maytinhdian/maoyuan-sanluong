@@ -12,6 +12,9 @@ on:
         default: "1.0.0"
   push:
     tags: ["v*"]
+  # Trên PR chỉ build thử bộ cài, không đăng Release.
+  pull_request:
+    paths: ["tools/installer/**", ".github/workflows/release.yml"]
 
 permissions:
   contents: write
@@ -27,7 +30,7 @@ jobs:
       - name: Version
         shell: pwsh
         run: |
-          $v = if ("${{ github.event_name }}" -eq "push") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
+          $v = switch ("${{ github.event_name }}") { "push" { "${{ github.ref_name }}".TrimStart("v") } "pull_request" { "0.0.0" } default { "${{ inputs.version }}" } }
           if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Phiên bản không hợp lệ: $v" }
           "VERSION=$v" | Out-File $env:GITHUB_ENV -Append
       - name: Test
@@ -45,7 +48,15 @@ jobs:
           & $iscc "/DAppVersion=$env:VERSION" tools/installer/DisplayBoard.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC lỗi" }
           Rename-Item dist/DisplayBoard-win-x64.zip "DisplayBoard-$env:VERSION-win-x64.zip"
+      - name: Upload installer (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DisplayBoard-Setup
+          path: dist/DisplayBoard-Setup-*.exe
+          retention-days: 7
       - name: Publish release
+        if: github.event_name != 'pull_request'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
