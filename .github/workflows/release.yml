@@ -1,0 +1,59 @@
+name: Release
+
+# Tạo bộ cài và đưa lên trang Releases.
+# Cách 1: Actions > Release > Run workflow, nhập số phiên bản (vd 1.0.1).
+# Cách 2: đẩy tag dạng v1.0.1.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Số phiên bản, ví dụ 1.0.0"
+        required: true
+        default: "1.0.0"
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        shell: pwsh
+        run: |
+          $v = if ("${{ github.event_name }}" -eq "push") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Phiên bản không hợp lệ: $v" }
+          "VERSION=$v" | Out-File $env:GITHUB_ENV -Append
+      - name: Test
+        run: dotnet test DisplayBoard.slnx -c Release
+      - name: Package
+        shell: pwsh
+        run: |
+          (Get-Content src/DisplayBoard.App/DisplayBoard.App.csproj) -replace '<Version>[^<]*</Version>', "<Version>$env:VERSION</Version>" | Set-Content src/DisplayBoard.App/DisplayBoard.App.csproj
+          powershell -ExecutionPolicy Bypass -File tools/publish.ps1
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DAppVersion=$env:VERSION" tools/installer/DisplayBoard.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC lỗi" }
+          Rename-Item dist/DisplayBoard-win-x64.zip "DisplayBoard-$env:VERSION-win-x64.zip"
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          **DisplayBoard-Setup-$env:VERSION.exe**: bộ cài, chạy file này để cài (Windows 10/11 64-bit, không cần cài .NET).
+          **DisplayBoard-$env:VERSION-win-x64.zip**: bản chạy ngay không cần cài, giải nén rồi chạy DisplayBoard.exe.
+
+          Lần đầu Windows có thể hiện "Windows protected your PC": bấm "More info" rồi "Run anyway".
+          "@
+          gh release create "v$env:VERSION" "dist/DisplayBoard-Setup-$env:VERSION.exe" "dist/DisplayBoard-$env:VERSION-win-x64.zip" --title "Display Board $env:VERSION" --notes $notes --target $env:GITHUB_SHA
