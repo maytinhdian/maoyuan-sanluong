@@ -29,7 +29,7 @@ public sealed class TrayService : IDisposable
 
         _icon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = LoadIcon(),
             Text = _name,
             ContextMenuStrip = menu,
             Visible = true
@@ -62,6 +62,25 @@ public sealed class TrayService : IDisposable
     }
 
     public void ShowBalloon(string text) => _icon.ShowBalloonTip(3000, _name, text, ToolTipIcon.Info);
+
+    // Icon app nhúng trong exe; lỗi thì dùng icon mặc định của Windows.
+    private static Icon LoadIcon()
+    {
+        try
+        {
+            var resource = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico"));
+            if (resource is not null)
+            {
+                using var stream = resource.Stream;
+                return new Icon(stream, SystemInformation.SmallIconSize);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException)
+        {
+            Serilog.Log.Warning("Không load được icon app: {Message}", ex.Message);
+        }
+        return SystemIcons.Application;
+    }
 
     public void Dispose()
     {

@@ -10,12 +10,16 @@
     <RootNamespace>DisplayBoard.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <!-- Dùng WinForms chỉ cho NotifyIcon và Screen; bỏ using ngầm để tránh trùng tên với WPF. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
     <Using Include="System.IO" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DisplayBoard.Core\DisplayBoard.Core.csproj" />

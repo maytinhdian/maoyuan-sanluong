@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:v="clr-namespace:DisplayBoard.App.Views"
         xmlns:app="clr-namespace:DisplayBoard.App"
-        Title="{Binding AppTitle}" Width="1180" Height="800" MinWidth="960" MinHeight="640"
+        Title="{Binding AppTitle}" Icon="/Assets/app.ico" Width="1180" Height="800" MinWidth="960" MinHeight="640"
         WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" FontSize="14" Background="#F3F5F9">
     <Window.Resources>
         <Style TargetType="GroupBox">
