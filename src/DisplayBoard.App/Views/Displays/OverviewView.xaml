@@ -41,7 +41,8 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="HOÀN THÀNH" Style="{StaticResource CardTitle}" FontSize="38" HorizontalAlignment="Center" Foreground="White" />
-                    <Grid Grid.Row="1" Width="240" Height="240" Margin="0,10,0,0">
+                    <!-- Không cố định kích thước: vòng tròn tự co theo chỗ trống của thẻ để không bị cắt. -->
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
                         <c:ProgressRing Value="{Binding DailyRate}" Thickness="26" Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}}" />
                         <TextBlock Text="{Binding DailyRateText}" Style="{StaticResource BoardText}" FontSize="70" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
