@@ -9,6 +9,9 @@
     <AssemblyName>DisplayBoard</AssemblyName>
     <RootNamespace>DisplayBoard.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 là cảnh báo cho app WinForms. App này là WPF (WinForms chỉ dùng cho icon khay),
+         nên khai báo DPI trong app.manifest là đúng cách; tắt cảnh báo để build gọn. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <Version>1.0.0</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
