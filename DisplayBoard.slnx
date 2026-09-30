@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DisplayBoard.App/DisplayBoard.App.csproj" />
+    <Project Path="src/DisplayBoard.Core/DisplayBoard.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DisplayBoard.App.Tests/DisplayBoard.App.Tests.csproj" />
+    <Project Path="tests/DisplayBoard.Tests/DisplayBoard.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DisplayBoard.SampleGenerator/DisplayBoard.SampleGenerator.csproj" />
+  </Folder>
+</Solution>

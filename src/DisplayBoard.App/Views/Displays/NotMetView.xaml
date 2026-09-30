@@ -1,0 +1,79 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.NotMetView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource DangerBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader HeaderBackground="{StaticResource DangerHeader}" IconBrush="{StaticResource NotMetBrush}" />
+
+        <!-- Có người chưa đạt -->
+        <Grid Grid.Row="1" Margin="40,30" Visibility="{Binding AllMet, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+                <Border Background="{StaticResource DangerHeader}" CornerRadius="10,10,0,0" Padding="20,0">
+                    <Grid Height="70">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" /><ColumnDefinition Width="210" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="280" /><ColumnDefinition Width="240" /><ColumnDefinition Width="180" /><ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="#" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="Mã NV" Style="{StaticResource TableHeaderText}" />
+                        <TextBlock Grid.Column="2" Text="Họ tên" Style="{StaticResource TableHeaderText}" />
+                        <TextBlock Grid.Column="3" Text="Bộ phận" Style="{StaticResource TableHeaderText}" />
+                        <TextBlock Grid.Column="4" Text="Sản lượng" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                        <TextBlock Grid.Column="5" Text="%" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                        <TextBlock Grid.Column="6" Text="Thiếu" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,20,0" />
+                    </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="Row" Padding="20,0" BorderBrush="#5A1320" BorderThickness="0,0,0,2">
+                                <Grid Height="80">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100" /><ColumnDefinition Width="210" /><ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="280" /><ColumnDefinition Width="240" /><ColumnDefinition Width="180" /><ColumnDefinition Width="220" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Index}" Style="{StaticResource TableCellText}" HorizontalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Code}" Style="{StaticResource TableCellText}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Name}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Department}" Style="{StaticResource TableCellText}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Quantity}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                    <TextBlock Grid.Column="5" Text="{Binding Rate}" Style="{StaticResource TableCellText}" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                    <TextBlock Grid.Column="6" Text="{Binding Shortfall}" Style="{StaticResource TableCellText}" Foreground="#FF8A8A" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,20,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding MoreText}" Style="{StaticResource TableCellText}" Foreground="{StaticResource TextSecondary}" Margin="40,16,0,0"
+                           Visibility="{Binding MoreText, Converter={StaticResource NullToVisibility}}" />
+            </StackPanel>
+            <Border Grid.Row="1" Background="{StaticResource DangerCard}" BorderBrush="#A3263A" BorderThickness="2" CornerRadius="14" Padding="36,24">
+                <StackPanel Orientation="Horizontal">
+                    <c:Icon Kind="warning" Width="84" Height="84" Fill="{StaticResource NotMetBrush}" />
+                    <StackPanel Margin="30,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding AlertText}" Style="{StaticResource BoardText}" FontSize="46" FontWeight="Bold" Foreground="#FFB4B4" />
+                        <TextBlock Text="Hãy cùng cố gắng để hoàn thành kế hoạch hôm nay!" Style="{StaticResource BoardText}" FontSize="32" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Tất cả đã đạt -->
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Visibility="{Binding AllMet, Converter={StaticResource NullToVisibility}}">
+            <c:Icon Kind="check" Width="220" Height="220" Fill="{StaticResource MetBrush}" />
+            <TextBlock Text="Tất cả nhân viên đã đạt mục tiêu" Style="{StaticResource BoardText}" FontSize="80" FontWeight="Bold" Margin="0,40,0,0" HorizontalAlignment="Center" />
+            <TextBlock Text="Cảm ơn sự cố gắng của mọi người!" Style="{StaticResource BoardText}" FontSize="44" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</UserControl>
