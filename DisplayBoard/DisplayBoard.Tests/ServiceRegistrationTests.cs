@@ -1,5 +1,6 @@
 using DisplayBoard.Core;
 using DisplayBoard.Core.Interfaces;
+using DisplayBoard.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DisplayBoard.Tests;
@@ -19,5 +20,16 @@ public sealed class ServiceRegistrationTests
 
         Assert.Equal(path, service.FilePath);
         Assert.Same(service, provider.GetRequiredService<IConfigurationService>());
+    }
+
+    [Fact]
+    public void AddDisplayBoardCore_ResolvesExcelDataReader()
+    {
+        using var provider = new ServiceCollection()
+            .AddLogging()
+            .AddDisplayBoardCore(Path.Combine(Path.GetTempPath(), "display-config.json"))
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        Assert.IsType<ExcelDataReader>(provider.GetRequiredService<IExcelDataReader>());
     }
 }

@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(new ConfigurationOptions { FilePath = configurationFilePath });
         services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IExcelDataReader, ExcelDataReader>();
         return services;
     }
 }
