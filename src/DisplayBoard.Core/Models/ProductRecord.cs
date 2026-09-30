@@ -9,11 +9,19 @@ public sealed record ProductRecord(
     decimal DailyTarget,
     decimal DailyActual,
     decimal? MonthTarget,
-    decimal? MonthCumulative);
+    decimal? MonthCumulative,
+    string Line = "");
 
-/// <summary>Kết quả đọc sheet sản lượng đã chọn.</summary>
+/// <summary>
+/// Kết quả đọc file sản lượng. Mỗi sheet cùng ngày là một chuyền (<see cref="Lines"/>);
+/// <see cref="SheetName"/> là tên các sheet đã đọc, nối bằng dấu phẩy.
+/// </summary>
 public sealed record ProductionSheet(
     string SheetName,
     DateOnly? Date,
     IReadOnlyList<ProductRecord> Records,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings)
+{
+    /// <summary>Tên chuyền theo thứ tự sheet. Rỗng khi dữ liệu không gắn chuyền.</summary>
+    public IReadOnlyList<string> Lines { get; init; } = [];
+}

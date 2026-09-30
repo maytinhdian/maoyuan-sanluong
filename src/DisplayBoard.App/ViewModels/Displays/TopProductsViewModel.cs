@@ -17,6 +17,6 @@ public sealed partial class TopProductsViewModel(ClockViewModel clock) : Display
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
         AnyMet = snapshot.Products.Any(p => p.DailyStatus == ProgressStatus.Met);
-        Top = ProductRow.From(snapshot.Products.Where(p => p.DailyRate is not null).OrderBy(p => p.Rank).Take(5));
+        Top = ProductRow.From(snapshot.Products.Where(p => p.DailyRate is not null).OrderBy(p => p.Rank).Take(5), snapshot.HasMultipleLines);
     }
 }

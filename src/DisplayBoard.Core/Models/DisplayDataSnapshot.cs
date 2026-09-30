@@ -26,7 +26,23 @@ public sealed record ProductDaily(
     decimal? ShiftHours,
     decimal? HourlyTarget,
     int Rank,
-    decimal? CarriedShortfall = null);
+    decimal? CarriedShortfall = null,
+    string Line = "");
+
+/// <summary>Tổng một chuyền (một sheet) trong ngày.</summary>
+public sealed record LineSummary(
+    string Name,
+    int ProductCount,
+    decimal DailyTarget,
+    decimal DailyActual,
+    decimal? DailyRate,
+    ProgressStatus DailyStatus,
+    decimal MonthTarget,
+    decimal MonthCumulative,
+    decimal? MonthRate,
+    ProgressStatus MonthStatus,
+    int MetCount,
+    decimal CarriedShortfall);
 
 public sealed record Notice(
     string Title,
@@ -67,6 +83,11 @@ public sealed record DisplayDataSnapshot(
     string? CompanyName,
     IReadOnlyList<string> Warnings)
 {
+    /// <summary>Tổng theo chuyền, theo thứ tự sheet. Có từ 2 chuyền trở lên thì các màn hình hiện tên chuyền.</summary>
+    public IReadOnlyList<LineSummary> Lines { get; init; } = [];
+
+    public bool HasMultipleLines => Lines.Count > 1;
+
     public static DisplayDataSnapshot Empty(DateTimeOffset now) => new(
         now, "",
         new ProductionSummary(DateOnly.FromDateTime(now.LocalDateTime), true, 0, 0, 0, 0, ProgressStatus.None, 0, 0, 0, ProgressStatus.None, 0, 0),

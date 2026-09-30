@@ -38,7 +38,7 @@
                                 <Border x:Name="RankBadge" Width="56" Height="56" CornerRadius="28" Background="Transparent" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding Rank}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Center" />
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" />
                                 <TextBlock Grid.Column="2" Text="{Binding DailyTarget}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
                                 <TextBlock Grid.Column="3" Text="{Binding DailyActual}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0" />
                                 <TextBlock Grid.Column="4" Text="{Binding DailyRate}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,30,0"

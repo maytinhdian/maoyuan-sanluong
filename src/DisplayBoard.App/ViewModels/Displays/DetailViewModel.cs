@@ -38,7 +38,7 @@ public sealed partial class DetailViewModel : DisplayViewModelBase
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        _all = ProductRow.From(snapshot.Products);
+        _all = ProductRow.From(snapshot.Products, snapshot.HasMultipleLines);
         PageCount = DetailViewDefinition.PageCount(snapshot);
         var s = snapshot.Summary;
         TotalDailyTarget = Format.Number(s.DailyTarget);

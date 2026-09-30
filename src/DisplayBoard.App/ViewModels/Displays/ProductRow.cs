@@ -3,7 +3,7 @@ using DisplayBoard.Core.Models;
 namespace DisplayBoard.App.ViewModels.Displays;
 
 /// <summary>Một dòng sản phẩm đã định dạng sẵn để hiển thị.</summary>
-public sealed class ProductRow(ProductDaily p, int index)
+public sealed class ProductRow(ProductDaily p, int index, bool showLine = false)
 {
     public int Index { get; } = index;
     public bool IsAlternate => Index % 2 == 0;
@@ -11,6 +11,10 @@ public sealed class ProductRow(ProductDaily p, int index)
     public bool IsTop3 => p.Rank <= 3;
     public string Code { get; } = p.ProductCode;
     public string Name { get; } = p.DisplayName;
+    public string Line { get; } = p.Line;
+    public bool ShowLine { get; } = showLine && p.Line.Length > 0;
+    /// <summary>Tên hiển thị trong bảng: có nhiều chuyền thì kèm tên chuyền để phân biệt cùng mã ở 2 chuyền.</summary>
+    public string Title => ShowLine ? $"{Line} · {Name}" : Name;
     public string Color { get; } = p.Color;
     public string? ImagePath { get; } = p.ImagePath;
 
@@ -48,6 +52,6 @@ public sealed class ProductRow(ProductDaily p, int index)
     private static double Fraction(decimal actual, decimal target) =>
         target > 0 ? Math.Clamp((double)(actual / target), 0, 1) : 0;
 
-    public static IReadOnlyList<ProductRow> From(IEnumerable<ProductDaily> products) =>
-        products.Select((p, i) => new ProductRow(p, i + 1)).ToList();
+    public static IReadOnlyList<ProductRow> From(IEnumerable<ProductDaily> products, bool showLine = false) =>
+        products.Select((p, i) => new ProductRow(p, i + 1, showLine)).ToList();
 }

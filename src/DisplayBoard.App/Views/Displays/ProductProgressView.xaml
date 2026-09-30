@@ -27,7 +27,7 @@
                                 <DockPanel>
                                     <Rectangle DockPanel.Dock="Left" Width="16" Height="44" RadiusX="4" RadiusY="4" Margin="0,0,16,0"
                                                Fill="{Binding Color, Converter={StaticResource HexToBrush}}" />
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BoardText}" FontSize="42" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="42" FontWeight="SemiBold" />
                                 </DockPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                     <TextBlock Text="{Binding DailyActual}" Style="{StaticResource BoardText}" FontSize="86" FontWeight="Bold" />

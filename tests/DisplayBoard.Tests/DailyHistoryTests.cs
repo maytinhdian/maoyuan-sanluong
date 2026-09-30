@@ -34,6 +34,28 @@ public class DailyHistoryTests
     }
 
     [Fact]
+    public void Shortfall_is_kept_per_line()
+    {
+        var yesterday = new DayHistory(new DateOnly(2026, 9, 29),
+            [new ProductDayResult("883", 1000, 900, "Chuyền 1"), new ProductDayResult("883", 1000, 1000, "Chuyền 2")]);
+        var sheet = new ProductionSheet("Chuyền 1, Chuyền 2", new DateOnly(2026, 9, 30),
+            [new ProductRecord(3, "883", 10, 100, 1000, 950, null, null, "Chuyền 1"),
+             new ProductRecord(3, "883", 10, 100, 1000, 1000, null, null, "Chuyền 2")], [])
+        { Lines = ["Chuyền 1", "Chuyền 2"] };
+
+        var snapshot = new ProductProcessor().Build(sheet, ContentData.Empty, Now, null, yesterday);
+
+        Assert.Equal(2, snapshot.Products.Count);   // cùng mã, khác chuyền: không gộp
+        Assert.Equal(100m, snapshot.Products.Single(p => p.Line == "Chuyền 1").CarriedShortfall);
+        Assert.Equal(0m, snapshot.Products.Single(p => p.Line == "Chuyền 2").CarriedShortfall);
+        Assert.True(snapshot.HasMultipleLines);
+        var line1 = snapshot.Lines[0];
+        Assert.Equal(("Chuyền 1", 95m, ProgressStatus.Near, 100m), (line1.Name, line1.DailyRate!.Value, line1.DailyStatus, line1.CarriedShortfall));
+        Assert.Equal(100m, snapshot.Lines[1].DailyRate);
+        Assert.Equal("Chuyền 1", ProductProcessor.ToHistory(snapshot).Products[0].Line);
+    }
+
+    [Fact]
     public void Store_overwrites_same_day_and_returns_latest_earlier_day()
     {
         var path = Path.Combine(Path.GetTempPath(), $"history-{Guid.NewGuid():N}.json");

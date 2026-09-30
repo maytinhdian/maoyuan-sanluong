@@ -16,5 +16,5 @@ public sealed partial class RankingViewModel(ClockViewModel clock) : DisplayView
     [ObservableProperty] private IReadOnlyList<ProductRow> _rows = [];
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot) =>
-        Rows = ProductRow.From(snapshot.Products.OrderBy(p => p.Rank).Take(MaxRows));
+        Rows = ProductRow.From(snapshot.Products.OrderBy(p => p.Rank).Take(MaxRows), snapshot.HasMultipleLines);
 }

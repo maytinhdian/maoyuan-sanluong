@@ -39,7 +39,7 @@ public sealed partial class MonthProgressViewModel(ClockViewModel clock) : Displ
         // Sản phẩm đang thiếu nhiều nhất nằm trên.
         var withMonth = snapshot.Products.Where(p => p.MonthTarget > 0).OrderBy(p => p.MonthRate).ToList();
         var shown = withMonth.Count > MaxRows ? MaxRows - 1 : withMonth.Count;
-        Rows = ProductRow.From(withMonth.Take(shown));
+        Rows = ProductRow.From(withMonth.Take(shown), snapshot.HasMultipleLines);
         MoreText = withMonth.Count > shown ? $"+{withMonth.Count - shown} sản phẩm khác" : null;
     }
 }

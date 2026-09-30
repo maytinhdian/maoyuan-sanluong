@@ -134,17 +134,23 @@ public class ProductionWorkbookReaderTests
     }
 
     [Fact]
-    public void Same_date_prefers_active_sheet()
+    public void Same_date_sheets_are_read_as_lines()
     {
         using var stream = WorkbookFactory.Create(wb =>
         {
-            CustomerSheet(wb.AddWorksheet("A"), "日期：2026/09/30", ["X", 10, 100, 1, 0, 0]);
-            var b = wb.AddWorksheet("B");
-            CustomerSheet(b, "日期：2026/09/30", ["X", 10, 100, 2, 0, 0]);
-            b.SetTabActive();
+            CustomerSheet(wb.AddWorksheet("Chuyền 1"), "日期：2026/09/30", ["X", 10, 100, 1, 0, 0], ["Y", 10, 100, 5, 0, 0]);
+            CustomerSheet(wb.AddWorksheet("Chuyền 2"), "日期：2026/09/30", ["X", 10, 100, 2, 0, 0]);
+            // Sheet ngày cũ còn sót lại thì bỏ qua.
+            CustomerSheet(wb.AddWorksheet("Cũ"), "日期：2026/09/29", ["X", 10, 100, 9, 0, 0]);
         });
 
-        Assert.Equal("B", ProductionWorkbookReader.Read(stream).SheetName);
+        var sheet = ProductionWorkbookReader.Read(stream);
+
+        Assert.Equal(["Chuyền 1", "Chuyền 2"], sheet.Lines);
+        Assert.Equal("Chuyền 1, Chuyền 2", sheet.SheetName);
+        Assert.Equal(new DateOnly(2026, 9, 30), sheet.Date);
+        Assert.Equal([("Chuyền 1", "X", 1m), ("Chuyền 1", "Y", 5m), ("Chuyền 2", "X", 2m)],
+            sheet.Records.Select(r => (r.Line, r.ProductCode, r.DailyActual)).ToList());
     }
 
     [Fact]
@@ -191,7 +197,7 @@ public class ProductionWorkbookReaderTests
         var sheet = ProductionWorkbookReader.Read(stream);
 
         Assert.Single(sheet.Records);
-        Assert.Contains(sheet.Warnings, w => w.Contains("Dòng 4") && w.Contains("B"));
+        Assert.Contains(sheet.Warnings, w => w.Contains("dòng 4") && w.Contains("B"));
     }
 
     [Theory]
@@ -212,8 +218,8 @@ public class ProductionWorkbookReaderTests
 
         var sheet = ProductionWorkbookReader.Read(stream);
 
-        Assert.Equal("Sheet2", sheet.SheetName);
-        Assert.Equal(11, sheet.Records.Count);
+        Assert.Equal(6, sheet.Lines.Count);
+        Assert.Equal(24, sheet.Records.Count);
         Assert.Empty(sheet.Warnings);
     }
 }

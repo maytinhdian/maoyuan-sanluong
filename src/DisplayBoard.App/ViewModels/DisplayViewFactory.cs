@@ -15,6 +15,7 @@ public sealed class DisplayViewFactory(ClockViewModel clock)
         ViewIds.Notice => new NoticeViewModel(clock),
         ViewIds.Detail => new DetailViewModel(clock),
         ViewIds.MonthProgress => new MonthProgressViewModel(clock),
+        ViewIds.Lines => new LinesViewModel(clock),
         _ => new OverviewViewModel(clock)
     };
 }

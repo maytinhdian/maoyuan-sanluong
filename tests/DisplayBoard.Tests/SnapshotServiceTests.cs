@@ -131,7 +131,7 @@ public class SnapshotServiceTests
         await using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
         {
             var sheet = await new ExcelDataReader().ReadProductionAsync(path, null, CancellationToken.None);
-            Assert.Equal(11, sheet.Records.Count);
+            Assert.Equal(24, sheet.Records.Count);
         }
         File.Delete(path);
     }

@@ -46,7 +46,7 @@
                                         <ColumnDefinition Width="330" />
                                         <ColumnDefinition Width="140" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                     <c:ProgressLine Grid.Column="1" Height="26" Margin="10,0,20,0" Fraction="{Binding MonthFraction}"
                                                     Fill="{Binding MonthStatus, Converter={StaticResource StatusBrush}}" />
                                     <TextBlock Grid.Column="2" Style="{StaticResource TableCellText}" FontSize="28" HorizontalAlignment="Right" Foreground="{StaticResource TextSecondary}">

@@ -36,6 +36,8 @@
                                 </Grid>
                             </Border>
                             <TextBlock Text="{Binding Name}" Style="{StaticResource BoardText}" FontSize="38" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding Line}" Style="{StaticResource BoardText}" FontSize="28" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"
+                                       Visibility="{Binding ShowLine, Converter={StaticResource NullToVisibility}}" />
                             <TextBlock Text="{Binding DailyActual}" Style="{StaticResource BoardText}" FontSize="92" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,20,0,0" />
                             <TextBlock Text="{Binding DailyRate}" Style="{StaticResource BoardText}" FontSize="56" FontWeight="Bold" HorizontalAlignment="Center"
                                        Foreground="{Binding DailyStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />

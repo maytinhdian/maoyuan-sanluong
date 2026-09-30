@@ -60,13 +60,24 @@ public static partial class ProductionWorkbookReader
         if (candidates.Count == 0)
             throw new ExcelValidationException($"Không tìm thấy sheet nào có dòng tiêu đề chứa cột {Columns[0].Label}.");
 
-        // Nhiều sheet: lấy sheet có ngày mới nhất; cùng ngày hoặc không có ngày thì ưu tiên sheet đang chọn khi lưu, rồi sheet đầu.
+        // Mỗi sheet là một chuyền: đọc mọi sheet có ngày mới nhất (sheet ngày cũ còn sót lại bị bỏ qua).
+        // Không sheet nào có ngày thì đọc tất cả.
+        var newest = candidates.Max(x => x.Layout!.Date);
         var chosen = candidates
-            .OrderByDescending(x => x.Layout!.Date ?? DateOnly.MinValue)
-            .ThenByDescending(x => x.Sheet.TabActive)
-            .ThenBy(x => x.Sheet.Position)
-            .First();
-        return ReadSheet(chosen.Sheet, chosen.Layout!);
+            .Where(x => newest is null || x.Layout!.Date == newest || x.Layout!.Date is null)
+            .OrderBy(x => x.Sheet.Position)
+            .ToList();
+        var sheets = chosen.Select(x => ReadSheet(x.Sheet, x.Layout!)).ToList();
+        if (sheets.Count == 1)
+            return sheets[0];
+        return new ProductionSheet(
+            string.Join(", ", sheets.Select(x => x.SheetName)),
+            newest,
+            sheets.SelectMany(x => x.Records).ToList(),
+            sheets.SelectMany(x => x.Warnings).ToList())
+        {
+            Lines = sheets.Select(x => x.SheetName).ToList()
+        };
     }
 
     private sealed record Layout(int HeaderRow, IReadOnlyDictionary<Column, int> Columns, DateOnly? Date);
@@ -192,19 +203,20 @@ public static partial class ProductionWorkbookReader
 
             if (actual is null)
             {
-                warnings.Add($"Dòng {row} ({code}): thiếu sản lượng thực tế, đã bỏ qua.");
+                warnings.Add($"{sheet.Name} dòng {row} ({code}): thiếu sản lượng thực tế, đã bỏ qua.");
                 continue;
             }
             if (target is null)
-                warnings.Add($"Dòng {row} ({code}): thiếu mục tiêu ngày.");
+                warnings.Add($"{sheet.Name} dòng {row} ({code}): thiếu mục tiêu ngày.");
 
             records.Add(new ProductRecord(
                 row, code, hours, hourly, target ?? 0, actual.Value,
                 Number(sheet, row, columns, Column.MonthTarget),
-                Number(sheet, row, columns, Column.MonthCumulative)));
+                Number(sheet, row, columns, Column.MonthCumulative),
+                sheet.Name.Trim()));
         }
 
-        return new ProductionSheet(sheet.Name, layout.Date, records, warnings);
+        return new ProductionSheet(sheet.Name, layout.Date, records, warnings) { Lines = [sheet.Name.Trim()] };
     }
 
     private static string Label(Column column) => Columns.First(c => c.Column == column).Label;

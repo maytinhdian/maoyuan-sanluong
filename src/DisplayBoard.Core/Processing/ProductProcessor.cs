@@ -16,7 +16,7 @@ public sealed class ProductProcessor
         var warnings = sheet.Warnings.Concat(content.Warnings).ToList();
 
         var carried = previousDay?.Products
-            .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(p => Key(p.Line, p.ProductCode), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Sum(p => p.Shortfall), StringComparer.OrdinalIgnoreCase)
             ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
@@ -24,14 +24,14 @@ public sealed class ProductProcessor
             .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
 
-        // Mã trùng trong file: cộng dồn để không mất số liệu, và cảnh báo.
+        // Mã trùng trong cùng một chuyền: cộng dồn để không mất số liệu, và cảnh báo. Khác chuyền thì là 2 dòng riêng.
         var grouped = sheet.Records
-            .GroupBy(r => r.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(r => Key(r.Line, r.ProductCode), StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
-                if (g.Count() > 1)
-                    warnings.Add($"Mã sản phẩm {g.Key} xuất hiện {g.Count()} lần (dòng {string.Join(", ", g.Select(r => r.RowNumber))}), đã cộng dồn.");
                 var first = g.First();
+                if (g.Count() > 1)
+                    warnings.Add($"Mã sản phẩm {first.ProductCode}{(first.Line.Length > 0 ? $" ({first.Line})" : "")} xuất hiện {g.Count()} lần (dòng {string.Join(", ", g.Select(r => r.RowNumber))}), đã cộng dồn.");
                 return first with
                 {
                     DailyTarget = g.Sum(r => r.DailyTarget),
@@ -66,7 +66,8 @@ public sealed class ProductProcessor
                     r.ShiftHours,
                     r.HourlyTarget,
                     0,
-                    carried.TryGetValue(r.ProductCode, out var shortfall) ? shortfall : null));
+                    carried.TryGetValue(Key(r.Line, r.ProductCode), out var shortfall) ? shortfall : null,
+                    r.Line));
             })
             .OrderBy(x => x.Order)
             .Select(x => x.Product)
@@ -78,9 +79,9 @@ public sealed class ProductProcessor
             .OrderByDescending(x => x.p.DailyRate ?? -1)
             .ThenByDescending(x => x.p.DailyActual)
             .ThenBy(x => x.i)
-            .Select((x, rank) => (x.p.ProductCode, Rank: rank + 1))
-            .ToDictionary(x => x.ProductCode, x => x.Rank, StringComparer.OrdinalIgnoreCase);
-        products = products.Select(p => p with { Rank = ranks[p.ProductCode] }).ToList();
+            .Select((x, rank) => (Key: Key(x.p.Line, x.p.ProductCode), Rank: rank + 1))
+            .ToDictionary(x => x.Key, x => x.Rank, StringComparer.OrdinalIgnoreCase);
+        products = products.Select(p => p with { Rank = ranks[Key(p.Line, p.ProductCode)] }).ToList();
 
         var withDailyTarget = products.Where(p => p.DailyTarget > 0).ToList();
         var withMonth = products.Where(p => p.MonthTarget > 0).ToList();
@@ -115,6 +116,11 @@ public sealed class ProductProcessor
             .Select(n => new Notice(n.Title, n.Content, images.ResolveImage(n.BackgroundImage), n.Order))
             .ToList();
 
+        var lineNames = sheet.Lines.Count > 0 ? sheet.Lines : products.Select(p => p.Line).Distinct().ToList();
+        var lines = lineNames
+            .Select(name => LineTotal(name, products.Where(p => string.Equals(p.Line, name, StringComparison.OrdinalIgnoreCase)).ToList()))
+            .ToList();
+
         return new DisplayDataSnapshot(
             now,
             sheet.SheetName,
@@ -124,15 +130,44 @@ public sealed class ProductProcessor
             content.Slogans,
             content.Settings.GetValueOrDefault("donvi") ?? "PCS",
             content.Settings.GetValueOrDefault("tencongty"),
-            warnings);
+            warnings)
+        {
+            Lines = lines
+        };
     }
+
+    private static LineSummary LineTotal(string name, IReadOnlyList<ProductDaily> products)
+    {
+        var withTarget = products.Where(p => p.DailyTarget > 0).ToList();
+        var withMonth = products.Where(p => p.MonthTarget > 0).ToList();
+        var target = withTarget.Sum(p => p.DailyTarget);
+        var monthTarget = withMonth.Sum(p => p.MonthTarget!.Value);
+        var monthCumulative = withMonth.Sum(p => p.MonthCumulative ?? 0);
+        var rate = Rate(withTarget.Sum(p => p.DailyActual), target);
+        var monthRate = Rate(monthCumulative, monthTarget);
+        return new LineSummary(
+            name,
+            products.Count,
+            target,
+            products.Sum(p => p.DailyActual),
+            rate,
+            Status(rate),
+            monthTarget,
+            monthCumulative,
+            monthRate,
+            Status(monthRate),
+            products.Count(p => p.DailyStatus == ProgressStatus.Met),
+            products.Sum(p => p.CarriedShortfall ?? 0));
+    }
+
+    private static string Key(string line, string code) => $"{line}\u001F{code}";
 
     /// <summary>Kết quả hôm nay để lưu lịch sử (chỉ sản phẩm có mục tiêu).</summary>
     public static DayHistory ToHistory(DisplayDataSnapshot snapshot) => new(
         snapshot.Summary.Date,
         snapshot.Products
             .Where(p => p.DailyTarget > 0)
-            .Select(p => new ProductDayResult(p.ProductCode, p.DailyTarget, p.DailyActual))
+            .Select(p => new ProductDayResult(p.ProductCode, p.DailyTarget, p.DailyActual, p.Line))
             .ToList());
 
     public static decimal? Rate(decimal actual, decimal target) =>

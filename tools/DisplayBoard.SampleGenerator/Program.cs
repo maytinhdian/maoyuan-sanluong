@@ -7,28 +7,23 @@ var folder = args.Length > 0 ? args[0] : "samples";
 var date = args.Length > 1 ? DateTime.ParseExact(args[1], "yyyy/MM/dd", null) : DateTime.Today;
 Directory.CreateDirectory(folder);
 
-var products = new (object Code, double Hours, double Hourly, double Actual, double MonthTarget, double MonthCumulative)[]
+// Khách có 6 chuyền, mỗi chuyền một sheet cùng ngày.
+var lines = new (string Name, (object Code, double Hours, double Hourly, double Actual, double MonthTarget, double MonthCumulative)[] Products)[]
 {
-    ("ĐAI LƯNG", 10, 100, 1000, 40000, 38000),
-    ("BAO TAY XANH", 10, 100, 1000, 40000, 39000),
-    (883, 10, 185, 1850, 50000, 45000),
-    (700, 10, 185, 1850, 50000, 45000),
-    (972, 10, 185, 2000, 50000, 55000),
-    (959, 10, 185, 1850, 50000, 45000),
-    (1201, 8, 150, 1020, 30000, 24500),
-    (1305, 8, 150, 1150, 30000, 28800),
-    ("GĂNG TAY TRẮNG", 10, 120, 1310, 36000, 36500),
-    (640, 10, 200, 1700, 60000, 51000),
-    (515, 9, 160, 1500, 42000, 40100),
+    ("Chuyền 1", [("ĐAI LƯNG", 10, 100, 1000, 40000, 38000), ("BAO TAY XANH", 10, 100, 1000, 40000, 39000), (883, 10, 185, 1850, 50000, 45000)]),
+    ("Chuyền 2", [(700, 10, 185, 1850, 50000, 45000), (972, 10, 185, 2000, 50000, 55000), (959, 10, 185, 1850, 50000, 45000)]),
+    ("Chuyền 3", [(1201, 8, 150, 1020, 30000, 24500), (1305, 8, 150, 1150, 30000, 28800), (1306, 8, 150, 1180, 30000, 29900), (1310, 8, 150, 1090, 30000, 27100)]),
+    ("Chuyền 4", [("GĂNG TAY TRẮNG", 10, 120, 1310, 36000, 36500), (640, 10, 200, 1700, 60000, 51000), (641, 10, 200, 2050, 60000, 61200)]),
+    ("Chuyền 5", [(515, 9, 160, 1500, 42000, 40100), (516, 9, 160, 1390, 42000, 37800), (520, 9, 160, 1440, 42000, 41500), (883, 9, 160, 1460, 42000, 40900)]),
+    ("Chuyền 6", [(730, 10, 180, 1810, 52000, 50400), (731, 10, 180, 1620, 52000, 46800), (735, 10, 180, 1790, 52000, 51900), (740, 10, 180, 1400, 52000, 43000), (745, 10, 180, 1850, 52000, 52800), (750, 10, 180, 1705, 52000, 49600), (755, 10, 180, 1830, 52000, 50800)]),
 };
 
 using (var workbook = new XLWorkbook())
 {
-    // Sheet cũ (ngày hôm trước) để minh họa file nhiều sheet: app phải chọn sheet ngày mới nhất.
-    WriteSheet(workbook.AddWorksheet("Sheet1"), date.AddDays(-1), products.Take(6).Select(p => p with { Actual = p.Actual * 0.9 }).ToArray());
-    var current = workbook.AddWorksheet("Sheet2");
-    WriteSheet(current, date, products);
-    current.SetTabActive();
+    foreach (var line in lines)
+        WriteSheet(workbook.AddWorksheet(line.Name), date, line.Products);
+    // Sheet ngày cũ còn sót lại: app phải bỏ qua vì khác ngày.
+    WriteSheet(workbook.AddWorksheet("Cũ"), date.AddDays(-1), lines[0].Products);
     workbook.SaveAs(Path.Combine(folder, "SanLuong-khach-mau.xlsx"));
 }
 
@@ -50,7 +45,7 @@ using (var content = new XLWorkbook())
     content.SaveAs(Path.Combine(folder, "display-content.xlsx"));
 }
 
-Console.WriteLine($"Đã tạo {folder}/SanLuong-khach-mau.xlsx ({products.Length} sản phẩm, ngày {date:yyyy/MM/dd}) và {folder}/display-content.xlsx");
+Console.WriteLine($"Đã tạo {folder}/SanLuong-khach-mau.xlsx ({lines.Length} chuyền, {lines.Sum(l => l.Products.Length)} sản phẩm, ngày {date:yyyy/MM/dd}) và {folder}/display-content.xlsx");
 
 static void WriteSheet(IXLWorksheet sheet, DateTime date, (object Code, double Hours, double Hourly, double Actual, double MonthTarget, double MonthCumulative)[] rows)
 {

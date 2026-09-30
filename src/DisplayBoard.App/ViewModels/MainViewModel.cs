@@ -260,7 +260,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsHealthy));
 
         if (_snapshots.Current is { } current && current.SheetName.Length > 0)
-            DataInfoText = $"Sheet \"{current.SheetName}\" · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm";
+            DataInfoText = current.HasMultipleLines
+                ? $"{current.Lines.Count} chuyền ({current.SheetName}) · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm"
+                : $"Sheet \"{current.SheetName}\" · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm";
         if (Status == LoadStatus.Updated && _snapshots.Current is { } snapshot)
         {
             Warnings.Clear();

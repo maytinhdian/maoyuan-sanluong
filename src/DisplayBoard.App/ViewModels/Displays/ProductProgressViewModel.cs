@@ -31,7 +31,7 @@ public sealed partial class ProductProgressViewModel : DisplayViewModelBase
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
-        _all = ProductRow.From(snapshot.Products);
+        _all = ProductRow.From(snapshot.Products, snapshot.HasMultipleLines);
         Unit = snapshot.Unit;
         PageCount = ProductProgressViewDefinition.PageCount(snapshot);
         ShowPage(Page);

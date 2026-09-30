@@ -60,7 +60,7 @@
                                 <DockPanel VerticalAlignment="Center">
                                     <Rectangle DockPanel.Dock="Left" Width="10" Height="36" RadiusX="3" RadiusY="3" Margin="0,0,14,0"
                                                Fill="{Binding Color, Converter={StaticResource HexToBrush}}" />
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" />
                                 </DockPanel>
                                 <TextBlock Grid.Column="1" Text="{Binding ShiftHours}" Style="{StaticResource Num}" />
                                 <TextBlock Grid.Column="2" Text="{Binding HourlyTarget}" Style="{StaticResource Num}" />

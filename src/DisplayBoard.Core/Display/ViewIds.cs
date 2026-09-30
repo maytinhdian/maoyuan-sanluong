@@ -10,4 +10,5 @@ public static class ViewIds
     public const string Notice = "notice";
     public const string Detail = "detail";
     public const string MonthProgress = "month-progress";
+    public const string Lines = "lines";
 }

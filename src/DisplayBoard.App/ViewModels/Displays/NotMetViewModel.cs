@@ -27,7 +27,7 @@ public sealed partial class NotMetViewModel(ClockViewModel clock) : DisplayViewM
             .ToList();
         // Chừa 1 dòng cho "+N sản phẩm khác" khi danh sách dài.
         var shown = notMet.Count > MaxRows ? MaxRows - 1 : notMet.Count;
-        Rows = ProductRow.From(notMet.Take(shown));
+        Rows = ProductRow.From(notMet.Take(shown), snapshot.HasMultipleLines);
         MoreText = notMet.Count > shown ? $"+{notMet.Count - shown} sản phẩm khác" : null;
         AllMet = notMet.Count == 0;
         AlertText = $"Còn {notMet.Count} sản phẩm chưa đạt mục tiêu hôm nay";

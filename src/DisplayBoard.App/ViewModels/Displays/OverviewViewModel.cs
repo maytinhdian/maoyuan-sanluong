@@ -26,6 +26,7 @@ public sealed partial class OverviewViewModel(ClockViewModel clock) : DisplayVie
     [ObservableProperty] private ProgressStatus _monthStatus;
     [ObservableProperty] private string _metSummary = "";
     [ObservableProperty] private string? _carriedText;
+    [ObservableProperty] private string _chartTitle = "SẢN LƯỢNG THEO SẢN PHẨM";
     [ObservableProperty] private IReadOnlyList<ProductBar> _bars = [];
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
@@ -46,15 +47,23 @@ public sealed partial class OverviewViewModel(ClockViewModel clock) : DisplayVie
             : null;
         MetSummary = $"{s.ProductCount} sản phẩm · {s.MetCount} đạt · {s.NotMetCount} chưa đạt";
 
-        var max = snapshot.Products.Select(p => Math.Max(p.DailyActual, p.DailyTarget)).DefaultIfEmpty(0).Max();
-        Bars = snapshot.Products
-            .Select(p => new ProductBar(
-                p.DisplayName,
-                Format.Number(p.DailyActual),
-                StatusColor(p.DailyStatus, p.Color),
-                max > 0 ? Math.Max(6, (double)(p.DailyActual / max) * MaxBarHeight) : 6,
-                max > 0 ? (double)(p.DailyTarget / max) * MaxBarHeight : 0,
-                p.DailyTarget > 0))
+        // Nhiều chuyền: mỗi cột là một chuyền (6 cột dễ đọc hơn vài chục cột sản phẩm).
+        MetSummary = snapshot.HasMultipleLines
+            ? $"{snapshot.Lines.Count} chuyền · {s.ProductCount} sản phẩm · {s.MetCount} đạt · {s.NotMetCount} chưa đạt"
+            : MetSummary;
+        ChartTitle = snapshot.HasMultipleLines ? "SẢN LƯỢNG THEO CHUYỀN" : "SẢN LƯỢNG THEO SẢN PHẨM";
+        var items = snapshot.HasMultipleLines
+            ? snapshot.Lines.Select(l => (l.Name, l.DailyActual, l.DailyTarget, l.DailyStatus, Color: "#2E86DE")).ToList()
+            : snapshot.Products.Select(p => (Name: p.DisplayName, p.DailyActual, p.DailyTarget, p.DailyStatus, p.Color)).ToList();
+        var max = items.Select(i => Math.Max(i.DailyActual, i.DailyTarget)).DefaultIfEmpty(0).Max();
+        Bars = items
+            .Select(i => new ProductBar(
+                i.Name,
+                Format.Number(i.DailyActual),
+                StatusColor(i.DailyStatus, i.Color),
+                max > 0 ? Math.Max(6, (double)(i.DailyActual / max) * MaxBarHeight) : 6,
+                max > 0 ? (double)(i.DailyTarget / max) * MaxBarHeight : 0,
+                i.DailyTarget > 0))
             .ToList();
     }
 

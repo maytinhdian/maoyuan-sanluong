@@ -40,8 +40,8 @@ App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào
 
 - Ngày lấy từ ô A1 (`日期：2026/09/30`). Cột được nhận theo tiêu đề (tiếng Trung trước, rồi tiếng Việt), nên đổi thứ tự cột vẫn đọc được.
 - %, chênh lệch và trạng thái do app tự tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
-- File có nhiều sheet: dùng sheet ghi trong **Sheet** ở màn hình chính; để trống thì lấy sheet có ngày mới nhất.
-- **Phần thiếu hôm trước**: mỗi lần đọc file, app lưu kết quả của ngày đó vào `%AppData%\DisplayBoard\daily-history.json`. Hôm sau các màn hình hiện số còn thiếu của ngày làm việc trước (bỏ qua ngày nghỉ).
+- **Mỗi sheet là một chuyền** (khách có 6 chuyền). App đọc mọi sheet có ngày mới nhất; sheet của ngày cũ còn sót lại bị bỏ qua. Cùng một mã sản phẩm ở 2 chuyền được tính riêng. Ghi tên sheet vào ô **Sheet** ở màn hình chính nếu chỉ muốn chiếu một chuyền.
+- **Phần thiếu hôm trước**: mỗi lần đọc file, app lưu kết quả của ngày đó vào `%AppData%\DisplayBoard\daily-history.json`. Hôm sau các màn hình hiện số còn thiếu của ngày làm việc trước (bỏ qua ngày nghỉ), tính riêng theo từng chuyền và sản phẩm.
 
 ### File nội dung phụ (không bắt buộc)
 
@@ -56,11 +56,11 @@ App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào
 
 Ảnh sản phẩm và ảnh nền thông báo đặt trong thư mục `images` cạnh file Excel. Ảnh sản phẩm đặt tên theo mã, ví dụ `883.jpg`.
 
-## 8 nội dung hiển thị
+## 9 nội dung hiển thị
 
 | Id | Nội dung |
 |---|---|
-| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, cột theo sản phẩm, phần thiếu hôm trước |
+| `overview` | Sản lượng hôm nay: tổng, mục tiêu, % hoàn thành, cột theo chuyền (hoặc theo sản phẩm nếu chỉ 1 chuyền), phần thiếu hôm trước |
 | `ranking` | Xếp hạng sản phẩm theo % hoàn thành |
 | `product-progress` | Thẻ tiến độ từng sản phẩm (ngày và tháng) |
 | `top-products` | Sản phẩm vượt mục tiêu |
@@ -68,6 +68,7 @@ App đọc thẳng file sản lượng của khách, **không bao giờ ghi vào
 | `notice` | Thông báo / thông điệp |
 | `detail` | Bảng chi tiết giống file khách, tự lật trang |
 | `month-progress` | Lũy kế tháng so với mục tiêu tháng |
+| `lines` | So sánh các chuyền: thực tế/mục tiêu, %, số sản phẩm đạt, phần thiếu hôm trước |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 

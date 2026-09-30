@@ -20,7 +20,7 @@ public class RenderViewsTests
     public static TheoryData<string> ViewIdsData() =>
     [
         ViewIds.Overview, ViewIds.Ranking, ViewIds.ProductProgress, ViewIds.TopProducts,
-        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress
+        ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress, ViewIds.Lines
     ];
 
     [Theory]
@@ -74,7 +74,7 @@ public class RenderViewsTests
         var now = new DateTimeOffset(date.ToDateTime(new TimeOnly(14, 30)));
         // Ngày trước: mỗi sản phẩm thứ hai thiếu 10% để ảnh chụp có phần "thiếu hôm trước".
         var previous = new DayHistory(date.AddDays(-1), sheet.Records
-            .Select((r, i) => new ProductDayResult(r.ProductCode, r.DailyTarget, i % 2 == 0 ? r.DailyTarget * 0.9m : r.DailyTarget))
+            .Select((r, i) => new ProductDayResult(r.ProductCode, r.DailyTarget, i % 2 == 0 ? r.DailyTarget * 0.9m : r.DailyTarget, r.Line))
             .ToList());
         return new ProductProcessor().Build(sheet, content, now, Path.Combine(samples, "images"), previous);
     }

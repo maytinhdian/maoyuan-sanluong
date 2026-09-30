@@ -75,7 +75,7 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding MetSummary}" Style="{StaticResource CardTitle}" FontWeight="Normal" />
                     <TextBlock Style="{StaticResource CardTitle}" Foreground="White">
-                        <Run Text="SẢN LƯỢNG THEO SẢN PHẨM" /><Run Text="   ▬ mục tiêu" FontSize="24" Foreground="{StaticResource TextSecondary}" />
+                        <Run Text="{Binding ChartTitle, Mode=OneWay}" /><Run Text="   ▬ mục tiêu" FontSize="24" Foreground="{StaticResource TextSecondary}" />
                     </TextBlock>
                 </DockPanel>
                 <ItemsControl Grid.Row="1" ItemsSource="{Binding Bars}" Margin="0,8,0,0">

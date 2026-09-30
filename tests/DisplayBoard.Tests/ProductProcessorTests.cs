@@ -157,7 +157,8 @@ public class ProductProcessorTests
 
         var snapshot = new ProductProcessor().Build(ProductionWorkbookReader.Read(data), ContentWorkbookReader.Read(content), Now, null);
 
-        Assert.Equal(11, snapshot.Products.Count);
+        Assert.Equal(24, snapshot.Products.Count);
+        Assert.Equal(6, snapshot.Lines.Count);
         Assert.Equal(2, snapshot.Notices.Count);
         Assert.Equal(4, snapshot.Slogans.Count);
         Assert.Contains(snapshot.Products, p => p.DisplayName == "Găng tay 883");
