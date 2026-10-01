@@ -197,19 +197,14 @@ public sealed class BoardServerTests : IAsyncLifetime
     [Fact]
     public async Task Port_in_use_is_reported_instead_of_crashing()
     {
-        var blocker = new TcpListener(IPAddress.Any, FreePort());
-        blocker.Start();
-        try
-        {
-            _config.Server.Port = ((IPEndPoint)blocker.LocalEndpoint).Port;
-            await _server.ApplyAsync(_config);
-            Assert.False(_server.IsRunning);
-            Assert.Contains("đang bị chương trình khác dùng", _server.LastError);
-        }
-        finally
-        {
-            blocker.Stop();
-        }
+        // Giống khi mở app thứ hai trên cùng máy: cổng đã có máy chủ khác giữ.
+        var config = new DisplayConfiguration { Server = new LanServerSettings { Port = _port } };
+        await using var second = new BoardServer(_snapshots, new FakeConfig(config), TimeProvider.System, NullLogger<BoardServer>.Instance);
+        await second.ApplyAsync(config);
+
+        Assert.False(second.IsRunning);
+        Assert.Contains("đang bị chương trình khác dùng", second.LastError);
+        Assert.True(_server.IsRunning);
     }
 
     private static async Task<JsonElement> ReceiveAsync(ClientWebSocket socket)
