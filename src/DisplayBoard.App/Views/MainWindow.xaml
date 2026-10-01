@@ -32,7 +32,34 @@
             <Setter Property="FontSize" Value="15" />
         </Style>
 
-        <!-- Trình chỉnh playlist của một TV -->
+        <!-- Danh sách nội dung của một TV (DataContext: ScreenSettingsViewModel) -->
+        <DataTemplate x:Key="PlaylistEditor">
+            <StackPanel>
+                <TextBlock Text="Nội dung (tick để bật, ↑↓ để sắp thứ tự, số giây trống = mặc định):" FontWeight="Normal" Foreground="#555" Margin="0,0,0,6" />
+                <ItemsControl ItemsSource="{Binding Entries}" FontWeight="Normal">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="1" Text="{Binding Seconds, UpdateSourceTrigger=PropertyChanged}" ToolTip="Số giây hiển thị" Margin="6,0" />
+                                <Button Grid.Column="2" Content="↑" MinWidth="30" Padding="6,0" Margin="0,0,2,0"
+                                        Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                <Button Grid.Column="3" Content="↓" MinWidth="30" Padding="6,0" Margin="0"
+                                        Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- TV nối dây vào máy này: màn hình vật lý + nội dung -->
         <DataTemplate x:Key="ScreenEditor">
             <GroupBox Header="{Binding Name}">
                 <StackPanel>
@@ -41,27 +68,7 @@
                         <ComboBox ItemsSource="{Binding DataContext.Monitors, RelativeSource={RelativeSource AncestorType=Window}}"
                                   SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="DisplayName" FontWeight="Normal" />
                     </DockPanel>
-                    <TextBlock Text="Nội dung (tick để bật, ↑↓ để sắp thứ tự, số giây trống = mặc định):" FontWeight="Normal" Foreground="#555" Margin="0,0,0,6" />
-                    <ItemsControl ItemsSource="{Binding Entries}" FontWeight="Normal">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="60" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1" Text="{Binding Seconds, UpdateSourceTrigger=PropertyChanged}" ToolTip="Số giây hiển thị" Margin="6,0" />
-                                    <Button Grid.Column="2" Content="↑" MinWidth="30" Padding="6,0" Margin="0,0,2,0"
-                                            Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                    <Button Grid.Column="3" Content="↓" MinWidth="30" Padding="6,0" Margin="0"
-                                            Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PlaylistEditor}" Focusable="False" />
                 </StackPanel>
             </GroupBox>
         </DataTemplate>
@@ -148,32 +155,54 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="MÀN HÌNH">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <RadioButton Content="Đồng bộ (2 TV cùng nội dung)" IsChecked="{Binding IsMirror}" FontWeight="Normal" Margin="0,0,24,0" />
-                                    <RadioButton Content="Độc lập (mỗi TV một nội dung)" IsChecked="{Binding IsIndependent}" FontWeight="Normal" Margin="0,0,24,0" />
-                                    <Button Content="Dò lại màn hình" Command="{Binding RefreshMonitorsCommand}" />
+                        <GroupBox Header="TV XEM QUA MẠNG LAN">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="240" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Button Content="+ Thêm TV" Command="{Binding AddTvCommand}" />
+                                        <Button Content="Xoá TV" Command="{Binding RemoveTvCommand}" CommandParameter="{Binding SelectedTv}" Margin="0" />
+                                    </StackPanel>
+                                    <ListBox ItemsSource="{Binding NetworkTvs}" SelectedItem="{Binding SelectedTv}" MinHeight="180" FontWeight="Normal">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="4,6">
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" />
+                                                    <TextBlock Foreground="#555" FontSize="12">
+                                                        <Run Text="/tv/" /><Run Text="{Binding Number, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding ViewersText, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                                <StackPanel Grid.Column="2" DataContext="{Binding SelectedTv}">
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="Tên TV:" Style="{StaticResource Label}" Width="90" />
+                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontWeight="Normal" VerticalContentAlignment="Center" />
+                                    </DockPanel>
+                                    <DockPanel Margin="0,0,0,4">
+                                        <TextBlock Text="Địa chỉ:" Style="{StaticResource Label}" Width="90" />
+                                        <Button DockPanel.Dock="Right" Content="Mở" MinWidth="60" Margin="6,0,0,0" Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Url}" />
+                                        <Button DockPanel.Dock="Right" Content="Copy" MinWidth="60" Margin="6,0,0,0" Command="{Binding DataContext.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Url}" />
+                                        <TextBox Text="{Binding Url, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="15" VerticalContentAlignment="Center" />
+                                    </DockPanel>
+                                    <TextBlock FontWeight="Normal" Foreground="#555" Margin="90,0,0,12" TextWrapping="Wrap"
+                                               Text="Mở địa chỉ này bằng trình duyệt trên TV (Smart TV, TV box, máy tính nối TV), bấm vào màn hình để chiếu toàn màn hình. Địa chỉ trống là máy chủ đang tắt (xem tab Máy chủ)." />
+                                    <ContentControl Content="{Binding Content}" ContentTemplate="{StaticResource PlaylistEditor}" Focusable="False" />
                                 </StackPanel>
-                                <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,0,0,8" TextWrapping="Wrap"
-                                           Text="Chế độ Đồng bộ: cả 2 TV dùng danh sách nội dung của TV1 và chuyển trang cùng lúc. TV xem qua mạng LAN (tab Mạng LAN) cũng dùng danh sách nội dung của TV1/TV2 ở đây." />
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="16" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <ContentControl Content="{Binding Screens[0]}" ContentTemplate="{StaticResource ScreenEditor}" />
-                                    <ContentControl Grid.Column="2" Content="{Binding Screens[1]}" ContentTemplate="{StaticResource ScreenEditor}" />
-                                </Grid>
-                            </StackPanel>
+                            </Grid>
                         </GroupBox>
 
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="Lưu &amp; xem trước" Command="{Binding ApplySettingsCommand}" />
-                            <Button Content="Bắt đầu trình chiếu" Style="{StaticResource PrimaryButton}" Command="{Binding StartPresentationCommand}" />
-                            <Button Content="Dừng trình chiếu" Command="{Binding StopPresentationCommand}" />
+                            <Button Content="Lưu &amp; áp dụng" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" />
                         </StackPanel>
+                        <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
+                                   Text="Bấm Lưu &amp; áp dụng sau khi thêm, xoá, đổi tên TV hoặc đổi nội dung: các TV đang mở tự nhận ngay, không cần tải lại." />
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -182,10 +211,7 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                         <TextBlock Text="Xem nội dung của:" Style="{StaticResource Label}" />
-                        <ComboBox SelectedIndex="{Binding PreviewScreenIndex}" Width="120" Margin="0,0,12,0">
-                            <ComboBoxItem Content="TV1" />
-                            <ComboBoxItem Content="TV2" />
-                        </ComboBox>
+                        <ComboBox ItemsSource="{Binding NetworkTvs}" SelectedItem="{Binding PreviewTv}" DisplayMemberPath="DisplayName" Width="180" Margin="0,0,12,0" />
                         <Button Content="Chạy lại" Command="{Binding PreviewCommand}" />
                         <Button Content="Trang tiếp ›" Command="{Binding NextPreviewViewCommand}" />
                     </StackPanel>
@@ -195,7 +221,7 @@
                 </DockPanel>
             </TabItem>
 
-            <TabItem Header="Mạng LAN">
+            <TabItem Header="Máy chủ">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="820" HorizontalAlignment="Left" Margin="0,0,0,20">
                         <GroupBox Header="MÁY CHỦ CHO TV XEM QUA TRÌNH DUYỆT">
@@ -218,17 +244,16 @@
                                 <TextBlock Text="{Binding ServerError}" Foreground="#B91C1C" FontWeight="Normal" TextWrapping="Wrap" Margin="0,0,0,8"
                                            Visibility="{Binding ServerError, Converter={StaticResource NullToVisibility}}" />
                                 <TextBlock FontWeight="Normal" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,10"
-                                           Text="Máy này đọc file Excel và phát số liệu qua mạng nội bộ. Mỗi TV (Smart TV, TV box, máy tính…) chỉ cần mở trình duyệt vào địa chỉ bên dưới, không cần cài gì. Số liệu đổi ngay khi file Excel được lưu." />
-                                <ItemsControl ItemsSource="{Binding ServerLinks}" FontWeight="Normal">
+                                           Text="Máy này đọc file Excel và phát số liệu qua mạng nội bộ. Địa chỉ riêng của từng TV nằm ở Trang chủ. Trang dưới đây liệt kê tất cả TV để chọn nhanh trên TV mới." />
+                                <ItemsControl ItemsSource="{Binding ServerAddresses}" FontWeight="Normal">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <DockPanel Margin="0,2">
-                                                <TextBlock DockPanel.Dock="Left" Text="{Binding Screen}" Width="44" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                 <Button DockPanel.Dock="Right" Content="Mở" MinWidth="60" Margin="6,0,0,0"
-                                                        Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                                        Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
                                                 <Button DockPanel.Dock="Right" Content="Copy" MinWidth="60" Margin="6,0,0,0"
-                                                        Command="{Binding DataContext.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                <TextBox Text="{Binding Url, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="15" VerticalContentAlignment="Center" />
+                                                        Command="{Binding DataContext.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                <TextBox Text="{Binding Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="15" VerticalContentAlignment="Center" />
                                             </DockPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -258,6 +283,38 @@
                             </StackPanel>
                         </GroupBox>
                         <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Chiếu trên máy này">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <GroupBox Header="TV NỐI DÂY VÀO MÁY NÀY">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <RadioButton Content="Đồng bộ (2 TV cùng nội dung)" IsChecked="{Binding IsMirror}" FontWeight="Normal" Margin="0,0,24,0" />
+                                    <RadioButton Content="Độc lập (mỗi TV một nội dung)" IsChecked="{Binding IsIndependent}" FontWeight="Normal" Margin="0,0,24,0" />
+                                    <Button Content="Dò lại màn hình" Command="{Binding RefreshMonitorsCommand}" />
+                                </StackPanel>
+                                <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,0,0,8" TextWrapping="Wrap"
+                                           Text="Dùng khi TV cắm thẳng vào máy này bằng dây HDMI (giống bản 1.x). TV xem qua mạng không cần phần này. Chế độ Đồng bộ: cả 2 TV dùng nội dung của TV1 và chuyển trang cùng lúc." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentControl Content="{Binding Screens[0]}" ContentTemplate="{StaticResource ScreenEditor}" />
+                                    <ContentControl Grid.Column="2" Content="{Binding Screens[1]}" ContentTemplate="{StaticResource ScreenEditor}" />
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Bắt đầu trình chiếu" Style="{StaticResource PrimaryButton}" Command="{Binding StartPresentationCommand}" />
+                            <Button Content="Dừng trình chiếu" Command="{Binding StopPresentationCommand}" />
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

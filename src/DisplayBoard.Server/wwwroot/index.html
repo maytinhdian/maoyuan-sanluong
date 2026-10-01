@@ -45,7 +45,7 @@
       var a = document.createElement('a');
       a.className = 'tv';
       a.href = '/tv/' + s.number;
-      a.innerHTML = s.name + '<span>Mở màn hình ' + s.name + '</span>';
+      a.innerHTML = s.name + '<span>/tv/' + s.number + '</span>';
       a.onclick = function () {
         if (info.keyRequired && keyInput.value) a.href = '/tv/' + s.number + '?key=' + encodeURIComponent(keyInput.value.trim());
       };

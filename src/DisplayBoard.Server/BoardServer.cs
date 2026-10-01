@@ -166,7 +166,7 @@ public sealed class BoardServer : IBoardServer
             AppName = _config.ResolveAppName(),
             Version,
             KeyRequired = KeyRequired,
-            Screens = Enumerable.Range(1, ScreenCount).Select(n => new { Number = n, Name = ScreenName(n) })
+            Screens = _config.ResolveNetworkScreens().Select(s => new { s.Number, Name = ScreenName(s) })
         }, Json));
 
         app.MapGet("/api/state", (HttpContext http, int? tv) =>
@@ -283,16 +283,14 @@ public sealed class BoardServer : IBoardServer
             _snapshots.LastError);
     }
 
-    private ScreenState BuildScreen(DisplayConfiguration config, int screen)
+    /// <summary>Null khi máy chủ không có TV số này (vd đã bị xoá); TV vẫn giữ kết nối để hiện lại khi được thêm.</summary>
+    private static ScreenState? BuildScreen(DisplayConfiguration config, int screen)
     {
-        var count = Math.Max(1, config.Screens.Count);
-        var index = Math.Clamp(screen, 1, count) - 1;
-        // Đồng bộ: mọi TV dùng nội dung của TV1, giống khi chiếu trên máy này.
-        var source = config.DisplayMode == DisplayMode.Mirror ? 0 : index;
-        var playlist = source < config.Screens.Count ? config.Screens[source].Playlist : [];
-        if (playlist.Count == 0)
-            playlist = [new PlaylistItem { ViewId = "overview" }];
-        return new ScreenState(index + 1, ScreenName(index + 1), playlist,
+        var tv = config.ResolveNetworkScreens().FirstOrDefault(s => s.Number == screen);
+        if (tv is null)
+            return null;
+        var playlist = tv.Playlist.Count > 0 ? tv.Playlist : [new PlaylistItem { ViewId = "overview" }];
+        return new ScreenState(tv.Number, ScreenName(tv), playlist,
             Math.Max(3, config.DefaultViewSeconds), Math.Max(5, config.MaxPagedViewSeconds));
     }
 
@@ -313,9 +311,8 @@ public sealed class BoardServer : IBoardServer
         return $"/img/{token}?v={File.GetLastWriteTimeUtc(path).Ticks}";
     }
 
-    private int ScreenCount => Math.Max(1, _config.Screens.Count);
-
-    private static string ScreenName(int screen) => $"TV{screen}";
+    private static string ScreenName(NetworkScreen screen) =>
+        string.IsNullOrWhiteSpace(screen.Name) ? $"TV{screen.Number}" : screen.Name.Trim();
 
     private bool KeyRequired => !string.IsNullOrWhiteSpace(_config.Server.AccessKey);
 
@@ -406,7 +403,7 @@ public sealed record BoardState(
     string Version,
     DateTimeOffset ServerTime,
     string AppName,
-    ScreenState Screen,
+    ScreenState? Screen,
     DisplayDataSnapshot? Data,
     string Status,
     string? Error);

@@ -6,9 +6,10 @@ App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_
 
 ## Bản 2.x: TV xem qua mạng LAN
 
-- Máy chủ (máy có file Excel) chạy Display Board như bình thường. App mở máy chủ HTTP + WebSocket ở cổng 5080 (đổi ở tab **Mạng LAN**).
-- TV mở trình duyệt vào `http://<IP máy chủ>:5080/tv/1` (hoặc `/tv/2`). Trang `http://<IP máy chủ>:5080/` liệt kê các TV.
-- TV1/TV2 chiếu danh sách nội dung chọn ở mục **MÀN HÌNH**; chế độ Đồng bộ thì mọi TV dùng danh sách của TV1.
+- Máy chủ (máy có file Excel) chạy Display Board như bình thường. App mở máy chủ HTTP + WebSocket ở cổng 5080 (đổi ở tab **Máy chủ**).
+- Tab **Trang chủ** là danh sách TV qua mạng: thêm/xoá TV, đặt tên, chọn nội dung riêng cho từng TV. Mỗi TV có địa chỉ riêng `http://<IP máy chủ>:5080/tv/<số>`; trang `http://<IP máy chủ>:5080/` liệt kê các TV.
+- Bấm **Lưu & áp dụng** là TV đang mở nhận nội dung mới ngay. Cấu hình cũ từ 1.x tự chuyển thành TV1/TV2 qua mạng.
+- TV cắm dây HDMI thẳng vào máy chủ vẫn dùng được ở tab **Chiếu trên máy này** (giống 1.x).
 - Excel vừa lưu là máy chủ đẩy số mới sang TV ngay. Mất kết nối thì TV giữ số liệu gần nhất và tự kết nối lại.
 - Có thể đặt **mã truy cập**: TV nhập một lần, hoặc mở địa chỉ có `?key=…`.
 - Ảnh sản phẩm/thông báo được phát qua `/img/<mã>`; chỉ ảnh có trong dữ liệu mới được phát, không lộ đường dẫn trên máy.
@@ -26,8 +27,8 @@ dotnet run --project src/DisplayBoard.App
 ```
 
 1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V18_mau.xlsx` (file V18 với số liệu thử).
-2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
-3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
+2. Ở **TV XEM QUA MẠNG LAN**, chọn TV, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓, bấm **Lưu & áp dụng**.
+3. Bấm **Mở** để xem trang TV trong trình duyệt, hoặc xem ở tab **Xem trước**. TV nối dây: tab **Chiếu trên máy này** > **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
 
 Tạo lại file nội dung phụ mẫu `samples/display-content.xlsx`:

@@ -52,10 +52,10 @@ public sealed class BoardServerTests : IAsyncLifetime
         {
             AppName = "Xưởng A",
             DisplayMode = DisplayMode.Independent,
-            Screens =
+            NetworkScreens =
             [
-                new ScreenAssignment { Playlist = [new PlaylistItem { ViewId = "overview" }, new PlaylistItem { ViewId = "ranking", Seconds = 20 }] },
-                new ScreenAssignment { Playlist = [new PlaylistItem { ViewId = "detail" }] }
+                new NetworkScreen { Number = 1, Name = "Cổng xưởng", Playlist = [new PlaylistItem { ViewId = "overview" }, new PlaylistItem { ViewId = "ranking", Seconds = 20 }] },
+                new NetworkScreen { Number = 3, Playlist = [new PlaylistItem { ViewId = "detail" }] }
             ],
             Server = new LanServerSettings { Port = _port }
         };
@@ -115,18 +115,36 @@ public sealed class BoardServerTests : IAsyncLifetime
         Assert.Equal(["overview", "ranking"], playlist.EnumerateArray().Select(p => p.GetProperty("viewId").GetString()));
         Assert.Equal(20, playlist[1].GetProperty("seconds").GetInt32());
 
-        var tv2 = await GetStateAsync(2);
-        Assert.Equal("TV2", tv2.GetProperty("screen").GetProperty("name").GetString());
-        Assert.Equal("detail", tv2.GetProperty("screen").GetProperty("playlist")[0].GetProperty("viewId").GetString());
+        Assert.Equal("Cổng xưởng", tv1.GetProperty("screen").GetProperty("name").GetString());
+
+        var tv3 = await GetStateAsync(3);
+        Assert.Equal("TV3", tv3.GetProperty("screen").GetProperty("name").GetString());
+        Assert.Equal("detail", tv3.GetProperty("screen").GetProperty("playlist")[0].GetProperty("viewId").GetString());
     }
 
     [Fact]
-    public async Task Mirror_mode_gives_every_tv_the_tv1_playlist()
+    public async Task Unknown_tv_gets_no_screen_and_info_lists_the_tvs()
     {
-        _config.DisplayMode = DisplayMode.Mirror;
-        await _server.ApplyAsync(_config);
         var tv2 = await GetStateAsync(2);
-        Assert.Equal("ranking", tv2.GetProperty("screen").GetProperty("playlist")[1].GetProperty("viewId").GetString());
+        Assert.False(tv2.TryGetProperty("screen", out var screen) && screen.ValueKind != JsonValueKind.Null);
+
+        using var info = JsonDocument.Parse(await _http.GetStringAsync("/api/info"));
+        var screens = info.RootElement.GetProperty("screens").EnumerateArray()
+            .Select(e => (e.GetProperty("number").GetInt32(), e.GetProperty("name").GetString())).ToArray();
+        Assert.Equal([(1, "Cổng xưởng"), (3, "TV3")], screens);
+    }
+
+    [Fact]
+    public void Without_network_tvs_the_wired_screens_are_used()
+    {
+        var config = new DisplayConfiguration
+        {
+            Screens = [new ScreenAssignment { Playlist = [new PlaylistItem { ViewId = "detail" }] }]
+        };
+        var tvs = config.ResolveNetworkScreens();
+        Assert.Equal([1, 2], tvs.Select(t => t.Number));
+        Assert.Equal("detail", tvs[0].Playlist[0].ViewId);
+        Assert.Equal("ranking", tvs[1].Playlist[0].ViewId);
     }
 
     [Fact]

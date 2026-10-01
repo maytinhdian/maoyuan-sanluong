@@ -409,6 +409,14 @@
     }
     var playlistChanged = !state || JSON.stringify(state.screen) !== JSON.stringify(next.screen);
     state = next;
+    if (!next.screen) {
+      stopRotation();
+      stage.innerHTML = '';
+      document.title = next.appName;
+      showOverlay('Máy chủ chưa có TV số ' + tvNumber + '<small>Thêm TV ở ứng dụng Display Board trên máy chủ, hoặc chọn TV khác tại <a href="/" style="color:#7CC4FF">' +
+        esc(location.host) + '</a></small>');
+      return;
+    }
     document.title = next.appName + ' · ' + next.screen.name;
     if (!next.data) {
       stopRotation();
