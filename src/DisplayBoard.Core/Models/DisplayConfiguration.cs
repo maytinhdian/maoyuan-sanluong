@@ -18,6 +18,26 @@ public sealed class ScreenAssignment
     public List<PlaylistItem> Playlist { get; set; } = [];
 }
 
+/// <summary>Một TV xem qua mạng LAN, mở http://&lt;IP&gt;:&lt;cổng&gt;/tv/{Number}. Số không đổi khi xoá TV khác.</summary>
+public sealed class NetworkScreen
+{
+    public int Number { get; set; }
+    public string Name { get; set; } = "";
+    public List<PlaylistItem> Playlist { get; set; } = [];
+}
+
+/// <summary>Máy chủ mạng LAN: TV mở trình duyệt vào http://&lt;IP máy này&gt;:Port/tv/1.</summary>
+public sealed class LanServerSettings
+{
+    public const int DefaultPort = 5080;
+
+    public bool Enabled { get; set; } = true;
+    public int Port { get; set; } = DefaultPort;
+
+    /// <summary>Mã truy cập TV phải gửi kèm (?key=...). Trống = không cần mã.</summary>
+    public string? AccessKey { get; set; }
+}
+
 /// <summary>Nội dung file display-config.json.</summary>
 public sealed class DisplayConfiguration
 {
@@ -38,9 +58,31 @@ public sealed class DisplayConfiguration
     public int DefaultViewSeconds { get; set; } = 15;
     public int MaxPagedViewSeconds { get; set; } = 60;
     public List<ScreenAssignment> Screens { get; set; } = [];
+    public LanServerSettings Server { get; set; } = new();
+
+    /// <summary>Các TV xem qua mạng. Trống (cấu hình từ bản 1.x) thì lấy theo TV1/TV2 ở <see cref="Screens"/>.</summary>
+    public List<NetworkScreen> NetworkScreens { get; set; } = [];
 
     public const string DefaultContentFileName = "display-content.xlsx";
     public const string DefaultAppName = "Display Board";
+
+    /// <summary>Danh sách TV qua mạng, luôn có ít nhất một TV.</summary>
+    public IReadOnlyList<NetworkScreen> ResolveNetworkScreens()
+    {
+        var screens = NetworkScreens.Where(s => s.Number > 0).GroupBy(s => s.Number).Select(g => g.First()).OrderBy(s => s.Number).ToList();
+        if (screens.Count > 0)
+            return screens;
+        // Nâng cấp từ 1.x: dùng nội dung đã chọn cho TV1/TV2.
+        var count = Math.Max(2, Screens.Count);
+        return Enumerable.Range(1, count).Select(n => new NetworkScreen
+        {
+            Number = n,
+            Name = $"TV{n}",
+            Playlist = n <= Screens.Count && Screens[n - 1].Playlist.Count > 0
+                ? Screens[n - 1].Playlist
+                : [new PlaylistItem { ViewId = n == 1 ? "overview" : "ranking" }]
+        }).ToList();
+    }
 
     public string ResolveAppName() => string.IsNullOrWhiteSpace(AppName) ? DefaultAppName : AppName.Trim();
 

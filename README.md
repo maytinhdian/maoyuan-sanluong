@@ -2,6 +2,19 @@
 
 App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_THI`) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
 
+> **Hai phiên bản:** nhánh `master` là bản 1.x (TV nối thẳng vào máy có Excel). Nhánh `v2-lan` là bản 2.x: máy có Excel làm máy chủ, TV xem qua trình duyệt trong mạng LAN. Bản 2.x vẫn chiếu được lên TV nối thẳng như 1.x, và bộ cài 2.x cài đè lên 1.x.
+
+## Bản 2.x: TV xem qua mạng LAN
+
+- Máy chủ (máy có file Excel) chạy Display Board như bình thường. App mở máy chủ HTTP + WebSocket ở cổng 5080 (đổi ở tab **Máy chủ**).
+- Tab **Trang chủ** là danh sách TV qua mạng: thêm/xoá TV, đặt tên, chọn nội dung riêng cho từng TV. Mỗi TV có địa chỉ riêng `http://<IP máy chủ>:5080/tv/<số>`; trang `http://<IP máy chủ>:5080/` liệt kê các TV.
+- Bấm **Lưu & áp dụng** là TV đang mở nhận nội dung mới ngay. Cấu hình cũ từ 1.x tự chuyển thành TV1/TV2 qua mạng.
+- TV cắm dây HDMI thẳng vào máy chủ vẫn dùng được ở tab **Chiếu trên máy này** (giống 1.x).
+- Excel vừa lưu là máy chủ đẩy số mới sang TV ngay. Mất kết nối thì TV giữ số liệu gần nhất và tự kết nối lại.
+- Có thể đặt **mã truy cập**: TV nhập một lần, hoặc mở địa chỉ có `?key=…`.
+- Ảnh sản phẩm/thông báo được phát qua `/img/<mã>`; chỉ ảnh có trong dữ liệu mới được phát, không lộ đường dẫn trên máy.
+- Giao diện web nằm trong `src/DisplayBoard.Server/wwwroot` (nhúng vào exe), vẽ lại đúng 10 màn hình của bản WPF ở khung 1920×1080 và co giãn theo TV.
+
 ## Yêu cầu
 
 - Windows 10/11
@@ -14,8 +27,8 @@ dotnet run --project src/DisplayBoard.App
 ```
 
 1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V18_mau.xlsx` (file V18 với số liệu thử).
-2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
-3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
+2. Ở **TV XEM QUA MẠNG LAN**, chọn TV, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓, bấm **Lưu & áp dụng**.
+3. Bấm **Mở** để xem trang TV trong trình duyệt, hoặc xem ở tab **Xem trước**. TV nối dây: tab **Chiếu trên máy này** > **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
 
 Tạo lại file nội dung phụ mẫu `samples/display-content.xlsx`:
@@ -86,7 +99,9 @@ Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang
 ```text
 src/DisplayBoard.Core      Đọc Excel (HIEN_THI), dựng snapshot, theo dõi file, xoay trang (không phụ thuộc WPF)
 src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 10 view, khay hệ thống
+src/DisplayBoard.Server    Máy chủ LAN (Kestrel): /tv/{n}, /api/state, /ws, /img, và giao diện web trong wwwroot
 tests/DisplayBoard.Tests   Unit test cho Core (chạy được trên mọi hệ điều hành)
+tests/DisplayBoard.Server.Tests  Test máy chủ LAN: trang TV, playlist, mã truy cập, WebSocket, ảnh, đổi cổng
 tests/DisplayBoard.App.Tests  Render từng view ra PNG và bắt lỗi binding (chỉ Windows)
 tools/DisplayBoard.SampleGenerator  Tạo file nội dung phụ mẫu
 ```

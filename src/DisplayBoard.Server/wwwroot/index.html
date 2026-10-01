@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Display Board</title>
+<style>
+  :root { --bg: #0A1830; --card: #12305C; --border: #1F4580; --text2: #B7C6E0; --accent: #3B82F6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: #fff; font-family: "Segoe UI", Roboto, Arial, sans-serif;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; text-align: center; }
+  h1 { font-size: 40px; margin: 0 0 8px; }
+  p { color: var(--text2); font-size: 20px; margin: 0 0 32px; }
+  .list { display: flex; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+  a.tv { display: block; width: 220px; margin: 10px; padding: 36px 20px; border-radius: 16px; background: var(--card); border: 2px solid var(--border);
+         color: #fff; text-decoration: none; font-size: 40px; font-weight: 700; }
+  a.tv:hover, a.tv:focus { border-color: var(--accent); outline: none; }
+  a.tv span { display: block; font-size: 18px; font-weight: 400; color: var(--text2); margin-top: 8px; }
+  input { font-size: 20px; padding: 8px 12px; border-radius: 8px; border: 0; text-align: center; margin-bottom: 24px; }
+  footer { margin-top: 40px; color: var(--text2); font-size: 14px; }
+</style>
+</head>
+<body>
+<h1 id="name">Display Board</h1>
+<p>Chọn TV để trình chiếu. Mỗi TV chỉ cần mở trang này một lần, trình duyệt sẽ nhớ.</p>
+<div id="keyBox" style="display:none"><input id="key" type="password" placeholder="Mã truy cập"></div>
+<div class="list" id="list"></div>
+<footer id="ver"></footer>
+<script>
+(function () {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/info');
+  xhr.onload = function () {
+    var info = JSON.parse(xhr.responseText);
+    document.title = info.appName;
+    document.getElementById('name').textContent = info.appName;
+    document.getElementById('ver').textContent = 'Display Board ' + info.version;
+    var keyInput = document.getElementById('key');
+    if (info.keyRequired) {
+      document.getElementById('keyBox').style.display = 'block';
+      try { keyInput.value = localStorage.getItem('displayboard.key') || ''; } catch (e) { }
+    }
+    var list = document.getElementById('list');
+    info.screens.forEach(function (s) {
+      var a = document.createElement('a');
+      a.className = 'tv';
+      a.href = '/tv/' + s.number;
+      a.innerHTML = s.name + '<span>/tv/' + s.number + '</span>';
+      a.onclick = function () {
+        if (info.keyRequired && keyInput.value) a.href = '/tv/' + s.number + '?key=' + encodeURIComponent(keyInput.value.trim());
+      };
+      list.appendChild(a);
+    });
+  };
+  xhr.send();
+})();
+</script>
+</body>
+</html>

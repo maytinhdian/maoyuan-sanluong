@@ -1,0 +1,133 @@
+/* Giao diện TV qua trình duyệt. Thiết kế ở 1920×1080 rồi co giãn theo màn hình (giống Viewbox của app WPF).
+   Màu và cỡ chữ lấy theo Themes/Dark.xaml để hai bản trông giống nhau. */
+:root {
+  --bg: #0A1830;
+  --header: #0F2447;
+  --card: #12305C;
+  --card-border: #1F4580;
+  --table-header: #1A3A6B;
+  --row-alt: #0F2447;
+  --text: #FFFFFF;
+  --text2: #B7C6E0;
+  --met: #22C55E;
+  --notmet: #EF4444;
+  --near: #F5B301;
+  --none: #5B6B85;
+  --accent: #3B82F6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: var(--text); }
+body { font-family: "Segoe UI", "Roboto", "Noto Sans", "Helvetica Neue", Arial, sans-serif; cursor: none; }
+body.pointer { cursor: default; }
+
+#stage {
+  position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+  transform-origin: 0 0; overflow: hidden; background: var(--bg);
+}
+.view { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: flex; flex-direction: column; background: var(--bg); }
+.view.fade-in { animation: fadein .45s ease-out; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+.ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b { font-weight: 700; }
+.sb { font-weight: 600; }
+.t2 { color: var(--text2); }
+.c-met { color: var(--met); } .c-near { color: var(--near); } .c-behind { color: var(--notmet); } .c-none { color: var(--text); }
+.bg-met { background: var(--met); } .bg-near { background: var(--near); } .bg-behind { background: var(--notmet); } .bg-none { background: var(--none); }
+.r { text-align: right; } .c { text-align: center; }
+
+/* Header dùng chung */
+.hdr { height: 130px; flex: none; padding: 0 48px; display: flex; align-items: center; background: var(--header); }
+.hdr .icon { width: 64px; height: 64px; flex: none; fill: var(--accent); }
+.hdr .ttl { flex: 1; margin-left: 28px; min-width: 0; }
+.hdr .ttl h1 { font-size: 54px; font-weight: 700; line-height: 1.2; }
+.hdr .ttl .note { font-size: 26px; color: var(--near); }
+.hdr .clock { text-align: right; }
+.hdr .clock .d { font-size: 26px; color: var(--text2); }
+.hdr .clock .t { font-size: 56px; font-weight: 700; line-height: 1.1; }
+
+.card { background: var(--card); border: 2px solid var(--card-border); border-radius: 16px; padding: 28px; }
+.card-title { font-size: 30px; font-weight: 600; color: var(--text2); }
+
+/* Thanh tiến độ */
+.bar { position: relative; background: rgba(0,0,0,.27); border-radius: 999px; overflow: hidden; }
+.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+
+/* Bảng */
+.tbl { margin: 30px 40px 0; }
+.tbl .th { background: var(--table-header); border-radius: 10px 10px 0 0; padding: 0 20px; display: flex; align-items: center; font-size: 28px; font-weight: 600; color: var(--text2); }
+.tbl .tr { padding: 0 20px; display: flex; align-items: center; font-size: 34px; }
+.tbl .tr.alt { background: var(--row-alt); }
+.tbl .col { flex: none; padding-right: 30px; }
+.tbl .grow { flex: 1; min-width: 0; }
+.pill { border-radius: 6px; padding: 2px 12px; text-align: center; font-weight: 700; font-size: 30px; }
+.page { position: absolute; right: 50px; bottom: 22px; font-size: 30px; color: var(--text2); }
+
+/* 1. Tổng quan */
+.ov-kpis { display: flex; height: 380px; margin: 30px 40px 0; flex: none; }
+.ov-kpis .card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ov-kpis .lbl { font-size: 38px; font-weight: 600; }
+.ov-kpis .big { font-size: 110px; font-weight: 700; line-height: 1.15; }
+.ov-ring { position: relative; flex: 1; width: 100%; margin-top: 8px; }
+.ov-ring svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.ov-ring .pct { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-size: 70px; font-weight: 700; }
+.banner { margin: 20px 40px 0; border-radius: 12px; padding: 12px 28px; display: flex; align-items: center; flex: none; font-size: 34px; }
+.banner.warn { margin-top: 12px; background: #3A2A06; border: 2px solid var(--near); font-size: 32px; font-weight: 600; padding: 10px 28px; }
+.banner .dot { width: 22px; height: 22px; border-radius: 50%; margin-right: 18px; flex: none; }
+.banner svg { width: 36px; height: 36px; margin-right: 18px; fill: var(--near); flex: none; }
+.ov-chart { flex: 1; margin: 20px 40px 36px; display: flex; flex-direction: column; min-height: 0; }
+.ov-chart .head { display: flex; justify-content: space-between; align-items: baseline; }
+.ov-bars { flex: 1; display: flex; margin-top: 8px; min-height: 0; }
+.ov-bars .col { flex: 1; display: flex; flex-direction: column; margin: 0 14px; min-width: 0; }
+.ov-bars .plot { flex: 1; position: relative; }
+.ov-bars .val { position: absolute; left: 0; right: 0; margin-bottom: 6px; text-align: center; font-size: 36px; font-weight: 700; line-height: 1.2; }
+.ov-bars .fill { position: absolute; left: 10px; right: 10px; bottom: 0; min-height: 6px; border-radius: 8px 8px 0 0; }
+.ov-bars .target { position: absolute; left: 0; right: 0; border-top: 5px solid #fff; }
+.ov-bars .name { font-size: 28px; text-align: center; margin-top: 10px; }
+
+/* 3/9. Lưới thẻ */
+.cards { flex: 1; display: grid; margin: 24px 28px 28px; min-height: 0; }
+.pcard { margin: 12px; border-radius: 18px; padding: 20px 32px; background: var(--card); display: flex; flex-direction: column; justify-content: center; min-height: 0; overflow: hidden; }
+.pcard .inner { transform-origin: 0 50%; }
+
+/* 4. Dẫn đầu */
+.top { flex: 1; display: flex; margin: 40px 30px; }
+.top .tc { flex: 1; margin: 14px; border-radius: 18px; background: #114A2E; border: 2px solid #1F7A4A; padding: 30px 20px; text-align: center; min-width: 0; }
+.top .crown { height: 90px; display: flex; align-items: center; justify-content: center; }
+.top .crown svg { width: 90px; height: 80px; fill: var(--near); }
+.top .tile { width: 240px; height: 240px; margin: 16px auto; border-radius: 24px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
+.top .tile img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.top .tile span { font-size: 64px; font-weight: 700; padding: 20px; word-break: break-word; line-height: 1.1; }
+
+/* 5. Chưa đạt */
+.alert { margin: 0 40px 30px; background: #6B1827; border: 2px solid #A3263A; border-radius: 14px; padding: 24px 36px; display: flex; align-items: center; flex: none; }
+.alert svg { width: 84px; height: 84px; fill: var(--notmet); flex: none; }
+.allmet { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.allmet svg { width: 220px; height: 220px; fill: var(--met); }
+
+/* 6. Thông báo */
+.notice-bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0F2A5C 0%, #4A2C5E 60%, #C0632B 100%); background-size: cover; background-position: center; }
+.notice-dim { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); }
+.notice-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 120px; position: relative; min-height: 0; }
+.notice-body div { font-size: 96px; font-weight: 700; text-align: center; text-shadow: 0 0 16px rgba(0,0,0,.9); white-space: pre-line; line-height: 1.25; }
+.slogans { display: flex; margin: 0 60px 50px; position: relative; flex: none; }
+.slogans > div { flex: 1; text-align: center; }
+.slogans svg { width: 100px; height: 100px; fill: var(--near); }
+.slogans p { font-size: 38px; font-weight: 700; }
+
+/* 10. Theo giờ */
+.hours { display: flex; flex: 1; min-width: 0; }
+.hours > div { flex: 1; margin: 0 4px; min-width: 0; }
+.hcell { height: 84px; border-radius: 8px; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; border-bottom: 8px solid var(--none); }
+
+/* Trạng thái kết nối và màn hình chờ */
+#overlay { position: fixed; left: 0; top: 0; right: 0; bottom: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: var(--bg); text-align: center; padding: 40px; font-size: 3vw; z-index: 10; }
+#overlay.show { display: flex; }
+#overlay small { display: block; font-size: 1.6vw; color: var(--text2); margin-top: 1.5vw; }
+#overlay input { font-size: 2.4vw; padding: .4vw .8vw; margin-top: 2vw; border-radius: .4vw; border: 0; text-align: center; width: 30vw; }
+#overlay button { font-size: 2vw; padding: .5vw 2vw; margin-top: 1.2vw; border-radius: .4vw; border: 0; background: var(--accent); color: #fff; }
+#badge { position: fixed; right: 1vw; bottom: 1vw; padding: .4vw 1vw; border-radius: .5vw; background: rgba(239,68,68,.9); color: #fff; font-size: 1.1vw; display: none; z-index: 5; }
+#badge.show { display: block; }
+#hint { position: fixed; left: 50%; bottom: 2vw; transform: translateX(-50%); padding: .6vw 1.4vw; border-radius: .5vw; background: rgba(0,0,0,.7); color: #fff; font-size: 1.2vw; z-index: 6; transition: opacity .6s; }
+#hint.hide { opacity: 0; pointer-events: none; }
