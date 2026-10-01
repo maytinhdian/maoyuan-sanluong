@@ -156,7 +156,7 @@
                                     <Button Content="Dò lại màn hình" Command="{Binding RefreshMonitorsCommand}" />
                                 </StackPanel>
                                 <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,0,0,8" TextWrapping="Wrap"
-                                           Text="Chế độ Đồng bộ: cả 2 TV dùng danh sách nội dung của TV1 và chuyển trang cùng lúc." />
+                                           Text="Chế độ Đồng bộ: cả 2 TV dùng danh sách nội dung của TV1 và chuyển trang cùng lúc. TV xem qua mạng LAN (tab Mạng LAN) cũng dùng danh sách nội dung của TV1/TV2 ở đây." />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -193,6 +193,73 @@
                         <v:DisplayHostControl DataContext="{Binding PreviewHost}" />
                     </Border>
                 </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Mạng LAN">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left" Margin="0,0,0,20">
+                        <GroupBox Header="MÁY CHỦ CHO TV XEM QUA TRÌNH DUYỆT">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Ellipse Width="12" Height="12" Margin="0,0,8,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="#9CA3AF" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ServerRunning}" Value="True">
+                                                        <Setter Property="Fill" Value="#22C55E" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding ServerStatusText}" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ServerError}" Foreground="#B91C1C" FontWeight="Normal" TextWrapping="Wrap" Margin="0,0,0,8"
+                                           Visibility="{Binding ServerError, Converter={StaticResource NullToVisibility}}" />
+                                <TextBlock FontWeight="Normal" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Text="Máy này đọc file Excel và phát số liệu qua mạng nội bộ. Mỗi TV (Smart TV, TV box, máy tính…) chỉ cần mở trình duyệt vào địa chỉ bên dưới, không cần cài gì. Số liệu đổi ngay khi file Excel được lưu." />
+                                <ItemsControl ItemsSource="{Binding ServerLinks}" FontWeight="Normal">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,2">
+                                                <TextBlock DockPanel.Dock="Left" Text="{Binding Screen}" Width="44" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                <Button DockPanel.Dock="Right" Content="Mở" MinWidth="60" Margin="6,0,0,0"
+                                                        Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                                <Button DockPanel.Dock="Right" Content="Copy" MinWidth="60" Margin="6,0,0,0"
+                                                        Command="{Binding DataContext.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                                <TextBox Text="{Binding Url, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="15" VerticalContentAlignment="Center" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="TV ĐANG XEM">
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding ConnectedTvs}" FontWeight="Normal" />
+                                <TextBlock Text="Chưa có TV nào kết nối." FontWeight="Normal" Foreground="#555"
+                                           Visibility="{Binding ConnectedTvs.Count, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="CÀI ĐẶT MÁY CHỦ">
+                            <StackPanel>
+                                <CheckBox Content="Bật máy chủ mạng LAN" IsChecked="{Binding ServerEnabled}" FontWeight="Normal" Margin="0,0,0,8" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Cổng" Style="{StaticResource Label}" Width="200" />
+                                    <TextBox Text="{Binding ServerPort}" Width="120" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Mã truy cập (không bắt buộc)" Style="{StaticResource Label}" Width="200" />
+                                    <TextBox Text="{Binding ServerAccessKey}" Width="200" />
+                                </StackPanel>
+                                <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           Text="Có mã truy cập thì TV phải nhập mã một lần (hoặc mở địa chỉ có sẵn ?key=… ở trên). Đổi cổng nếu cổng 5080 bị chương trình khác dùng. Nếu TV không vào được, kiểm tra Windows Firewall cho phép Display Board trong mạng Private." />
+                            </StackPanel>
+                        </GroupBox>
+                        <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="Nhật ký">

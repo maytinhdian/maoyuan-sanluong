@@ -3,7 +3,7 @@
 ; Kết quả: dist/DisplayBoard-Setup-<version>.exe
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "2.0.0"
 #endif
 
 [Setup]
@@ -30,7 +30,9 @@ CloseApplications=yes
 
 [Tasks]
 Name: "desktopicon"; Description: "Tạo biểu tượng ngoài Desktop"; GroupDescription: "Tuỳ chọn:"
-Name: "autostart"; Description: "Tự chạy khi khởi động Windows (cho máy nối TV)"; GroupDescription: "Tuỳ chọn:"; Flags: unchecked
+Name: "autostart"; Description: "Tự chạy khi khởi động Windows (cho máy nối TV hoặc máy chủ)"; GroupDescription: "Tuỳ chọn:"; Flags: unchecked
+; Bản 2.x phát số liệu cho TV qua mạng LAN (cổng mặc định 5080). Cần quyền admin để mở tường lửa.
+Name: "firewall"; Description: "Cho phép TV trong mạng LAN kết nối (mở Windows Firewall)"; GroupDescription: "Mạng LAN:"; Check: IsAdminInstallMode
 
 [Files]
 Source: "..\..\dist\DisplayBoard\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -44,4 +46,9 @@ Name: "{autodesktop}\Display Board"; Filename: "{app}\DisplayBoard.exe"; Tasks: 
 Name: "{userstartup}\Display Board"; Filename: "{app}\DisplayBoard.exe"; Tasks: autostart
 
 [Run]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Display Board"""; Flags: runhidden; Tasks: firewall
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Display Board"" dir=in action=allow program=""{app}\DisplayBoard.exe"" enable=yes profile=private,domain"; Flags: runhidden; Tasks: firewall
 Filename: "{app}\DisplayBoard.exe"; Description: "Mở Display Board"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Display Board"""; Flags: runhidden; RunOnceId: "DelFirewallRule"

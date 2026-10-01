@@ -8,6 +8,7 @@ using DisplayBoard.Core.Excel;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Processing;
 using DisplayBoard.Core.Services;
+using DisplayBoard.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -48,15 +49,22 @@ public partial class App : Application
             watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
         await snapshots.ReloadAsync();
 
+        // Máy chủ LAN cho TV xem qua trình duyệt. Lỗi (vd trùng cổng) chỉ hiện ở tab Mạng LAN, không chặn app.
+        var server = _services.GetRequiredService<IBoardServer>();
+        await server.ApplyAsync(config);
+
         var display = _services.GetRequiredService<IDisplayManager>();
         var viewModel = _services.GetRequiredService<MainViewModel>();
-        _mainWindow = new MainWindow(viewModel) { HideOnClose = () => display.IsRunning };
+        // Đang trình chiếu hoặc đang phát cho TV qua mạng: đóng cửa sổ thì ẩn xuống khay, không tắt.
+        _mainWindow = new MainWindow(viewModel) { HideOnClose = () => display.IsRunning || server.IsRunning };
         _mainWindow.HiddenToTray += (_, _) =>
         {
             if (_trayHintShown)
                 return;
             _trayHintShown = true;
-            _tray?.ShowBalloon("Vẫn đang trình chiếu. Mở lại từ biểu tượng ở khay hệ thống.");
+            _tray?.ShowBalloon(server.IsRunning
+                ? "Vẫn đang phát cho các TV qua mạng LAN. Mở lại từ biểu tượng ở khay hệ thống."
+                : "Vẫn đang trình chiếu. Mở lại từ biểu tượng ở khay hệ thống.");
         };
         _mainWindow.Closed += (_, _) => Shutdown();
 
@@ -105,6 +113,7 @@ public partial class App : Application
         services.AddSingleton<IExcelWatcher, ExcelWatcher>();
         services.AddSingleton<IScreenManager, ScreenManager>();
         services.AddSingleton<IDisplayManager, DisplayManager>();
+        services.AddSingleton<IBoardServer, BoardServer>();
         foreach (var view in ViewCatalog.CreateDefault())
             services.AddSingleton(view);
 

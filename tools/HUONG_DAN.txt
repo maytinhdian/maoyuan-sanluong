@@ -12,6 +12,15 @@ Yêu cầu: Windows 10/11 64-bit. Không cần cài .NET.
 4. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, rồi bấm "Bắt đầu trình chiếu".
 5. Bấm X chỉ ẩn app xuống khay hệ thống (góc phải thanh taskbar). Thoát hẳn: chuột phải icon ở khay > Thoát.
 
+XEM TRÊN TV QUA MẠNG LAN (bản 2.x)
+- Máy có file Excel là máy chủ: chỉ cần mở Display Board, máy chủ tự bật.
+- Mở tab "Mạng LAN" để xem địa chỉ cho từng TV, ví dụ http://192.168.1.10:5080/tv/1
+- Trên TV (Smart TV, TV box, máy tính nối TV): mở trình duyệt, gõ địa chỉ đó, bấm vào màn hình để chiếu toàn màn hình.
+  TV1/TV2 chiếu nội dung đã chọn ở mục MÀN HÌNH của tab Trang chủ.
+- Máy chủ và TV phải cùng mạng nội bộ. TV không vào được: kiểm tra Windows Firewall cho phép Display Board
+  (bộ cài có tuỳ chọn mở sẵn), hoặc đổi cổng ở tab Mạng LAN nếu cổng 5080 bị chương trình khác dùng.
+- Mất mạng thì TV vẫn hiện số liệu gần nhất và tự kết nối lại.
+
 File nội dung phụ (tên hiển thị, thông báo, khẩu hiệu, tên công ty): samples\display-content.xlsx,
 đặt cạnh file Excel sản lượng.
 

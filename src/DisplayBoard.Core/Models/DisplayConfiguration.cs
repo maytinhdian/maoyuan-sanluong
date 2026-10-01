@@ -18,6 +18,18 @@ public sealed class ScreenAssignment
     public List<PlaylistItem> Playlist { get; set; } = [];
 }
 
+/// <summary>Máy chủ mạng LAN: TV mở trình duyệt vào http://&lt;IP máy này&gt;:Port/tv/1.</summary>
+public sealed class LanServerSettings
+{
+    public const int DefaultPort = 5080;
+
+    public bool Enabled { get; set; } = true;
+    public int Port { get; set; } = DefaultPort;
+
+    /// <summary>Mã truy cập TV phải gửi kèm (?key=...). Trống = không cần mã.</summary>
+    public string? AccessKey { get; set; }
+}
+
 /// <summary>Nội dung file display-config.json.</summary>
 public sealed class DisplayConfiguration
 {
@@ -38,6 +50,7 @@ public sealed class DisplayConfiguration
     public int DefaultViewSeconds { get; set; } = 15;
     public int MaxPagedViewSeconds { get; set; } = 60;
     public List<ScreenAssignment> Screens { get; set; } = [];
+    public LanServerSettings Server { get; set; } = new();
 
     public const string DefaultContentFileName = "display-content.xlsx";
     public const string DefaultAppName = "Display Board";

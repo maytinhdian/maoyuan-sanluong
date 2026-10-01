@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using DisplayBoard.Core.Display;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
+using DisplayBoard.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
@@ -19,6 +20,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IExcelWatcher _watcher;
     private readonly IScreenManager _screens;
     private readonly IDisplayManager _display;
+    private readonly IBoardServer _server;
     private readonly ILogger<MainViewModel> _logger;
 
     public MainViewModel(
@@ -27,6 +29,7 @@ public sealed partial class MainViewModel : ObservableObject
         IExcelWatcher watcher,
         IScreenManager screens,
         IDisplayManager display,
+        IBoardServer server,
         IEnumerable<IDisplayViewDefinition> views,
         DisplayHostViewModel previewHost,
         ILogger<MainViewModel> logger)
@@ -36,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         _watcher = watcher;
         _screens = screens;
         _display = display;
+        _server = server;
         _logger = logger;
         PreviewHost = previewHost;
 
@@ -45,9 +49,11 @@ public sealed partial class MainViewModel : ObservableObject
         _snapshots.StatusChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshStatus);
         _screens.MonitorsChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshMonitors);
         _display.RunningChanged += (_, _) => IsRunning = _display.IsRunning;
+        _server.StateChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshServer);
 
         LoadFromConfiguration(_config.Current);
         RefreshStatus();
+        RefreshServer();
     }
 
     public ObservableCollection<MonitorInfo> Monitors { get; } = [];
@@ -55,6 +61,10 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<string> Warnings { get; } = [];
     public ObservableCollection<string> Log { get; } = [];
     public DisplayHostViewModel PreviewHost { get; }
+
+    /// <summary>Địa chỉ cho từng TV mở trong trình duyệt.</summary>
+    public ObservableCollection<ServerLink> ServerLinks { get; } = [];
+    public ObservableCollection<string> ConnectedTvs { get; } = [];
 
     [ObservableProperty] private string? _appName;
     /// <summary>Tên đang dùng (đã lưu); để trống ô tên thì là "Display Board".</summary>
@@ -75,6 +85,12 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _debounceMilliseconds = "800";
     [ObservableProperty] private string? _imagesFolder;
     [ObservableProperty] private bool _autoReload = true;
+    [ObservableProperty] private bool _serverEnabled = true;
+    [ObservableProperty] private string _serverPort = LanServerSettings.DefaultPort.ToString();
+    [ObservableProperty] private string? _serverAccessKey;
+    [ObservableProperty] private string _serverStatusText = "";
+    [ObservableProperty] private bool _serverRunning;
+    [ObservableProperty] private string? _serverError;
 
     public bool IsIndependent
     {
@@ -99,6 +115,9 @@ public sealed partial class MainViewModel : ObservableObject
         DebounceMilliseconds = config.DebounceMilliseconds.ToString();
         ImagesFolder = config.ImagesFolder;
         AutoReload = config.AutoReload;
+        ServerEnabled = config.Server.Enabled;
+        ServerPort = config.Server.Port.ToString();
+        ServerAccessKey = config.Server.AccessKey;
         RefreshMonitors();
 
         var secondary = Monitors.Where(m => !m.IsPrimary).ToList();
@@ -123,7 +142,13 @@ public sealed partial class MainViewModel : ObservableObject
         ImagesFolder = string.IsNullOrWhiteSpace(ImagesFolder) ? null : ImagesFolder,
         DefaultViewSeconds = ParseInt(DefaultViewSeconds, 15, 3, 3600),
         MaxPagedViewSeconds = ParseInt(MaxPagedViewSeconds, 60, 5, 3600),
-        Screens = Screens.Select(s => s.ToAssignment()).ToList()
+        Screens = Screens.Select(s => s.ToAssignment()).ToList(),
+        Server = new LanServerSettings
+        {
+            Enabled = ServerEnabled,
+            Port = ParseInt(ServerPort, LanServerSettings.DefaultPort, 1024, 65535),
+            AccessKey = string.IsNullOrWhiteSpace(ServerAccessKey) ? null : ServerAccessKey.Trim()
+        }
     };
 
     private static int ParseInt(string? text, int fallback, int min, int max) =>
@@ -200,6 +225,7 @@ public sealed partial class MainViewModel : ObservableObject
             _watcher.Stop();
 
         await _snapshots.ReloadAsync();
+        await _server.ApplyAsync(config);
         StartPreview();
         if (_display.IsRunning)
             _display.Start(config);
@@ -248,6 +274,7 @@ public sealed partial class MainViewModel : ObservableObject
             _logger.LogError(ex, "Không lưu được cấu hình");
         }
         _display.Start(config);
+        _ = _server.ApplyAsync(config);
         AddLog("Bắt đầu trình chiếu");
     }
 
@@ -256,6 +283,52 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _display.Stop();
         AddLog("Dừng trình chiếu");
+    }
+
+    private void RefreshServer()
+    {
+        ServerRunning = _server.IsRunning;
+        ServerError = _server.LastError;
+        var clients = _server.Clients;
+        ServerStatusText = _server.IsRunning
+            ? $"Đang chạy ở cổng {_server.Port} · {clients.Count} TV đang xem"
+            : ServerEnabled && _server.LastError is not null ? "Không chạy được" : "Đang tắt";
+
+        ServerLinks.Clear();
+        if (_server.IsRunning)
+        {
+            var key = _config.Current.Server.AccessKey;
+            for (var screen = 1; screen <= Screens.Count; screen++)
+                foreach (var url in BoardServer.ScreenUrls(_server.Port, screen, key))
+                    ServerLinks.Add(new ServerLink($"TV{screen}", url));
+        }
+
+        ConnectedTvs.Clear();
+        foreach (var client in clients)
+            ConnectedTvs.Add($"TV{client.Screen}  ·  {client.Address}  ·  từ {client.ConnectedAt.LocalDateTime:HH:mm dd/MM}");
+    }
+
+    [RelayCommand]
+    private void OpenLink(ServerLink? link)
+    {
+        if (link is not null)
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link.Url) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void CopyLink(ServerLink? link)
+    {
+        if (link is null)
+            return;
+        try
+        {
+            Clipboard.SetText(link.Url);
+            AddLog($"Đã copy địa chỉ {link.Url}");
+        }
+        catch (System.Runtime.InteropServices.ExternalException ex)
+        {
+            _logger.LogWarning(ex, "Không copy được vào clipboard");
+        }
     }
 
     private void RefreshStatus()
@@ -287,3 +360,6 @@ public sealed partial class MainViewModel : ObservableObject
             Log.RemoveAt(Log.Count - 1);
     }
 }
+
+/// <summary>Một địa chỉ TV mở được trong trình duyệt.</summary>
+public sealed record ServerLink(string Screen, string Url);
