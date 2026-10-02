@@ -138,4 +138,10 @@ body.pointer { cursor: default; }
 .ph .img { flex: 1; position: relative; background: #0B1424; min-height: 0; display: flex; align-items: center; justify-content: center; }
 .ph .tag { position: absolute; left: 14px; top: 14px; max-width: 70%; background: var(--notmet); color: #fff; font-weight: 700; font-size: 26px; padding: 4px 14px; border-radius: 8px; }
 .ph .qty { position: absolute; right: 14px; top: 14px; background: rgba(10,24,48,.85); color: #fff; font-weight: 700; font-size: 30px; padding: 4px 14px; border-radius: 8px; }
-.ph .cap { padding: 12px 18px; display: flex; align-items: baseline; flex: none; }
+.ph .cap { padding: 12px 18px; display: flex; align-items: baseline; flex: none; font-size: 30px; }
+.ph .cap .tm { font-size: 24px; margin-left: 10px; }
+/* 4 hoặc 2 ảnh/trang: chữ to theo ảnh */
+.dgrid.big .ph .tag { font-size: 38px; padding: 6px 18px; left: 18px; top: 18px; }
+.dgrid.big .ph .qty { font-size: 42px; padding: 6px 18px; right: 18px; top: 18px; }
+.dgrid.big .ph .cap { font-size: 40px; padding: 14px 22px; }
+.dgrid.big .ph .cap .tm { font-size: 32px; }

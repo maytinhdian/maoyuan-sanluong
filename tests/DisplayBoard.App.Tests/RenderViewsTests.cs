@@ -21,7 +21,7 @@ public class RenderViewsTests
     [
         ViewIds.Overview, ViewIds.Ranking, ViewIds.ProductProgress, ViewIds.TopProducts,
         ViewIds.NotMet, ViewIds.Notice, ViewIds.Detail, ViewIds.MonthProgress, ViewIds.Lines, ViewIds.Hourly,
-        ViewIds.Defects
+        ViewIds.Defects, ViewIds.Defects4, ViewIds.Defects2
     ];
 
     [Theory]
@@ -38,7 +38,7 @@ public class RenderViewsTests
             try
             {
                 // Hàng lỗi cần sheet HANG_LOI và ảnh mẫu của file V20.
-                var snapshot = LoadSampleSnapshot(viewId == ViewIds.Defects ? "Theo_doi_san_luong_V20_mau.xlsx" : "Theo_doi_san_luong_V18_mau.xlsx");
+                var snapshot = LoadSampleSnapshot(viewId.StartsWith(ViewIds.Defects, StringComparison.Ordinal) ? "Theo_doi_san_luong_V20_mau.xlsx" : "Theo_doi_san_luong_V18_mau.xlsx");
                 var viewModel = new DisplayViewFactory(new ClockViewModel()).Create(viewId);
                 viewModel.Update(snapshot);
                 viewModel.OnActivated();

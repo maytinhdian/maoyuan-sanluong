@@ -17,13 +17,21 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
     private readonly DispatcherTimer _timer;
     private IReadOnlyList<DefectPhotoCard> _allPhotos = [];
 
-    public DefectsViewModel(ClockViewModel clock) : base(clock)
+    private readonly int _perPage;
+
+    public DefectsViewModel(ClockViewModel clock, string viewId = ViewIds.Defects) : base(clock)
     {
+        ViewId = viewId;
+        _perPage = DefectsViewDefinition.PhotosPerPageOf(viewId);
+        // 6 ảnh: lưới 3×2 + cột tổng bên trái. 4 ảnh: 2×2, 2 ảnh: 2×1, ảnh chiếm cả màn hình và chữ to hơn.
+        (GridColumns, GridRows) = _perPage switch { 2 => (2, 1), 4 => (2, 2), _ => (3, 2) };
+        IsLarge = _perPage < 6;
+        SideWidth = new System.Windows.GridLength(IsLarge ? 0 : 444);
         _timer = new DispatcherTimer { Interval = DefectsViewDefinition.PageDuration };
         _timer.Tick += (_, _) => ShowPage(Page + 1);
     }
 
-    public override string ViewId => ViewIds.Defects;
+    public override string ViewId { get; }
     public override string Title => "HÀNG LỖI HÔM NAY";
     public override string IconKind => "search";
 
@@ -42,6 +50,17 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
     [ObservableProperty] private int _pageCount = 1;
     [ObservableProperty] private string _footerText = "";
     [ObservableProperty] private string? _pageText;
+
+    public int GridColumns { get; }
+    public int GridRows { get; }
+    /// <summary>4 hoặc 2 ảnh/trang: bỏ cột tổng bên trái, chữ trên ảnh to hơn.</summary>
+    public bool IsLarge { get; }
+    public System.Windows.GridLength SideWidth { get; }
+    public double TagFontSize => IsLarge ? 38 : 26;
+    public double QuantityFontSize => IsLarge ? 42 : 30;
+    public double CaptionFontSize => IsLarge ? 40 : 30;
+    public double TimeFontSize => IsLarge ? 32 : 24;
+    public double FooterFontSize => IsLarge ? 30 : 24;
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
@@ -68,15 +87,17 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
         SideLines = list.Take(MaxSideLines).Select((p, i) => new DefectRow(p, i + 1, maxRate)).ToList();
         _allPhotos = snapshot.DefectPhotos.Select(d => new DefectPhotoCard(d)).ToList();
         HasPhotos = _allPhotos.Count > 0;
-        FooterText = $"{_allPhotos.Count} ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng";
-        PageCount = DefectsViewDefinition.PageCount(snapshot);
+        FooterText = IsLarge
+            ? $"Tổng số lỗi {TotalDefects} {Unit} · tỷ lệ lỗi {TotalRate} · {_allPhotos.Count} ảnh hàng lỗi hôm nay"
+            : $"{_allPhotos.Count} ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng";
+        PageCount = DefectsViewDefinition.PageCount(snapshot, _perPage);
         ShowPage(Page);
     }
 
     private void ShowPage(int page)
     {
         Page = page > PageCount || page < 1 ? 1 : page;
-        Photos = _allPhotos.Skip((Page - 1) * DefectsViewDefinition.PhotosPerPage).Take(DefectsViewDefinition.PhotosPerPage).ToList();
+        Photos = _allPhotos.Skip((Page - 1) * _perPage).Take(_perPage).ToList();
         PageText = PageCount > 1 ? $"Trang {Page}/{PageCount}" : null;
     }
 

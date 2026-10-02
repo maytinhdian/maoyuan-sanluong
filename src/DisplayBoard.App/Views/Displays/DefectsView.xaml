@@ -100,10 +100,10 @@
         <!-- Có ảnh (sheet HANG_LOI): tổng bên trái, lưới ảnh 3×2 bên phải -->
         <Grid Grid.Row="1" Margin="40,26,40,0" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="{Binding SideWidth}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Grid Margin="0,0,24,0">
+            <Grid Margin="0,0,24,0" Visibility="{Binding IsLarge, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -141,7 +141,8 @@
             </Grid>
             <ItemsControl Grid.Column="1" ItemsSource="{Binding Photos}">
                 <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><UniformGrid Columns="3" Rows="2" /></ItemsPanelTemplate>
+                    <ItemsPanelTemplate><UniformGrid Columns="{Binding DataContext.GridColumns, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                     Rows="{Binding DataContext.GridRows, RelativeSource={RelativeSource AncestorType=ItemsControl}}" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -159,11 +160,11 @@
                                                Visibility="{Binding MissingText, Converter={StaticResource NullToVisibility}}" />
                                     <Border Background="{StaticResource NotMetBrush}" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Left" VerticalAlignment="Top" MaxWidth="300"
                                             Visibility="{Binding DefectType, Converter={StaticResource NullToVisibility}}">
-                                        <TextBlock Text="{Binding DefectType}" Style="{StaticResource BoardText}" FontSize="26" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding DefectType}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.TagFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
                                     </Border>
                                     <Border Background="#D90A1830" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Right" VerticalAlignment="Top"
                                             Visibility="{Binding Quantity, Converter={StaticResource NullToVisibility}}">
-                                        <TextBlock Text="{Binding Quantity}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding Quantity}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.QuantityFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="Bold" />
                                     </Border>
                                 </Grid>
                                 <Grid Grid.Row="1" Margin="18,10">
@@ -171,8 +172,8 @@
                                         <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border Width="8" Height="30" CornerRadius="3" Margin="0,0,12,0" Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.CaptionFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.TimeFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{StaticResource TextSecondary}" Margin="10,0,0,0" VerticalAlignment="Center" />
                                 </Grid>
                             </Grid>
                         </Border>
@@ -181,8 +182,8 @@
             </ItemsControl>
         </Grid>
         <Grid Grid.Row="2" Margin="40,0,64,22" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
-            <TextBlock Text="{Binding FooterText}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" />
-            <TextBlock Text="{Binding PageText}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" />
+            <TextBlock Text="{Binding FooterText}" Style="{StaticResource BoardText}" FontSize="{Binding FooterFontSize}" Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding PageText}" Style="{StaticResource BoardText}" FontSize="{Binding FooterFontSize}" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" />
         </Grid>
     </Grid>
 </UserControl>

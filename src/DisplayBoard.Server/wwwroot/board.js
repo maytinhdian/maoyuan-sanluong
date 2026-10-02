@@ -426,42 +426,58 @@
 
   function hm(t) { return t ? String(t).substr(0, 5) : ''; }
 
-  VIEWS.defects = {
-    title: function () { return 'HÀNG LỖI HÔM NAY'; }, icon: 'search',
-    hasContent: function (s) { return (s.defectPhotos || []).length > 0 || s.products.some(function (p) { return isNum(p.defects); }); },
-    paged: true, pageMs: 10000,
-    pageCount: function (s) { return Math.max(1, Math.ceil((s.defectPhotos || []).length / 6)); },
-    render: function (s, page, key) {
-      var photos = s.defectPhotos || [];
-      if (photos.length === 0) return defectTable(s);
-      var m = s.summary, pc = this.pageCount(s);
-      var lines = defectLines(s).slice(0, 7).map(function (p) {
-        return '<div style="display:flex"><span class="ell" style="flex:1">' + esc(title(p)) + '</span>' +
-          (isNum(p.defects) ? '<b class="c-' + st(p.defectStatus) + '" style="margin-left:16px">' + num(p.defects) + '</b>' : '<span class="t2" style="margin-left:16px">—</span>') + '</div>';
-      }).join('');
-      var side = '<div style="width:420px;flex:none;margin-right:24px;display:flex;flex-direction:column">' +
-        '<div class="card" style="text-align:center;padding:22px"><div class="sb" style="font-size:34px">TỔNG SỐ LỖI</div>' +
-        '<div class="b ' + (m.defects > 0 ? 'c-' + st(m.defectStatus) : '') + '" style="font-size:120px;line-height:1.1">' + num(m.defects) + '</div>' +
-        '<div class="t2" style="font-size:30px">' + esc(s.unit) + ' · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' + pct2(m.defectRate) + '</b></div></div>' +
-        '<div class="card" style="margin-top:20px;flex:1;padding:22px 26px;min-height:0;overflow:hidden"><div class="card-title" style="color:#fff;margin-bottom:10px">THEO CHUYỀN</div>' +
-        '<div style="font-size:30px;line-height:2.05">' + lines + '</div></div></div>';
-      var cards = photos.slice(page * 6, page * 6 + 6).map(function (d) {
-        var img = d.imagePath
-          ? '<img src="' + esc(withKey(d.imagePath, key)) + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#000">'
-          : '<div class="t2" style="font-size:26px;text-align:center;padding:20px">' + icon('warning', '', 'width:64px;height:64px;fill:var(--near)') +
-            '<div style="margin-top:10px">Không tìm thấy ảnh</div><div class="ell" style="font-size:22px">' + esc(d.imageFile) + '</div></div>';
-        return '<div class="ph"><div class="img">' + img +
-          (d.defectType ? '<span class="tag ell">' + esc(d.defectType) + '</span>' : '') +
-          (isNum(d.quantity) ? '<span class="qty">×' + num(d.quantity) + '</span>' : '') + '</div>' +
-          '<div class="cap"><span style="width:8px;height:30px;border-radius:3px;margin-right:12px;flex:none;align-self:center;background:' + color(d.color) + '"></span>' +
-          '<span class="sb ell" style="font-size:30px;flex:1">' + esc(d.line + (d.productCode ? ' · ' + d.productCode : '')) + '</span>' +
-          '<span class="t2" style="font-size:24px;margin-left:10px">' + hm(d.time) + '</span></div></div>';
-      }).join('');
-      return '<div style="flex:1;display:flex;margin:26px 40px 0;min-height:0">' + side + '<div class="dgrid">' + cards + '</div></div>' +
-        '<div class="t2" style="font-size:24px;margin:14px 40px 22px;display:flex"><span style="flex:1">' + photos.length + ' ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng</span>' +
-        (pc > 1 ? '<span>Trang ' + (page + 1) + '/' + pc + '</span>' : '') + '</div>';
-    }
-  };
+  // Hàng lỗi có ảnh: 6 ảnh/trang kèm cột tổng bên trái; 4 hoặc 2 ảnh/trang thì ảnh chiếm cả màn hình, tổng ghi ở chân trang.
+  function defectsView(per) {
+    return {
+      title: function () { return 'HÀNG LỖI HÔM NAY'; }, icon: 'search',
+      hasContent: function (s) { return (s.defectPhotos || []).length > 0 || s.products.some(function (p) { return isNum(p.defects); }); },
+      paged: true, pageMs: 10000,
+      pageCount: function (s) { return Math.max(1, Math.ceil((s.defectPhotos || []).length / per)); },
+      render: function (s, page, key) {
+        var photos = s.defectPhotos || [];
+        if (photos.length === 0) return defectTable(s);
+        var m = s.summary, pc = this.pageCount(s), big = per < 6;
+        var side = '';
+        if (!big) {
+          var lines = defectLines(s).slice(0, 7).map(function (p) {
+            return '<div style="display:flex"><span class="ell" style="flex:1">' + esc(title(p)) + '</span>' +
+              (isNum(p.defects) ? '<b class="c-' + st(p.defectStatus) + '" style="margin-left:16px">' + num(p.defects) + '</b>' : '<span class="t2" style="margin-left:16px">—</span>') + '</div>';
+          }).join('');
+          side = '<div style="width:420px;flex:none;margin-right:24px;display:flex;flex-direction:column">' +
+            '<div class="card" style="text-align:center;padding:22px"><div class="sb" style="font-size:34px">TỔNG SỐ LỖI</div>' +
+            '<div class="b ' + (m.defects > 0 ? 'c-' + st(m.defectStatus) : '') + '" style="font-size:120px;line-height:1.1">' + num(m.defects) + '</div>' +
+            '<div class="t2" style="font-size:30px">' + esc(s.unit) + ' · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' + pct2(m.defectRate) + '</b></div></div>' +
+            '<div class="card" style="margin-top:20px;flex:1;padding:22px 26px;min-height:0;overflow:hidden"><div class="card-title" style="color:#fff;margin-bottom:10px">THEO CHUYỀN</div>' +
+            '<div style="font-size:30px;line-height:2.05">' + lines + '</div></div></div>';
+        }
+        var cards = photos.slice(page * per, page * per + per).map(function (d) {
+          var img = d.imagePath
+            ? '<img src="' + esc(withKey(d.imagePath, key)) + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#000">'
+            : '<div class="t2" style="font-size:26px;text-align:center;padding:20px">' + icon('warning', '', 'width:64px;height:64px;fill:var(--near)') +
+              '<div style="margin-top:10px">Không tìm thấy ảnh</div><div class="ell" style="font-size:22px">' + esc(d.imageFile) + '</div></div>';
+          return '<div class="ph"><div class="img">' + img +
+            (d.defectType ? '<span class="tag ell">' + esc(d.defectType) + '</span>' : '') +
+            (isNum(d.quantity) ? '<span class="qty">×' + num(d.quantity) + '</span>' : '') + '</div>' +
+            '<div class="cap"><span style="width:8px;height:30px;border-radius:3px;margin-right:12px;flex:none;align-self:center;background:' + color(d.color) + '"></span>' +
+            '<span class="sb ell" style="flex:1">' + esc(d.line + (d.productCode ? ' · ' + d.productCode : '')) + '</span>' +
+            '<span class="t2 tm">' + hm(d.time) + '</span></div></div>';
+        }).join('');
+        var grid = per === 2 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:1fr'
+          : per === 4 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)' : '';
+        var foot = big
+          ? 'Tổng số lỗi <b class="c-' + st(m.defectStatus) + '">' + num(m.defects) + ' ' + esc(s.unit) + '</b> · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' +
+            pct2(m.defectRate) + '</b> · ' + photos.length + ' ảnh hàng lỗi hôm nay'
+          : photos.length + ' ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng';
+        return '<div style="flex:1;display:flex;margin:26px 40px 0;min-height:0">' + side +
+          '<div class="dgrid' + (big ? ' big' : '') + '" style="' + grid + '">' + cards + '</div></div>' +
+          '<div class="t2" style="font-size:' + (big ? 30 : 24) + 'px;margin:14px 40px 22px;display:flex"><span style="flex:1">' + foot + '</span>' +
+          (pc > 1 ? '<span>Trang ' + (page + 1) + '/' + pc + '</span>' : '') + '</div>';
+      }
+    };
+  }
+  VIEWS.defects = defectsView(6);
+  VIEWS['defects-4'] = defectsView(4);
+  VIEWS['defects-2'] = defectsView(2);
 
   function sortBy(list, key) {
     // Sắp ổn định, giá trị trống xếp đầu (giống OrderBy của C# với null).

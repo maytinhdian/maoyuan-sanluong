@@ -120,7 +120,9 @@ public class DisplaySheetReaderTests
         Assert.Equal(5, snapshot.DefectPhotos.Count);               // dòng không có tên file ảnh thì không chiếu
         Assert.Equal("Lem màu", snapshot.DefectPhotos[0].DefectType); // 13:40, mới nhất lên trước
         Assert.All(snapshot.DefectPhotos, p => Assert.True(File.Exists(p.ImagePath)));
-        Assert.Equal(1, new DefectsViewDefinition().GetRequiredDuration(snapshot)!.Value.Ticks / DefectsViewDefinition.PageDuration.Ticks);
+        Assert.Equal(1, DefectsViewDefinition.PageCount(snapshot, 6));
+        Assert.Equal(2, DefectsViewDefinition.PageCount(snapshot, 4));
+        Assert.Equal(3, DefectsViewDefinition.PageCount(snapshot, 2));
     }
 
     [Fact]
