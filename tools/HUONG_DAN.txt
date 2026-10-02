@@ -7,7 +7,7 @@ Yêu cầu: Windows 10/11 64-bit. Không cần cài .NET.
 2. Chạy DisplayBoard.exe.
    Lần đầu Windows có thể hiện "Windows protected your PC": bấm "More info" rồi "Run anyway".
 3. Bấm "Chọn file..." và chọn file Excel theo dõi sản lượng (sheet HIEN_THI).
-   Muốn thử trước: chọn samples\Theo_doi_san_luong_V18_mau.xlsx.
+   Muốn thử trước: chọn samples\Theo_doi_san_luong_V19_mau.xlsx.
    Lưu ý: file Excel phải được mở bằng Excel và bấm Lưu (Ctrl+S) ít nhất một lần.
 4. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, rồi bấm "Bắt đầu trình chiếu".
 5. Bấm X chỉ ẩn app xuống khay hệ thống (góc phải thanh taskbar). Thoát hẳn: chuột phải icon ở khay > Thoát.

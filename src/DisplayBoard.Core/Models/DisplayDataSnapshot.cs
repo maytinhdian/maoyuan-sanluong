@@ -37,6 +37,9 @@ public sealed record ProductDaily
     public decimal? MonthRate { get; init; }
     public ProgressStatus MonthStatus { get; init; }
     public decimal? MonthRemaining { get; init; }
+    public decimal? PreviousMonthShortfall { get; init; }
+    public decimal? WorkDaysLeft { get; init; }
+    public decimal? NeededPerDay { get; init; }
     public decimal? LineMonthCumulative { get; init; }
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? StatusText { get; init; }

@@ -46,6 +46,10 @@ public sealed class ProductRow(ProductDaily p, int index)
     public string MonthRemaining { get; } = Format.Number(p.MonthRemaining);
     public bool MonthBehind => p.MonthRemaining > 0;
     public ProgressStatus MonthStatus { get; } = p.MonthStatus;
+    /// <summary>Cần làm mỗi ngày để kịp tháng và thiếu tháng trước (cột Excel AN, AL), rỗng khi file không có.</summary>
+    public string? NeededPerDay { get; } = p.NeededPerDay is null ? null : Format.Number(p.NeededPerDay);
+    public string? PreviousMonthShortfall { get; } = p.PreviousMonthShortfall is > 0 ? Format.Number(p.PreviousMonthShortfall) : null;
+    public bool HasMonthPlan => NeededPerDay is not null || PreviousMonthShortfall is not null;
     public double MonthFraction { get; } = Fraction(p.MonthCumulative ?? 0, p.MonthTarget ?? 0);
 
     public static string StatusText(ProgressStatus status) => status switch

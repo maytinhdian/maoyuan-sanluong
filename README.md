@@ -13,7 +13,7 @@ App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_
 dotnet run --project src/DisplayBoard.App
 ```
 
-1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V18_mau.xlsx` (file V18 với số liệu thử).
+1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V19_mau.xlsx` (file V19 với số liệu thử).
 2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
 3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.

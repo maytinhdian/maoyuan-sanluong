@@ -65,7 +65,7 @@ public class RenderViewsTests
     {
         var samples = Path.Combine(RepoRoot(), "samples");
         DisplaySheet sheet;
-        using (var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V18_mau.xlsx")))
+        using (var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V19_mau.xlsx")))
             sheet = DisplaySheetReader.Read(stream);
         ContentData content;
         using (var stream = File.OpenRead(Path.Combine(samples, "display-content.xlsx")))
