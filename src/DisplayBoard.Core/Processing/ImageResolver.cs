@@ -19,4 +19,13 @@ public sealed class ImageResolver(string? imagesFolder)
 
     public string? ResolveProductImage(string productCode, string? fileName) =>
         ResolveImage(fileName) ?? ResolveImage(productCode);
+
+    /// <summary>Thư mục con chứa ảnh hàng lỗi QC chụp.</summary>
+    public const string DefectFolder = "hang_loi";
+
+    /// <summary>Ảnh hàng lỗi: tìm trong images\hang_loi trước, rồi tới images.</summary>
+    public string? ResolveDefectImage(string? fileName) =>
+        string.IsNullOrWhiteSpace(fileName) || fileName.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(fileName.Trim())
+            ? null
+            : ResolveImage(Path.Combine(DefectFolder, fileName.Trim())) ?? ResolveImage(fileName);
 }

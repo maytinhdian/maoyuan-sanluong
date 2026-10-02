@@ -33,9 +33,27 @@ public sealed record LineRecord
     public decimal? WorkDaysLeft { get; init; }
     /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (cột AN).</summary>
     public decimal? NeededPerDay { get; init; }
+    /// <summary>Số hàng lỗi trong ngày (V19, null = chưa nhập).</summary>
+    public decimal? Defects { get; init; }
+    /// <summary>Tỷ lệ lỗi = số lỗi / thực tế, Excel tính (V19), đơn vị %.</summary>
+    public decimal? DefectRate { get; init; }
     /// <summary>Sản lượng giờ 1..12 (null = chưa nhập).</summary>
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? Status { get; init; }
+    public string? Note { get; init; }
+}
+
+/// <summary>Một dòng của sheet HANG_LOI (V20) thuộc ngày đang hiển thị.</summary>
+public sealed record DefectEntry
+{
+    public DateOnly? Date { get; init; }
+    public TimeOnly? Time { get; init; }
+    public required string Line { get; init; }
+    public string? ProductCode { get; init; }
+    public string? DefectType { get; init; }
+    public decimal? Quantity { get; init; }
+    /// <summary>Tên file ảnh QC chụp, nằm trong thư mục ảnh (images\hang_loi).</summary>
+    public string? ImageFile { get; init; }
     public string? Note { get; init; }
 }
 
@@ -45,4 +63,8 @@ public sealed record DisplaySheet(
     DateOnly? Date,
     IReadOnlyList<LineRecord> Lines,
     LineRecord? Total,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings)
+{
+    /// <summary>Hàng lỗi kèm ảnh của ngày đang hiển thị (sheet HANG_LOI, V20); file cũ thì rỗng.</summary>
+    public IReadOnlyList<DefectEntry> DefectLog { get; init; } = [];
+}
