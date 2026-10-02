@@ -17,6 +17,10 @@ public sealed partial class MonthProgressViewModel(ClockViewModel clock) : Displ
     [ObservableProperty] private string _unit = "PCS";
     [ObservableProperty] private IReadOnlyList<ProductRow> _rows = [];
     [ObservableProperty] private string? _moreText;
+    /// <summary>Số ngày làm việc còn lại (V19); null với file V18.</summary>
+    [ObservableProperty] private string? _daysLeft;
+    /// <summary>Cột "Cần mỗi ngày": rộng 220 khi file có số (V19), ẩn với file V18.</summary>
+    [ObservableProperty] private System.Windows.GridLength _neededWidth = new(0);
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
@@ -30,5 +34,7 @@ public sealed partial class MonthProgressViewModel(ClockViewModel clock) : Displ
         var shown = withMonth.Count > MaxRows ? MaxRows - 1 : withMonth.Count;
         Rows = ProductRow.From(withMonth.Take(shown));
         MoreText = withMonth.Count > shown ? $"+{withMonth.Count - shown} chuyền khác" : null;
+        DaysLeft = snapshot.Summary.WorkingDaysLeft is null ? null : Format.Number(snapshot.Summary.WorkingDaysLeft);
+        NeededWidth = new System.Windows.GridLength(withMonth.Any(p => p.NeededPerDay is not null) ? 220 : 0);
     }
 }

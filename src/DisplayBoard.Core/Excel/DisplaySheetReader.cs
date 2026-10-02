@@ -4,7 +4,7 @@ using DisplayBoard.Core.Models;
 namespace DisplayBoard.Core.Excel;
 
 /// <summary>
-/// Đọc sheet HIEN_THI của file theo dõi sản lượng (V18). Sheet này toàn công thức: mỗi dòng một chuyền
+/// Đọc sheet HIEN_THI của file theo dõi sản lượng (V18, V19). Sheet này toàn công thức: mỗi dòng một chuyền
 /// của ngày đang hiển thị (ô M1), cuối bảng là dòng TỔNG CỘNG. App chỉ đọc giá trị Excel đã tính, không tính lại.
 /// Cột được nhận theo tiêu đề tiếng Việt (dòng 3), nên thêm/đổi thứ tự cột vẫn đọc được.
 /// </summary>
@@ -18,7 +18,8 @@ public static class DisplaySheetReader
     {
         Date, Line, Product, ShiftCode, ShiftHours, HourlyTarget, DailyTarget, DailyActual, DailyRate,
         DailyVariance, Remaining, HoursEntered, TargetToNow, HourlyProgress, PreviousDay, CarriedShortfall,
-        MonthTarget, MonthCumulative, MonthRate, MonthRemaining, LineMonthCumulative, Status, Note
+        MonthTarget, MonthCumulative, MonthRate, MonthRemaining, LineMonthCumulative, Status, Note,
+        PreviousMonthShortfall, WorkingDaysLeft, NeededPerDay
     }
 
     // Tiêu đề tiếng Việt ở dòng 3 của HIEN_THI, so sánh sau khi bỏ dấu/khoảng trắng.
@@ -47,6 +48,10 @@ public static class DisplaySheetReader
         (Column.LineMonthCumulative, "LŨY KẾ THÁNG CỦA CHUYỀN"),
         (Column.Status, "TRẠNG THÁI"),
         (Column.Note, "GHI CHÚ"),
+        // Có từ V19 (cột AL–AN); file V18 không có thì để trống.
+        (Column.PreviousMonthShortfall, "THIẾU THÁNG TRƯỚC (SẢN PHẨM)"),
+        (Column.WorkingDaysLeft, "NGÀY LÀM VIỆC CÒN LẠI (tính cả ngày này)"),
+        (Column.NeededPerDay, "CẦN LÀM MỖI NGÀY ĐỂ KỊP THÁNG (SẢN PHẨM)"),
     ];
 
     private static readonly Column[] Required = [Column.Line, Column.DailyTarget, Column.DailyActual];
@@ -140,6 +145,9 @@ public static class DisplaySheetReader
             MonthRate = Pct(Column.MonthRate),
             MonthRemaining = Num(Column.MonthRemaining),
             LineMonthCumulative = Num(Column.LineMonthCumulative),
+            PreviousMonthShortfall = Num(Column.PreviousMonthShortfall),
+            WorkingDaysLeft = Num(Column.WorkingDaysLeft),
+            NeededPerDay = Num(Column.NeededPerDay),
             Hourly = hours.Select(col => CellParser.TryGetDecimal(sheet.Cell(row, col), out var v) ? v : (decimal?)null).ToList(),
             Status = Text(Column.Status),
             Note = Text(Column.Note),

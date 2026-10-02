@@ -38,6 +38,12 @@ public sealed record ProductDaily
     public ProgressStatus MonthStatus { get; init; }
     public decimal? MonthRemaining { get; init; }
     public decimal? LineMonthCumulative { get; init; }
+    /// <summary>Thiếu tháng trước của mã hàng (V19, chỉ hiển thị, không cộng vào mục tiêu).</summary>
+    public decimal? PreviousMonthShortfall { get; init; }
+    /// <summary>Ngày làm việc còn lại trong tháng, tính cả ngày đang hiển thị (V19).</summary>
+    public decimal? WorkingDaysLeft { get; init; }
+    /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (V19).</summary>
+    public decimal? NeededPerDay { get; init; }
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? StatusText { get; init; }
     public string? Note { get; init; }
@@ -69,6 +75,8 @@ public sealed record ProductionSummary
     public decimal CarriedShortfall { get; init; }
     public int CarriedProductCount { get; init; }
     public decimal? LineMonthCumulative { get; init; }
+    /// <summary>Ngày làm việc còn lại trong tháng (V19), lấy từ chuyền đầu tiên có số.</summary>
+    public decimal? WorkingDaysLeft { get; init; }
     public int MetCount { get; init; }
     public int NotMetCount { get; init; }
 
