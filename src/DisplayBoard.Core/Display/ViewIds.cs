@@ -12,4 +12,5 @@ public static class ViewIds
     public const string MonthProgress = "month-progress";
     public const string Lines = "lines";
     public const string Hourly = "hourly";
+    public const string Defects = "defects";
 }

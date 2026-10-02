@@ -33,6 +33,10 @@ public sealed record LineRecord
     public decimal? WorkingDaysLeft { get; init; }
     /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (V19).</summary>
     public decimal? NeededPerDay { get; init; }
+    /// <summary>Số hàng lỗi trong ngày (V19, null = chưa nhập).</summary>
+    public decimal? Defects { get; init; }
+    /// <summary>Tỷ lệ lỗi = số lỗi / thực tế, Excel tính (V19), đơn vị %.</summary>
+    public decimal? DefectRate { get; init; }
     /// <summary>Sản lượng giờ 1..12 (null = chưa nhập).</summary>
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? Status { get; init; }

@@ -85,6 +85,7 @@ Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở
 | `month-progress` | Lũy kế và % tháng từng chuyền |
 | `lines` | Thẻ từng chuyền: mã hàng, thực tế/mục tiêu, %, tiến độ theo giờ, phần thiếu hôm trước |
 | `hourly` | Sản lượng từng giờ (GIỜ 1–12) của mỗi chuyền, tô màu so với mục tiêu mỗi giờ, kèm % tiến độ theo giờ |
+| `defects` | Hàng lỗi hôm nay (V19): tổng số lỗi, tỷ lệ lỗi chung và từng chuyền (cột SỐ LỖI, TỶ LỆ LỖI của HIEN_THI), nhiều lỗi xếp trên |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 

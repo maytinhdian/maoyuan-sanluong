@@ -59,6 +59,9 @@ public sealed class SnapshotBuilder
                     PreviousMonthShortfall = l.PreviousMonthShortfall,
                     WorkingDaysLeft = l.WorkingDaysLeft,
                     NeededPerDay = l.NeededPerDay,
+                    Defects = l.Defects,
+                    DefectRate = l.DefectRate,
+                    DefectStatus = DefectStatusOf(l.DefectRate),
                     Hourly = l.Hourly,
                     StatusText = l.Status,
                     Note = l.Note,
@@ -95,6 +98,9 @@ public sealed class SnapshotBuilder
             CarriedProductCount = products.Count(p => p.CarriedShortfall > 0),
             LineMonthCumulative = total?.LineMonthCumulative,
             WorkingDaysLeft = products.Select(p => p.WorkingDaysLeft).FirstOrDefault(d => d is not null),
+            Defects = total?.Defects,
+            DefectRate = total?.DefectRate,
+            DefectStatus = DefectStatusOf(total?.DefectRate),
             MetCount = products.Count(p => p.DailyStatus == ProgressStatus.Met),
             NotMetCount = products.Count(p => p.DailyStatus is ProgressStatus.Near or ProgressStatus.Behind),
         };
@@ -123,6 +129,15 @@ public sealed class SnapshotBuilder
         null => ProgressStatus.None,
         >= 100 => ProgressStatus.Met,
         >= 90 => ProgressStatus.Near,
+        _ => ProgressStatus.Behind
+    };
+
+    /// <summary>Đổi tỷ lệ lỗi % (Excel đã tính) sang màu: Tốt ≤ 1, Cần chú ý ≤ 3, Cao &gt; 3.</summary>
+    public static ProgressStatus DefectStatusOf(decimal? rate) => rate switch
+    {
+        null => ProgressStatus.None,
+        <= 1 => ProgressStatus.Met,
+        <= 3 => ProgressStatus.Near,
         _ => ProgressStatus.Behind
     };
 }

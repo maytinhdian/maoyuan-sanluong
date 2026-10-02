@@ -56,6 +56,7 @@ public class DisplaySheetReaderTests
         Assert.Null(line1.NeededPerDay);
         Assert.Null(line1.WorkingDaysLeft);
         Assert.Null(line1.PreviousMonthShortfall);
+        Assert.Null(line1.Defects);
     }
 
     [Fact]
@@ -76,6 +77,24 @@ public class DisplaySheetReaderTests
         var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, null);
         Assert.Equal(26m, snapshot.Summary.WorkingDaysLeft);
         Assert.Equal(1504m, snapshot.Products[1].NeededPerDay);
+    }
+
+    [Fact]
+    public void Reads_v19_defects_per_line_and_total()
+    {
+        using var stream = File.OpenRead(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V19_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        Assert.Null(sheet.Lines[0].Defects);                // chuyền 1 chưa nhập số lỗi
+        Assert.Equal(1m, sheet.Lines[1].Defects);
+        Assert.Equal(0.4167m, Math.Round(sheet.Lines[1].DefectRate!.Value, 4)); // 1 / 240, Excel tính
+        Assert.Equal(1m, sheet.Total!.Defects);
+
+        var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, null);
+        Assert.True(snapshot.HasDefectData);
+        Assert.Equal(ProgressStatus.Met, snapshot.Products[1].DefectStatus);
+        Assert.Equal(1m, snapshot.Summary.Defects);
+        Assert.Equal(ProgressStatus.None, snapshot.Products[0].DefectStatus);
     }
 
     [Fact]

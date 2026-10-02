@@ -48,6 +48,8 @@
     return (n < 0 ? '-' : '') + s;
   }
   function pct(v) { return isNum(v) ? roundAway(v) + '%' : '—'; }
+  // Tỷ lệ lỗi nhỏ nên giữ 2 số lẻ: 0,42%.
+  function pct2(v) { return isNum(v) ? String(Math.round(v * 100) / 100).replace('.', ',') + '%' : '—'; }
   function signed(v) { return !isNum(v) ? '—' : (v > 0 ? '+' + num(v) : num(v)); }
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -369,6 +371,48 @@
         '<div class="hours">' + heads + '</div><div class="r" style="width:200px">Tiến độ</div></div>' + rows + '</div>' +
         '<div class="t2" style="font-size:26px;margin:0 40px 28px">Màu ô: xanh ≥ mục tiêu giờ · vàng 90–99% · đỏ &lt; 90% · dấu chấm = chưa nhập. ' +
         'Tiến độ = % so với mục tiêu tới giờ đã nhập (Excel tính).</div>';
+    }
+  };
+
+  VIEWS.defects = {
+    title: function () { return 'HÀNG LỖI HÔM NAY'; }, icon: 'search',
+    hasContent: function (s) { return s.products.some(function (p) { return isNum(p.defects); }); },
+    render: function (s) {
+      // Chỉ các chuyền có kế hoạch; nhiều lỗi xếp trên, chưa nhập số lỗi xếp cuối.
+      var list = s.products.filter(function (p) { return p.productCode; })
+        .map(function (p, i) { return [p, i]; })
+        .sort(function (a, b) {
+          var x = a[0].defects, y = b[0].defects;
+          if (!isNum(x) || !isNum(y)) return isNum(x) === isNum(y) ? a[1] - b[1] : (isNum(x) ? -1 : 1);
+          return y - x || (b[0].defectRate || 0) - (a[0].defectRate || 0) || a[1] - b[1];
+        }).map(function (x) { return x[0]; });
+      var shown = list.length > 8 ? 7 : list.length, maxRate = 0;
+      list.forEach(function (p) { if (isNum(p.defectRate)) maxRate = Math.max(maxRate, p.defectRate); });
+      var rows = list.slice(0, shown).map(function (p, i) {
+        var has = isNum(p.defects), c = 'c-' + st(p.defectStatus);
+        return '<div class="tr' + (i % 2 === 1 ? ' alt' : '') + '" style="height:88px">' +
+          '<div class="grow" style="display:flex;align-items:center;min-width:0"><span style="width:10px;height:40px;border-radius:3px;margin-right:16px;flex:none;background:' +
+            color(p.color) + '"></span><span class="sb ell">' + esc(title(p)) + '</span></div>' +
+          '<div class="col r" style="width:170px">' + num(p.dailyActual) + '</div>' +
+          (has ? '<div class="col r b ' + c + '" style="width:170px">' + num(p.defects) + '</div>'
+            : '<div class="col r t2" style="width:170px;font-size:26px;white-space:nowrap">chưa nhập</div>') +
+          '<div class="col" style="width:200px">' + (isNum(p.defectRate) ? bar(maxRate > 0 ? p.defectRate / maxRate : 0, p.defectStatus, 20) : '') + '</div>' +
+          '<div class="col r b ' + c + '" style="width:170px;padding-right:10px">' + pct2(p.defectRate) + '</div></div>';
+      }).join('');
+      var m = s.summary, withDefects = list.filter(function (p) { return p.defects > 0; }).length;
+      var left = '<div class="card" style="width:500px;flex:none;margin-right:30px;display:flex;flex-direction:column;justify-content:center;text-align:center">' +
+        '<div class="sb" style="font-size:40px">TỔNG SỐ LỖI</div>' +
+        '<div class="b ' + (m.defects > 0 ? 'c-' + st(m.defectStatus) : '') + '" style="font-size:150px;line-height:1.15;margin-top:20px">' + num(m.defects) + '</div>' +
+        '<div class="t2" style="font-size:40px">' + esc(s.unit) + '</div>' +
+        '<div style="font-size:36px;margin-top:40px">Tỷ lệ lỗi chung <b class="c-' + st(m.defectStatus) + '" style="font-size:56px">' + pct2(m.defectRate) + '</b></div>' +
+        '<div class="t2" style="font-size:28px;margin-top:6px">trên ' + num(m.dailyActual) + ' ' + esc(s.unit) + ' thực tế</div>' +
+        '<div class="t2" style="font-size:28px;margin-top:30px">' + withDefects + ' chuyền có hàng lỗi</div></div>';
+      return '<div style="flex:1;display:flex;margin:30px 40px 0;min-height:0">' + left +
+        '<div style="flex:1;min-width:0"><div class="tbl" style="margin:0"><div class="th" style="height:70px">' +
+        '<div class="grow">Chuyền · Mã hàng</div><div class="col r" style="width:170px">Thực tế</div><div class="col r" style="width:170px">Số lỗi</div>' +
+        '<div class="col" style="width:200px"></div><div class="col r" style="width:170px;padding-right:10px">Tỷ lệ lỗi</div></div>' + rows +
+        (list.length > shown ? '<div class="t2" style="font-size:30px;margin:14px 0 0 20px">+' + (list.length - shown) + ' chuyền khác</div>' : '') + '</div></div></div>' +
+        '<div class="t2" style="font-size:26px;margin:16px 40px 28px">Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI).</div>';
     }
   };
 

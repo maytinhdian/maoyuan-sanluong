@@ -57,5 +57,6 @@ public static class ViewCatalog
         new ViewDefinition(ViewIds.MonthProgress, "Tiến độ tháng", s => s.HasMonthData),
         new ViewDefinition(ViewIds.Lines, "So sánh các chuyền", s => s.HasMultipleLines),
         new ViewDefinition(ViewIds.Hourly, "Sản lượng theo giờ", s => s.HasHourlyData),
+        new ViewDefinition(ViewIds.Defects, "Hàng lỗi", s => s.HasDefectData),
     ];
 }

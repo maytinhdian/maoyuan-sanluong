@@ -44,6 +44,11 @@ public sealed record ProductDaily
     public decimal? WorkingDaysLeft { get; init; }
     /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (V19).</summary>
     public decimal? NeededPerDay { get; init; }
+    /// <summary>Số hàng lỗi trong ngày (V19, null = chưa nhập).</summary>
+    public decimal? Defects { get; init; }
+    /// <summary>Tỷ lệ lỗi % do Excel tính (V19).</summary>
+    public decimal? DefectRate { get; init; }
+    public ProgressStatus DefectStatus { get; init; }
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? StatusText { get; init; }
     public string? Note { get; init; }
@@ -77,6 +82,10 @@ public sealed record ProductionSummary
     public decimal? LineMonthCumulative { get; init; }
     /// <summary>Ngày làm việc còn lại trong tháng (V19), lấy từ chuyền đầu tiên có số.</summary>
     public decimal? WorkingDaysLeft { get; init; }
+    /// <summary>Tổng số lỗi và tỷ lệ lỗi chung ở dòng TỔNG CỘNG (V19).</summary>
+    public decimal? Defects { get; init; }
+    public decimal? DefectRate { get; init; }
+    public ProgressStatus DefectStatus { get; init; }
     public int MetCount { get; init; }
     public int NotMetCount { get; init; }
 
@@ -100,6 +109,8 @@ public sealed record DisplayDataSnapshot(
     public bool HasMultipleLines => Products.Select(p => p.Line).Distinct().Skip(1).Any();
 
     public bool HasMonthData => Products.Any(p => p.MonthTarget > 0);
+
+    public bool HasDefectData => Products.Any(p => p.Defects is not null);
 
     public bool HasHourlyData => Products.Any(p => p.Hourly.Any(h => h is not null));
 
