@@ -19,7 +19,7 @@ public static class DisplaySheetReader
         Date, Line, Product, ShiftCode, ShiftHours, HourlyTarget, DailyTarget, DailyActual, DailyRate,
         DailyVariance, Remaining, HoursEntered, TargetToNow, HourlyProgress, PreviousDay, CarriedShortfall,
         MonthTarget, MonthCumulative, MonthRate, MonthRemaining, LineMonthCumulative, Status, Note,
-        PreviousMonthShortfall, WorkDaysLeft, NeededPerDay
+        PreviousMonthShortfall, WorkDaysLeft, NeededPerDay, Defects, DefectRate
     }
 
     // Tiêu đề tiếng Việt ở dòng 3 của HIEN_THI, so sánh sau khi bỏ dấu/khoảng trắng.
@@ -52,6 +52,9 @@ public static class DisplaySheetReader
         (Column.PreviousMonthShortfall, "THIẾU THÁNG TRƯỚC (SẢN PHẨM)"),
         (Column.WorkDaysLeft, "NGÀY LÀM VIỆC CÒN LẠI (tính cả ngày này)"),
         (Column.NeededPerDay, "CẦN LÀM MỖI NGÀY ĐỂ KỊP THÁNG (SẢN PHẨM)"),
+        // Hàng lỗi (V19, cột AQ–AR; từ V20 Excel cộng từ sheet HANG_LOI).
+        (Column.Defects, "SỐ LỖI"),
+        (Column.DefectRate, "TỶ LỆ LỖI"),
     ];
 
     private static readonly Column[] Required = [Column.Line, Column.DailyTarget, Column.DailyActual];
@@ -110,7 +113,10 @@ public static class DisplaySheetReader
         if (date is null)
             warnings.Add($"Sheet \"{sheet.Name}\": không đọc được ngày đang hiển thị.");
 
-        return new DisplaySheet(sheet.Name, date, lines.Select(l => l.Record).ToList(), total?.Record, warnings);
+        return new DisplaySheet(sheet.Name, date, lines.Select(l => l.Record).ToList(), total?.Record, warnings)
+        {
+            DefectLog = DefectLogReader.Read(workbook)
+        };
     }
 
     private sealed record ParsedRow(LineRecord Record, DateOnly? Date);
@@ -148,6 +154,8 @@ public static class DisplaySheetReader
             PreviousMonthShortfall = Num(Column.PreviousMonthShortfall),
             WorkDaysLeft = Num(Column.WorkDaysLeft),
             NeededPerDay = Num(Column.NeededPerDay),
+            Defects = Num(Column.Defects),
+            DefectRate = Pct(Column.DefectRate),
             Hourly = hours.Select(col => CellParser.TryGetDecimal(sheet.Cell(row, col), out var v) ? v : (decimal?)null).ToList(),
             Status = Text(Column.Status),
             Note = Text(Column.Note),

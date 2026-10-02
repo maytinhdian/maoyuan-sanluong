@@ -1,3 +1,4 @@
+using DisplayBoard.Core.Display;
 using ClosedXML.Excel;
 using DisplayBoard.Core.Excel;
 using DisplayBoard.Core.Models;
@@ -74,6 +75,64 @@ public class DisplaySheetReaderTests
         Assert.Equal(40m, total.CarriedShortfall);
         Assert.Equal(6810m, total.LineMonthCumulative);
         Assert.Empty(sheet.Warnings);
+    }
+
+    [Fact]
+    public void Reads_v19_defects_per_line_and_total()
+    {
+        using var stream = File.OpenRead(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V19_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        Assert.Null(sheet.Lines[0].Defects);                // chuyền 1 chưa nhập số lỗi
+        Assert.Equal(1m, sheet.Lines[1].Defects);
+        Assert.Equal(0.4167m, Math.Round(sheet.Lines[1].DefectRate!.Value, 4)); // 1 / 240, Excel tính
+        Assert.Equal(1m, sheet.Total!.Defects);
+
+        var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, null);
+        Assert.True(snapshot.HasDefectData);
+        Assert.Equal(ProgressStatus.Met, snapshot.Products[1].DefectStatus);
+        Assert.Equal(1m, snapshot.Summary.Defects);
+        Assert.Equal(ProgressStatus.None, snapshot.Products[0].DefectStatus);
+    }
+
+    [Fact]
+    public void Reads_v20_defect_photos_of_the_shown_day()
+    {
+        var samples = Path.Combine(TestPaths.RepoRoot(), "samples");
+        using var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V20_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        Assert.Equal(6, sheet.DefectLog.Count);                     // HANG_LOI: các dòng HIỆN TRÊN TV = CÓ
+        var first = sheet.DefectLog[0];
+        Assert.Equal("Chuyền 3", first.Line);
+        Assert.Equal("883", first.ProductCode);                    // Excel tự lấy từ NHAP_LIEU
+        Assert.Equal("Bung chỉ", first.DefectType);
+        Assert.Equal(4m, first.Quantity);
+        Assert.Equal(new TimeOnly(8, 50), first.Time);
+        Assert.Equal("bung_chi_c3.png", first.ImageFile);
+        Assert.Equal(85m, sheet.Lines[1].Defects);                  // SỐ LỖI = tổng HANG_LOI của chuyền 2
+        Assert.Equal(125m, sheet.Total!.Defects);
+
+        var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, Path.Combine(samples, "images"));
+        Assert.Equal(5, snapshot.DefectPhotos.Count);               // dòng không có tên file ảnh thì không chiếu
+        Assert.Equal("Lem màu", snapshot.DefectPhotos[0].DefectType); // 13:40, mới nhất lên trước
+        Assert.All(snapshot.DefectPhotos, p => Assert.True(File.Exists(p.ImagePath)));
+        Assert.Equal(1, DefectsViewDefinition.PageCount(snapshot, 6));
+        Assert.Equal(2, DefectsViewDefinition.PageCount(snapshot, 4));
+        Assert.Equal(3, DefectsViewDefinition.PageCount(snapshot, 2));
+    }
+
+    [Fact]
+    public void Missing_defect_photo_is_reported_but_still_listed()
+    {
+        var samples = Path.Combine(TestPaths.RepoRoot(), "samples");
+        using var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V20_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, Path.Combine(samples, "khong_co"));
+        Assert.Equal(5, snapshot.DefectPhotos.Count);
+        Assert.All(snapshot.DefectPhotos, p => Assert.Null(p.ImagePath));
+        Assert.Contains(snapshot.Warnings, w => w.Contains("rach_c2.png"));
     }
 
     [Fact]
