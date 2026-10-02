@@ -297,7 +297,8 @@ public sealed class BoardServer : IBoardServer
     private DisplayDataSnapshot MapImages(DisplayDataSnapshot snapshot) => snapshot with
     {
         Products = snapshot.Products.Select(p => p with { ImagePath = ImageUrl(p.ImagePath) }).ToList(),
-        Notices = snapshot.Notices.Select(n => n with { BackgroundImagePath = ImageUrl(n.BackgroundImagePath) }).ToList()
+        Notices = snapshot.Notices.Select(n => n with { BackgroundImagePath = ImageUrl(n.BackgroundImagePath) }).ToList(),
+        DefectPhotos = snapshot.DefectPhotos.Select(d => d with { ImagePath = ImageUrl(d.ImagePath) }).ToList()
     };
 
     /// <summary>Chỉ ảnh có trong dữ liệu mới được phát, qua mã băm của đường dẫn (không lộ đường dẫn trên máy).</summary>

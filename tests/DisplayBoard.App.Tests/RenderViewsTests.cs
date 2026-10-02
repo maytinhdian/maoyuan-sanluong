@@ -37,7 +37,8 @@ public class RenderViewsTests
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
             try
             {
-                var snapshot = LoadSampleSnapshot();
+                // Hàng lỗi cần sheet HANG_LOI và ảnh mẫu của file V20.
+                var snapshot = LoadSampleSnapshot(viewId == ViewIds.Defects ? "Theo_doi_san_luong_V20_mau.xlsx" : "Theo_doi_san_luong_V18_mau.xlsx");
                 var viewModel = new DisplayViewFactory(new ClockViewModel()).Create(viewId);
                 viewModel.Update(snapshot);
                 viewModel.OnActivated();
@@ -62,11 +63,11 @@ public class RenderViewsTests
         Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
     }
 
-    private static DisplayDataSnapshot LoadSampleSnapshot()
+    private static DisplayDataSnapshot LoadSampleSnapshot(string file)
     {
         var samples = Path.Combine(RepoRoot(), "samples");
         DisplaySheet sheet;
-        using (var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V18_mau.xlsx")))
+        using (var stream = File.OpenRead(Path.Combine(samples, file)))
             sheet = DisplaySheetReader.Read(stream);
         ContentData content;
         using (var stream = File.OpenRead(Path.Combine(samples, "display-content.xlsx")))

@@ -56,6 +56,20 @@ public sealed record ProductDaily
     public int Rank { get; init; }
 }
 
+/// <summary>Một ảnh hàng lỗi để chiếu (sheet HANG_LOI). ImagePath null = không tìm thấy file ảnh.</summary>
+public sealed record DefectPhoto
+{
+    public required string Line { get; init; }
+    public required string ProductCode { get; init; }
+    public required string Color { get; init; }
+    public string? DefectType { get; init; }
+    public decimal? Quantity { get; init; }
+    public TimeOnly? Time { get; init; }
+    public required string ImageFile { get; init; }
+    public string? ImagePath { get; init; }
+    public string? Note { get; init; }
+}
+
 public sealed record Notice(
     string Title,
     string Content,
@@ -110,7 +124,10 @@ public sealed record DisplayDataSnapshot(
 
     public bool HasMonthData => Products.Any(p => p.MonthTarget > 0);
 
-    public bool HasDefectData => Products.Any(p => p.Defects is not null);
+    /// <summary>Ảnh hàng lỗi của ngày đang hiển thị, mới nhất trước (V20).</summary>
+    public IReadOnlyList<DefectPhoto> DefectPhotos { get; init; } = [];
+
+    public bool HasDefectData => DefectPhotos.Count > 0 || Products.Any(p => p.Defects is not null);
 
     public bool HasHourlyData => Products.Any(p => p.Hourly.Any(h => h is not null));
 

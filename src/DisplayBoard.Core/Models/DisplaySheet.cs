@@ -43,10 +43,28 @@ public sealed record LineRecord
     public string? Note { get; init; }
 }
 
+/// <summary>Một dòng của sheet HANG_LOI (V20) thuộc ngày đang hiển thị.</summary>
+public sealed record DefectEntry
+{
+    public DateOnly? Date { get; init; }
+    public TimeOnly? Time { get; init; }
+    public required string Line { get; init; }
+    public string? ProductCode { get; init; }
+    public string? DefectType { get; init; }
+    public decimal? Quantity { get; init; }
+    /// <summary>Tên file ảnh QC chụp, nằm trong thư mục ảnh (images\hang_loi).</summary>
+    public string? ImageFile { get; init; }
+    public string? Note { get; init; }
+}
+
 /// <summary>Nội dung sheet HIEN_THI: ngày đang hiển thị, các chuyền và dòng TỔNG CỘNG.</summary>
 public sealed record DisplaySheet(
     string SheetName,
     DateOnly? Date,
     IReadOnlyList<LineRecord> Lines,
     LineRecord? Total,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings)
+{
+    /// <summary>Hàng lỗi kèm ảnh của ngày đang hiển thị (sheet HANG_LOI, V20); file cũ thì rỗng.</summary>
+    public IReadOnlyList<DefectEntry> DefectLog { get; init; } = [];
+}

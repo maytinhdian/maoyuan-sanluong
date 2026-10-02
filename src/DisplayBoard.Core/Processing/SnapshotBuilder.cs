@@ -111,6 +111,29 @@ public sealed class SnapshotBuilder
             .Select(n => new Notice(n.Title, n.Content, images.ResolveImage(n.BackgroundImage), n.Order))
             .ToList();
 
+        // Chỉ dòng có tên file ảnh; giờ ghi mới nhất lên trước, cùng giờ thì giữ thứ tự trong Excel.
+        var colors = products.GroupBy(p => p.Line).ToDictionary(g => g.Key, g => g.First().Color);
+        var photos = sheet.DefectLog
+            .Where(d => !string.IsNullOrWhiteSpace(d.ImageFile))
+            .Select((d, i) => (d, i))
+            .OrderByDescending(x => x.d.Time ?? TimeOnly.MinValue)
+            .ThenBy(x => x.i)
+            .Select(x => new DefectPhoto
+            {
+                Line = x.d.Line,
+                ProductCode = x.d.ProductCode ?? "",
+                Color = colors.GetValueOrDefault(x.d.Line) ?? Palette[0],
+                DefectType = x.d.DefectType,
+                Quantity = x.d.Quantity,
+                Time = x.d.Time,
+                ImageFile = x.d.ImageFile!.Trim(),
+                ImagePath = images.ResolveDefectImage(x.d.ImageFile),
+                Note = x.d.Note,
+            })
+            .ToList();
+        foreach (var missing in photos.Where(p => p.ImagePath is null))
+            warnings.Add($"Không tìm thấy ảnh hàng lỗi \"{missing.ImageFile}\" (thư mục ảnh\\{ImageResolver.DefectFolder}).");
+
         return new DisplayDataSnapshot(
             now,
             sheet.SheetName,
@@ -120,7 +143,10 @@ public sealed class SnapshotBuilder
             content.Slogans,
             content.Settings.GetValueOrDefault("donvi") ?? "PCS",
             content.Settings.GetValueOrDefault("tencongty"),
-            warnings);
+            warnings)
+        {
+            DefectPhotos = photos
+        };
     }
 
     /// <summary>Đổi % (Excel đã tính) sang màu: Đạt ≥ 100, Gần đạt 90–99, Chậm &lt; 90.</summary>

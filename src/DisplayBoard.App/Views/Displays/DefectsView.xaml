@@ -11,7 +11,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <s:DisplayHeader />
-        <Grid Grid.Row="1" Margin="40,30,40,0">
+        <!-- Chưa có ảnh: bảng số lỗi từng chuyền -->
+        <Grid Grid.Row="1" Margin="40,30,40,0" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="500" />
                 <ColumnDefinition Width="*" />
@@ -93,6 +94,95 @@
             </StackPanel>
         </Grid>
         <TextBlock Grid.Row="2" Style="{StaticResource BoardText}" FontSize="26" Foreground="{StaticResource TextSecondary}" Margin="40,16,40,28"
-                   Text="Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI)." />
+                   Text="Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI)."
+                   Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+
+        <!-- Có ảnh (sheet HANG_LOI): tổng bên trái, lưới ảnh 3×2 bên phải -->
+        <Grid Grid.Row="1" Margin="40,26,40,0" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Margin="0,0,24,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Border Style="{StaticResource Card}" Padding="22">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="TỔNG SỐ LỖI" Style="{StaticResource CardTitle}" FontSize="34" HorizontalAlignment="Center" Foreground="White" />
+                        <TextBlock Text="{Binding TotalDefects}" Style="{StaticResource KpiValue}" FontSize="120" HorizontalAlignment="Center"
+                                   Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                        <TextBlock Style="{StaticResource BoardText}" FontSize="30" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}">
+                            <Run Text="{Binding Unit, Mode=OneWay}" /><Run Text=" · tỷ lệ lỗi " /><Run Text="{Binding TotalRate, Mode=OneWay}" FontWeight="Bold"
+                                 Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,20,0,0" Padding="26,22">
+                    <StackPanel>
+                        <TextBlock Text="THEO CHUYỀN" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
+                        <ItemsControl ItemsSource="{Binding SideLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="62">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="30" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Defects}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{Binding DefectStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Photos}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="3" Rows="2" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,24,24" ClipToBounds="True">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid Background="#0B1424">
+                                    <Image Source="{Binding ImagePath, Converter={StaticResource PathToImageLarge}}" Stretch="Uniform"
+                                           Visibility="{Binding ImagePath, Converter={StaticResource NullToVisibility}}" />
+                                    <TextBlock Text="{Binding MissingText}" Style="{StaticResource BoardText}" FontSize="24" TextAlignment="Center" TextWrapping="Wrap"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Foreground="{StaticResource NearBrush}"
+                                               Visibility="{Binding MissingText, Converter={StaticResource NullToVisibility}}" />
+                                    <Border Background="{StaticResource NotMetBrush}" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Left" VerticalAlignment="Top" MaxWidth="300"
+                                            Visibility="{Binding DefectType, Converter={StaticResource NullToVisibility}}">
+                                        <TextBlock Text="{Binding DefectType}" Style="{StaticResource BoardText}" FontSize="26" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <Border Background="#D90A1830" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            Visibility="{Binding Quantity, Converter={StaticResource NullToVisibility}}">
+                                        <TextBlock Text="{Binding Quantity}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="Bold" />
+                                    </Border>
+                                </Grid>
+                                <Grid Grid.Row="1" Margin="18,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="8" Height="30" CornerRadius="3" Margin="0,0,12,0" Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+        <Grid Grid.Row="2" Margin="40,0,64,22" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
+            <TextBlock Text="{Binding FooterText}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding PageText}" Style="{StaticResource BoardText}" FontSize="24" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" />
+        </Grid>
     </Grid>
 </UserControl>

@@ -42,6 +42,22 @@ public sealed class ProductProgressViewDefinition : IDisplayViewDefinition
     public TimeSpan? GetRequiredDuration(DisplayDataSnapshot snapshot) => PageDuration * PageCount(snapshot);
 }
 
+/// <summary>Hàng lỗi: lưới ảnh QC chụp, 6 ảnh/trang. File chưa có ảnh thì chỉ một trang bảng số lỗi.</summary>
+public sealed class DefectsViewDefinition : IDisplayViewDefinition
+{
+    public const int PhotosPerPage = 6;
+    public static readonly TimeSpan PageDuration = TimeSpan.FromSeconds(10);
+
+    public string Id => ViewIds.Defects;
+    public string Name => "Hàng lỗi";
+    public bool HasContent(DisplayDataSnapshot snapshot) => snapshot.HasDefectData;
+
+    public static int PageCount(DisplayDataSnapshot snapshot) =>
+        Math.Max(1, (int)Math.Ceiling(snapshot.DefectPhotos.Count / (double)PhotosPerPage));
+
+    public TimeSpan? GetRequiredDuration(DisplayDataSnapshot snapshot) => PageDuration * PageCount(snapshot);
+}
+
 public static class ViewCatalog
 {
     public static IReadOnlyList<IDisplayViewDefinition> CreateDefault() =>
@@ -57,6 +73,6 @@ public static class ViewCatalog
         new ViewDefinition(ViewIds.MonthProgress, "Tiến độ tháng", s => s.HasMonthData),
         new ViewDefinition(ViewIds.Lines, "So sánh các chuyền", s => s.HasMultipleLines),
         new ViewDefinition(ViewIds.Hourly, "Sản lượng theo giờ", s => s.HasHourlyData),
-        new ViewDefinition(ViewIds.Defects, "Hàng lỗi", s => s.HasDefectData),
+        new DefectsViewDefinition(),
     ];
 }

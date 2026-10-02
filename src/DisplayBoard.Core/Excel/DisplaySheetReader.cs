@@ -113,7 +113,10 @@ public static class DisplaySheetReader
         if (date is null)
             warnings.Add($"Sheet \"{sheet.Name}\": không đọc được ngày đang hiển thị.");
 
-        return new DisplaySheet(sheet.Name, date, lines.Select(l => l.Record).ToList(), total?.Record, warnings);
+        return new DisplaySheet(sheet.Name, date, lines.Select(l => l.Record).ToList(), total?.Record, warnings)
+        {
+            DefectLog = DefectLogReader.Read(workbook)
+        };
     }
 
     private sealed record ParsedRow(LineRecord Record, DateOnly? Date);
