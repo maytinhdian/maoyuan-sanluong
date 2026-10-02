@@ -25,6 +25,10 @@
                                Foreground="{StaticResource TextSecondary}" />
                     <TextBlock Text="% tháng xem theo từng chuyền bên phải" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,8,0,0"
                                Foreground="{StaticResource TextSecondary}" />
+                    <Border Margin="0,36,0,0" Padding="24,14" CornerRadius="12" Background="{StaticResource HeaderBackground}"
+                            Visibility="{Binding WorkDaysLeftText, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="{Binding WorkDaysLeftText}" Style="{StaticResource BoardText}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    </Border>
                 </StackPanel>
             </Border>
             <!-- Từng chuyền, % tháng thấp nhất ở trên -->
@@ -34,7 +38,11 @@
                     <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Height="72">
+                                <Grid MinHeight="72">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="72" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="260" />
                                         <ColumnDefinition Width="*" />
@@ -49,6 +57,11 @@
                                     </TextBlock>
                                     <TextBlock Grid.Column="3" Text="{Binding MonthRate}" Style="{StaticResource TableCellText}" FontSize="34" FontWeight="Bold" HorizontalAlignment="Right"
                                                Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                    <!-- V19: cần mỗi ngày để kịp tháng, thiếu tháng trước (số Excel tính) -->
+                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Style="{StaticResource TableCellText}" FontSize="26" Margin="0,0,0,10"
+                                               Foreground="{StaticResource TextSecondary}" Visibility="{Binding HasMonthPlan, Converter={StaticResource NullToVisibility}}">
+                                        <Run Text="Cần mỗi ngày để kịp tháng: " /><Run Text="{Binding NeededPerDay, Mode=OneWay, TargetNullValue='—'}" Foreground="{StaticResource NearBrush}" FontWeight="Bold" /><Run Text="     Thiếu tháng trước: " /><Run Text="{Binding PreviousMonthShortfall, Mode=OneWay, TargetNullValue='0'}" Foreground="White" FontWeight="SemiBold" />
+                                    </TextBlock>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

@@ -13,7 +13,7 @@ App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_
 dotnet run --project src/DisplayBoard.App
 ```
 
-1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V18_mau.xlsx` (file V18 với số liệu thử).
+1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V19_mau.xlsx` (file V19 với số liệu thử).
 2. Chọn màn hình cho TV1/TV2, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓.
 3. Xem ở tab **Xem trước**, rồi bấm **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
@@ -40,6 +40,7 @@ Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở
 
 - 6 dòng dữ liệu, mỗi dòng một chuyền, và dòng **TỔNG CỘNG** ở cuối.
 - Cột được nhận theo tiêu đề tiếng Việt (hàng 3): CHUYỀN, MÃ HÀNG, MỤC TIÊU TRONG NGÀY, THỰC TẾ TRONG NGÀY, % ĐẠT NGÀY, CÒN THIẾU, THIẾU NGÀY TRƯỚC, lũy kế và % tháng, GIỜ 1–12… Thiếu cột CHUYỀN, MỤC TIÊU TRONG NGÀY hoặc THỰC TẾ TRONG NGÀY thì app báo lỗi rõ tên cột.
+- Từ V19, màn **Tiến độ tháng** hiện thêm 3 cột Excel tính: thiếu tháng trước (AL), số ngày làm việc còn lại (AM) và cần làm mỗi ngày để kịp tháng (AN). File V18 không có các cột này thì phần đó tự ẩn.
 - Ngày lấy từ cột NGÀY (hoặc ô ngày ở hàng tiêu đề).
 - Trạng thái màu theo % Excel tính: Đạt ≥ 100%, Gần đạt 90–99%, Chậm < 90%.
 - Dòng TỔNG CỘNG không cộng mục tiêu/lũy kế tháng theo mã hàng (mã có thể trùng giữa các chuyền), nên màn hình tháng hiện % theo từng chuyền và tổng lũy kế tháng của các chuyền.

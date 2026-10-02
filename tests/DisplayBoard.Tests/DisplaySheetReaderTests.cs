@@ -14,6 +14,29 @@ public class DisplaySheetReaderTests
     }
 
     [Fact]
+    public void Reads_v19_month_plan_columns()
+    {
+        using var stream = File.OpenRead(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V19_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        Assert.Equal(6, sheet.Lines.Count);
+        Assert.Equal(38940m, sheet.Lines[0].PreviousMonthShortfall);
+        Assert.Equal(26m, sheet.Lines[0].WorkDaysLeft);
+        Assert.Equal(1585m, sheet.Lines[0].NeededPerDay);
+        Assert.Equal(1504m, sheet.Lines[1].NeededPerDay);
+        Assert.Null(sheet.Lines[2].NeededPerDay);   // chuyền chưa có kế hoạch tháng
+    }
+
+    [Fact]
+    public void V18_file_has_no_month_plan_columns()
+    {
+        var line1 = ReadSample().Lines[0];
+        Assert.Null(line1.NeededPerDay);
+        Assert.Null(line1.WorkDaysLeft);
+        Assert.Null(line1.PreviousMonthShortfall);
+    }
+
+    [Fact]
     public void Reads_values_excel_calculated_on_hien_thi()
     {
         var sheet = ReadSample();

@@ -27,6 +27,12 @@ public sealed record LineRecord
     public decimal? MonthRate { get; init; }
     public decimal? MonthRemaining { get; init; }
     public decimal? LineMonthCumulative { get; init; }
+    /// <summary>Thiếu tháng trước của mã hàng (cột AL, chỉ để xem, không cộng vào mục tiêu).</summary>
+    public decimal? PreviousMonthShortfall { get; init; }
+    /// <summary>Số ngày làm việc còn lại trong tháng, tính cả ngày đang hiển thị (cột AM).</summary>
+    public decimal? WorkDaysLeft { get; init; }
+    /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (cột AN).</summary>
+    public decimal? NeededPerDay { get; init; }
     /// <summary>Sản lượng giờ 1..12 (null = chưa nhập).</summary>
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? Status { get; init; }
