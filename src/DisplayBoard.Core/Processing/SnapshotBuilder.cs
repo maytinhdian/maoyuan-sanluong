@@ -59,6 +59,9 @@ public sealed class SnapshotBuilder
                     PreviousMonthShortfall = l.PreviousMonthShortfall,
                     WorkingDaysLeft = l.WorkingDaysLeft,
                     NeededPerDay = l.NeededPerDay,
+                    Defects = l.Defects,
+                    DefectRate = l.DefectRate,
+                    DefectStatus = DefectStatusOf(l.DefectRate),
                     Hourly = l.Hourly,
                     StatusText = l.Status,
                     Note = l.Note,
@@ -95,6 +98,9 @@ public sealed class SnapshotBuilder
             CarriedProductCount = products.Count(p => p.CarriedShortfall > 0),
             LineMonthCumulative = total?.LineMonthCumulative,
             WorkingDaysLeft = products.Select(p => p.WorkingDaysLeft).FirstOrDefault(d => d is not null),
+            Defects = total?.Defects,
+            DefectRate = total?.DefectRate,
+            DefectStatus = DefectStatusOf(total?.DefectRate),
             MetCount = products.Count(p => p.DailyStatus == ProgressStatus.Met),
             NotMetCount = products.Count(p => p.DailyStatus is ProgressStatus.Near or ProgressStatus.Behind),
         };
@@ -105,6 +111,29 @@ public sealed class SnapshotBuilder
             .Select(n => new Notice(n.Title, n.Content, images.ResolveImage(n.BackgroundImage), n.Order))
             .ToList();
 
+        // Chỉ dòng có tên file ảnh; giờ ghi mới nhất lên trước, cùng giờ thì giữ thứ tự trong Excel.
+        var colors = products.GroupBy(p => p.Line).ToDictionary(g => g.Key, g => g.First().Color);
+        var photos = sheet.DefectLog
+            .Where(d => !string.IsNullOrWhiteSpace(d.ImageFile))
+            .Select((d, i) => (d, i))
+            .OrderByDescending(x => x.d.Time ?? TimeOnly.MinValue)
+            .ThenBy(x => x.i)
+            .Select(x => new DefectPhoto
+            {
+                Line = x.d.Line,
+                ProductCode = x.d.ProductCode ?? "",
+                Color = colors.GetValueOrDefault(x.d.Line) ?? Palette[0],
+                DefectType = x.d.DefectType,
+                Quantity = x.d.Quantity,
+                Time = x.d.Time,
+                ImageFile = x.d.ImageFile!.Trim(),
+                ImagePath = images.ResolveDefectImage(x.d.ImageFile),
+                Note = x.d.Note,
+            })
+            .ToList();
+        foreach (var missing in photos.Where(p => p.ImagePath is null))
+            warnings.Add($"Không tìm thấy ảnh hàng lỗi \"{missing.ImageFile}\" (thư mục ảnh\\{ImageResolver.DefectFolder}).");
+
         return new DisplayDataSnapshot(
             now,
             sheet.SheetName,
@@ -114,7 +143,10 @@ public sealed class SnapshotBuilder
             content.Slogans,
             content.Settings.GetValueOrDefault("donvi") ?? "PCS",
             content.Settings.GetValueOrDefault("tencongty"),
-            warnings);
+            warnings)
+        {
+            DefectPhotos = photos
+        };
     }
 
     /// <summary>Đổi % (Excel đã tính) sang màu: Đạt ≥ 100, Gần đạt 90–99, Chậm &lt; 90.</summary>
@@ -123,6 +155,15 @@ public sealed class SnapshotBuilder
         null => ProgressStatus.None,
         >= 100 => ProgressStatus.Met,
         >= 90 => ProgressStatus.Near,
+        _ => ProgressStatus.Behind
+    };
+
+    /// <summary>Đổi tỷ lệ lỗi % (Excel đã tính) sang màu: Tốt ≤ 1, Cần chú ý ≤ 3, Cao &gt; 3.</summary>
+    public static ProgressStatus DefectStatusOf(decimal? rate) => rate switch
+    {
+        null => ProgressStatus.None,
+        <= 1 => ProgressStatus.Met,
+        <= 3 => ProgressStatus.Near,
         _ => ProgressStatus.Behind
     };
 }

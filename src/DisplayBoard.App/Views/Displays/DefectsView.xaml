@@ -1,0 +1,189 @@
+<UserControl x:Class="DisplayBoard.App.Views.Displays.DefectsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:DisplayBoard.App.Controls"
+             xmlns:s="clr-namespace:DisplayBoard.App.Views.Shared"
+             Width="1920" Height="1080">
+    <Grid Background="{StaticResource BoardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <s:DisplayHeader />
+        <!-- Chưa có ảnh: bảng số lỗi từng chuyền -->
+        <Grid Grid.Row="1" Margin="40,30,40,0" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="500" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- Tổng số lỗi (dòng TỔNG CỘNG) -->
+            <Border Style="{StaticResource Card}" Margin="0,0,30,0">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="TỔNG SỐ LỖI" Style="{StaticResource CardTitle}" FontSize="40" HorizontalAlignment="Center" Foreground="White" />
+                    <TextBlock Text="{Binding TotalDefects}" Style="{StaticResource KpiValue}" FontSize="150" HorizontalAlignment="Center" Margin="0,20,0,0"
+                               Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                    <TextBlock Text="{Binding Unit}" Style="{StaticResource BoardText}" FontSize="40" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Style="{StaticResource BoardText}" FontSize="36" HorizontalAlignment="Center" Margin="0,40,0,0">
+                        <Run Text="Tỷ lệ lỗi chung " /><Run Text="{Binding TotalRate, Mode=OneWay}" FontSize="56" FontWeight="Bold"
+                             Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding ActualText}" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,6,0,0" Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="{Binding LinesWithDefects}" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,30,0,0" Foreground="{StaticResource TextSecondary}" />
+                </StackPanel>
+            </Border>
+            <!-- Từng chuyền, nhiều lỗi nhất ở trên -->
+            <StackPanel Grid.Column="1">
+                <Border Background="{StaticResource TableHeaderBackground}" CornerRadius="10,10,0,0" Padding="20,0">
+                    <Grid Height="70">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="170" /><ColumnDefinition Width="170" /><ColumnDefinition Width="200" /><ColumnDefinition Width="170" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Chuyền · Mã hàng" Style="{StaticResource TableHeaderText}" />
+                        <TextBlock Grid.Column="1" Text="Thực tế" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                        <TextBlock Grid.Column="2" Text="Số lỗi" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                        <TextBlock Grid.Column="4" Text="Tỷ lệ lỗi" Style="{StaticResource TableHeaderText}" HorizontalAlignment="Right" Margin="0,0,10,0" />
+                    </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="Row" Padding="20,0">
+                                <Grid Height="88">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" /><ColumnDefinition Width="170" /><ColumnDefinition Width="170" /><ColumnDefinition Width="200" /><ColumnDefinition Width="170" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="10" Height="40" CornerRadius="3" Margin="0,0,16,0" Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource TableCellText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding DailyActual}" Style="{StaticResource TableCellText}" HorizontalAlignment="Right" Margin="0,0,30,0" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Defects}" HorizontalAlignment="Right" Margin="0,0,30,0">
+                                        <TextBlock.Style>
+                                            <!-- Đặt màu trong Style để trigger "chưa nhập" ghi đè được. -->
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCellText}">
+                                                <Setter Property="FontWeight" Value="Bold" />
+                                                <Setter Property="Foreground" Value="{Binding DefectStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasDefects}" Value="False">
+                                                        <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+                                                        <Setter Property="FontWeight" Value="Normal" />
+                                                        <Setter Property="FontSize" Value="26" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <c:ProgressLine Grid.Column="3" Height="20" Margin="0,0,30,0" Fraction="{Binding RateFraction}"
+                                                    Fill="{Binding DefectStatus, Converter={StaticResource StatusBrush}}"
+                                                    Visibility="{Binding HasRate, Converter={StaticResource NullToVisibility}}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding DefectRate}" Style="{StaticResource TableCellText}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,10,0"
+                                               Foreground="{Binding DefectStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsAlternate}" Value="True">
+                                    <Setter TargetName="Row" Property="Background" Value="{StaticResource TableRowAlt}" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding MoreText}" Style="{StaticResource TableCellText}" FontSize="30" Foreground="{StaticResource TextSecondary}" Margin="20,14,0,0"
+                           Visibility="{Binding MoreText, Converter={StaticResource NullToVisibility}}" />
+            </StackPanel>
+        </Grid>
+        <TextBlock Grid.Row="2" Style="{StaticResource BoardText}" FontSize="26" Foreground="{StaticResource TextSecondary}" Margin="40,16,40,28"
+                   Text="Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI)."
+                   Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+
+        <!-- Có ảnh (sheet HANG_LOI): tổng bên trái, lưới ảnh 3×2 bên phải -->
+        <Grid Grid.Row="1" Margin="40,26,40,0" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding SideWidth}" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Margin="0,0,24,0" Visibility="{Binding IsLarge, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Border Style="{StaticResource Card}" Padding="22">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="TỔNG SỐ LỖI" Style="{StaticResource CardTitle}" FontSize="34" HorizontalAlignment="Center" Foreground="White" />
+                        <TextBlock Text="{Binding TotalDefects}" Style="{StaticResource KpiValue}" FontSize="120" HorizontalAlignment="Center"
+                                   Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                        <TextBlock Style="{StaticResource BoardText}" FontSize="30" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}">
+                            <Run Text="{Binding Unit, Mode=OneWay}" /><Run Text=" · tỷ lệ lỗi " /><Run Text="{Binding TotalRate, Mode=OneWay}" FontWeight="Bold"
+                                 Foreground="{Binding TotalStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,20,0,0" Padding="26,22">
+                    <StackPanel>
+                        <TextBlock Text="THEO CHUYỀN" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
+                        <ItemsControl ItemsSource="{Binding SideLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="62">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="30" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Defects}" Style="{StaticResource BoardText}" FontSize="30" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{Binding DefectStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Photos}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="{Binding DataContext.GridColumns, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                     Rows="{Binding DataContext.GridRows, RelativeSource={RelativeSource AncestorType=ItemsControl}}" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,24,24" ClipToBounds="True">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid Background="#0B1424">
+                                    <Image Source="{Binding ImagePath, Converter={StaticResource PathToImageLarge}}" Stretch="Uniform"
+                                           Visibility="{Binding ImagePath, Converter={StaticResource NullToVisibility}}" />
+                                    <TextBlock Text="{Binding MissingText}" Style="{StaticResource BoardText}" FontSize="24" TextAlignment="Center" TextWrapping="Wrap"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Foreground="{StaticResource NearBrush}"
+                                               Visibility="{Binding MissingText, Converter={StaticResource NullToVisibility}}" />
+                                    <Border Background="{StaticResource NotMetBrush}" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Left" VerticalAlignment="Top" MaxWidth="300"
+                                            Visibility="{Binding DefectType, Converter={StaticResource NullToVisibility}}">
+                                        <TextBlock Text="{Binding DefectType}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.TagFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <Border Background="#D90A1830" CornerRadius="8" Padding="14,4" Margin="14" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            Visibility="{Binding Quantity, Converter={StaticResource NullToVisibility}}">
+                                        <TextBlock Text="{Binding Quantity}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.QuantityFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="Bold" />
+                                    </Border>
+                                </Grid>
+                                <Grid Grid.Row="1" Margin="18,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="8" Height="30" CornerRadius="3" Margin="0,0,12,0" Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.CaptionFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource BoardText}" FontSize="{Binding DataContext.TimeFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{StaticResource TextSecondary}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+        <Grid Grid.Row="2" Margin="40,0,64,22" Visibility="{Binding HasPhotos, Converter={StaticResource NullToVisibility}}">
+            <TextBlock Text="{Binding FooterText}" Style="{StaticResource BoardText}" FontSize="{Binding FooterFontSize}" Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding PageText}" Style="{StaticResource BoardText}" FontSize="{Binding FooterFontSize}" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" />
+        </Grid>
+    </Grid>
+</UserControl>

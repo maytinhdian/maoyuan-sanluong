@@ -48,6 +48,8 @@
     return (n < 0 ? '-' : '') + s;
   }
   function pct(v) { return isNum(v) ? roundAway(v) + '%' : '—'; }
+  // Tỷ lệ lỗi nhỏ nên giữ 2 số lẻ: 0,42%.
+  function pct2(v) { return isNum(v) ? String(Math.round(v * 100) / 100).replace('.', ',') + '%' : '—'; }
   function signed(v) { return !isNum(v) ? '—' : (v > 0 ? '+' + num(v) : num(v)); }
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -371,6 +373,111 @@
         'Tiến độ = % so với mục tiêu tới giờ đã nhập (Excel tính).</div>';
     }
   };
+
+  // Chưa có ảnh (file V19, hoặc chưa ghi ảnh): bảng số lỗi từng chuyền.
+  function defectTable(s) {
+    // Chỉ các chuyền có kế hoạch; nhiều lỗi xếp trên, chưa nhập số lỗi xếp cuối.
+    var list = s.products.filter(function (p) { return p.productCode; })
+      .map(function (p, i) { return [p, i]; })
+      .sort(function (a, b) {
+        var x = a[0].defects, y = b[0].defects;
+        if (!isNum(x) || !isNum(y)) return isNum(x) === isNum(y) ? a[1] - b[1] : (isNum(x) ? -1 : 1);
+        return y - x || (b[0].defectRate || 0) - (a[0].defectRate || 0) || a[1] - b[1];
+      }).map(function (x) { return x[0]; });
+    var shown = list.length > 8 ? 7 : list.length, maxRate = 0;
+    list.forEach(function (p) { if (isNum(p.defectRate)) maxRate = Math.max(maxRate, p.defectRate); });
+    var rows = list.slice(0, shown).map(function (p, i) {
+      var has = isNum(p.defects), c = 'c-' + st(p.defectStatus);
+      return '<div class="tr' + (i % 2 === 1 ? ' alt' : '') + '" style="height:88px">' +
+        '<div class="grow" style="display:flex;align-items:center;min-width:0"><span style="width:10px;height:40px;border-radius:3px;margin-right:16px;flex:none;background:' +
+          color(p.color) + '"></span><span class="sb ell">' + esc(title(p)) + '</span></div>' +
+        '<div class="col r" style="width:170px">' + num(p.dailyActual) + '</div>' +
+        (has ? '<div class="col r b ' + c + '" style="width:170px">' + num(p.defects) + '</div>'
+          : '<div class="col r t2" style="width:170px;font-size:26px;white-space:nowrap">chưa nhập</div>') +
+        '<div class="col" style="width:200px">' + (isNum(p.defectRate) ? bar(maxRate > 0 ? p.defectRate / maxRate : 0, p.defectStatus, 20) : '') + '</div>' +
+        '<div class="col r b ' + c + '" style="width:170px;padding-right:10px">' + pct2(p.defectRate) + '</div></div>';
+    }).join('');
+    var m = s.summary, withDefects = list.filter(function (p) { return p.defects > 0; }).length;
+    var left = '<div class="card" style="width:500px;flex:none;margin-right:30px;display:flex;flex-direction:column;justify-content:center;text-align:center">' +
+      '<div class="sb" style="font-size:40px">TỔNG SỐ LỖI</div>' +
+      '<div class="b ' + (m.defects > 0 ? 'c-' + st(m.defectStatus) : '') + '" style="font-size:150px;line-height:1.15;margin-top:20px">' + num(m.defects) + '</div>' +
+      '<div class="t2" style="font-size:40px">' + esc(s.unit) + '</div>' +
+      '<div style="font-size:36px;margin-top:40px">Tỷ lệ lỗi chung <b class="c-' + st(m.defectStatus) + '" style="font-size:56px">' + pct2(m.defectRate) + '</b></div>' +
+      '<div class="t2" style="font-size:28px;margin-top:6px">trên ' + num(m.dailyActual) + ' ' + esc(s.unit) + ' thực tế</div>' +
+      '<div class="t2" style="font-size:28px;margin-top:30px">' + withDefects + ' chuyền có hàng lỗi</div></div>';
+    return '<div style="flex:1;display:flex;margin:30px 40px 0;min-height:0">' + left +
+      '<div style="flex:1;min-width:0"><div class="tbl" style="margin:0"><div class="th" style="height:70px">' +
+      '<div class="grow">Chuyền · Mã hàng</div><div class="col r" style="width:170px">Thực tế</div><div class="col r" style="width:170px">Số lỗi</div>' +
+      '<div class="col" style="width:200px"></div><div class="col r" style="width:170px;padding-right:10px">Tỷ lệ lỗi</div></div>' + rows +
+      (list.length > shown ? '<div class="t2" style="font-size:30px;margin:14px 0 0 20px">+' + (list.length - shown) + ' chuyền khác</div>' : '') + '</div></div></div>' +
+      '<div class="t2" style="font-size:26px;margin:16px 40px 28px">Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI).</div>';
+  }
+
+  // Thứ tự chuyền theo số lỗi (Excel đã cộng từ HANG_LOI), chưa nhập xếp cuối.
+  function defectLines(s) {
+    return s.products.filter(function (p) { return p.productCode; })
+      .map(function (p, i) { return [p, i]; })
+      .sort(function (a, b) {
+        var x = a[0].defects, y = b[0].defects;
+        if (!isNum(x) || !isNum(y)) return isNum(x) === isNum(y) ? a[1] - b[1] : (isNum(x) ? -1 : 1);
+        return y - x || a[1] - b[1];
+      }).map(function (x) { return x[0]; });
+  }
+
+  function hm(t) { return t ? String(t).substr(0, 5) : ''; }
+
+  // Hàng lỗi có ảnh: 6 ảnh/trang kèm cột tổng bên trái; 4 hoặc 2 ảnh/trang thì ảnh chiếm cả màn hình, tổng ghi ở chân trang.
+  function defectsView(per) {
+    return {
+      title: function () { return 'HÀNG LỖI HÔM NAY'; }, icon: 'search',
+      hasContent: function (s) { return (s.defectPhotos || []).length > 0 || s.products.some(function (p) { return isNum(p.defects); }); },
+      paged: true, pageMs: 10000,
+      pageCount: function (s) { return Math.max(1, Math.ceil((s.defectPhotos || []).length / per)); },
+      render: function (s, page, key) {
+        var photos = s.defectPhotos || [];
+        if (photos.length === 0) return defectTable(s);
+        var m = s.summary, pc = this.pageCount(s), big = per < 6;
+        var side = '';
+        if (!big) {
+          var lines = defectLines(s).slice(0, 7).map(function (p) {
+            return '<div style="display:flex"><span class="ell" style="flex:1">' + esc(title(p)) + '</span>' +
+              (isNum(p.defects) ? '<b class="c-' + st(p.defectStatus) + '" style="margin-left:16px">' + num(p.defects) + '</b>' : '<span class="t2" style="margin-left:16px">—</span>') + '</div>';
+          }).join('');
+          side = '<div style="width:420px;flex:none;margin-right:24px;display:flex;flex-direction:column">' +
+            '<div class="card" style="text-align:center;padding:22px"><div class="sb" style="font-size:34px">TỔNG SỐ LỖI</div>' +
+            '<div class="b ' + (m.defects > 0 ? 'c-' + st(m.defectStatus) : '') + '" style="font-size:120px;line-height:1.1">' + num(m.defects) + '</div>' +
+            '<div class="t2" style="font-size:30px">' + esc(s.unit) + ' · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' + pct2(m.defectRate) + '</b></div></div>' +
+            '<div class="card" style="margin-top:20px;flex:1;padding:22px 26px;min-height:0;overflow:hidden"><div class="card-title" style="color:#fff;margin-bottom:10px">THEO CHUYỀN</div>' +
+            '<div style="font-size:30px;line-height:2.05">' + lines + '</div></div></div>';
+        }
+        var cards = photos.slice(page * per, page * per + per).map(function (d) {
+          var img = d.imagePath
+            ? '<img src="' + esc(withKey(d.imagePath, key)) + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#000">'
+            : '<div class="t2" style="font-size:26px;text-align:center;padding:20px">' + icon('warning', '', 'width:64px;height:64px;fill:var(--near)') +
+              '<div style="margin-top:10px">Không tìm thấy ảnh</div><div class="ell" style="font-size:22px">' + esc(d.imageFile) + '</div></div>';
+          return '<div class="ph"><div class="img">' + img +
+            (d.defectType ? '<span class="tag ell">' + esc(d.defectType) + '</span>' : '') +
+            (isNum(d.quantity) ? '<span class="qty">×' + num(d.quantity) + '</span>' : '') + '</div>' +
+            '<div class="cap"><span style="width:8px;height:30px;border-radius:3px;margin-right:12px;flex:none;align-self:center;background:' + color(d.color) + '"></span>' +
+            '<span class="sb ell" style="flex:1">' + esc(d.line + (d.productCode ? ' · ' + d.productCode : '')) + '</span>' +
+            '<span class="t2 tm">' + hm(d.time) + '</span></div></div>';
+        }).join('');
+        var grid = per === 2 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:1fr'
+          : per === 4 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)' : '';
+        var foot = big
+          ? 'Tổng số lỗi <b class="c-' + st(m.defectStatus) + '">' + num(m.defects) + ' ' + esc(s.unit) + '</b> · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' +
+            pct2(m.defectRate) + '</b> · ' + photos.length + ' ảnh hàng lỗi hôm nay'
+          : photos.length + ' ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng';
+        return '<div style="flex:1;display:flex;margin:26px 40px 0;min-height:0">' + side +
+          '<div class="dgrid' + (big ? ' big' : '') + '" style="' + grid + '">' + cards + '</div></div>' +
+          '<div class="t2" style="font-size:' + (big ? 30 : 24) + 'px;margin:14px 40px 22px;display:flex"><span style="flex:1">' + foot + '</span>' +
+          (pc > 1 ? '<span>Trang ' + (page + 1) + '/' + pc + '</span>' : '') + '</div>';
+      }
+    };
+  }
+  VIEWS.defects = defectsView(6);
+  VIEWS['defects-4'] = defectsView(4);
+  VIEWS['defects-2'] = defectsView(2);
 
   function sortBy(list, key) {
     // Sắp ổn định, giá trị trống xếp đầu (giống OrderBy của C# với null).

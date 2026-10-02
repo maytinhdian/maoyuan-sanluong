@@ -44,11 +44,30 @@ public sealed record ProductDaily
     public decimal? WorkingDaysLeft { get; init; }
     /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (V19).</summary>
     public decimal? NeededPerDay { get; init; }
+    /// <summary>Số hàng lỗi trong ngày (V19, null = chưa nhập).</summary>
+    public decimal? Defects { get; init; }
+    /// <summary>Tỷ lệ lỗi % do Excel tính (V19).</summary>
+    public decimal? DefectRate { get; init; }
+    public ProgressStatus DefectStatus { get; init; }
     public IReadOnlyList<decimal?> Hourly { get; init; } = [];
     public string? StatusText { get; init; }
     public string? Note { get; init; }
     /// <summary>Thứ hạng theo % đạt trong ngày (1 = cao nhất).</summary>
     public int Rank { get; init; }
+}
+
+/// <summary>Một ảnh hàng lỗi để chiếu (sheet HANG_LOI). ImagePath null = không tìm thấy file ảnh.</summary>
+public sealed record DefectPhoto
+{
+    public required string Line { get; init; }
+    public required string ProductCode { get; init; }
+    public required string Color { get; init; }
+    public string? DefectType { get; init; }
+    public decimal? Quantity { get; init; }
+    public TimeOnly? Time { get; init; }
+    public required string ImageFile { get; init; }
+    public string? ImagePath { get; init; }
+    public string? Note { get; init; }
 }
 
 public sealed record Notice(
@@ -77,6 +96,10 @@ public sealed record ProductionSummary
     public decimal? LineMonthCumulative { get; init; }
     /// <summary>Ngày làm việc còn lại trong tháng (V19), lấy từ chuyền đầu tiên có số.</summary>
     public decimal? WorkingDaysLeft { get; init; }
+    /// <summary>Tổng số lỗi và tỷ lệ lỗi chung ở dòng TỔNG CỘNG (V19).</summary>
+    public decimal? Defects { get; init; }
+    public decimal? DefectRate { get; init; }
+    public ProgressStatus DefectStatus { get; init; }
     public int MetCount { get; init; }
     public int NotMetCount { get; init; }
 
@@ -100,6 +123,11 @@ public sealed record DisplayDataSnapshot(
     public bool HasMultipleLines => Products.Select(p => p.Line).Distinct().Skip(1).Any();
 
     public bool HasMonthData => Products.Any(p => p.MonthTarget > 0);
+
+    /// <summary>Ảnh hàng lỗi của ngày đang hiển thị, mới nhất trước (V20).</summary>
+    public IReadOnlyList<DefectPhoto> DefectPhotos { get; init; } = [];
+
+    public bool HasDefectData => DefectPhotos.Count > 0 || Products.Any(p => p.Defects is not null);
 
     public bool HasHourlyData => Products.Any(p => p.Hourly.Any(h => h is not null));
 
