@@ -51,6 +51,31 @@ public class DisplaySheetReaderTests
         Assert.Equal(40m, total.CarriedShortfall);
         Assert.Equal(6810m, total.LineMonthCumulative);
         Assert.Empty(sheet.Warnings);
+
+        // V18 chưa có các cột của V19.
+        Assert.Null(line1.NeededPerDay);
+        Assert.Null(line1.WorkingDaysLeft);
+        Assert.Null(line1.PreviousMonthShortfall);
+    }
+
+    [Fact]
+    public void Reads_v19_needed_per_day_days_left_and_previous_month_shortfall()
+    {
+        using var stream = File.OpenRead(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V19_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+
+        var line1 = sheet.Lines[0];
+        Assert.Equal("ĐAI LƯNG", line1.ProductCode);
+        Assert.Equal(42000m, line1.MonthTarget);
+        Assert.Equal(26m, line1.WorkingDaysLeft);
+        Assert.Equal(1585m, line1.NeededPerDay);           // ROUNDUP((42.000 − 800) / 26)
+        Assert.Equal(38940m, line1.PreviousMonthShortfall);
+        Assert.Null(sheet.Lines[2].NeededPerDay);          // chuyền 3 chưa có kế hoạch
+        Assert.Empty(sheet.Warnings);
+
+        var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, null);
+        Assert.Equal(26m, snapshot.Summary.WorkingDaysLeft);
+        Assert.Equal(1504m, snapshot.Products[1].NeededPerDay);
     }
 
     [Fact]

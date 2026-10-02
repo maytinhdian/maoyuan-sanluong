@@ -12,7 +12,7 @@
         <s:DisplayHeader />
         <Grid Grid.Row="1" Margin="40,30,40,36">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="620" />
+                <ColumnDefinition Width="600" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <!-- Tổng tháng -->
@@ -24,24 +24,46 @@
                     <TextBlock Text="Tổng 6 chuyền trong tháng" Style="{StaticResource BoardText}" FontSize="32" HorizontalAlignment="Center" Margin="0,30,0,0"
                                Foreground="{StaticResource TextSecondary}" />
                     <TextBlock Text="% tháng xem theo từng chuyền bên phải" Style="{StaticResource BoardText}" FontSize="28" HorizontalAlignment="Center" Margin="0,8,0,0"
-                               Foreground="{StaticResource TextSecondary}" />
+                               Foreground="{StaticResource TextSecondary}" Visibility="{Binding DaysLeft, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+                    <StackPanel Visibility="{Binding DaysLeft, Converter={StaticResource NullToVisibility}}" Margin="0,40,0,0">
+                        <TextBlock Style="{StaticResource BoardText}" FontSize="36" HorizontalAlignment="Center">
+                            <Run Text="Còn " /><Run Text="{Binding DaysLeft, Mode=OneWay}" FontSize="56" FontWeight="Bold" /><Run Text=" ngày làm việc" />
+                        </TextBlock>
+                        <TextBlock Text="tính cả hôm nay" Style="{StaticResource BoardText}" FontSize="26" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
             <!-- Từng chuyền, % tháng thấp nhất ở trên -->
             <Border Grid.Column="1" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="THEO TỪNG CHUYỀN" Style="{StaticResource CardTitle}" Foreground="White" Margin="0,0,0,10" />
+                    <TextBlock Text="THEO TỪNG CHUYỀN" Style="{StaticResource CardTitle}" Foreground="White" />
+                    <Grid Height="40">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="280" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="{Binding NeededWidth}" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Text="Lũy kế / Mục tiêu" Style="{StaticResource TableCellText}" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource TextSecondary}" />
+                        <TextBlock Grid.Column="2" Text="% tháng" Style="{StaticResource TableCellText}" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource TextSecondary}" />
+                        <TextBlock Grid.Column="3" Text="Cần mỗi ngày" Style="{StaticResource TableCellText}" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource TextSecondary}" />
+                    </Grid>
                     <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Height="72">
+                                <Grid Height="80">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="260" />
+                                        <ColumnDefinition Width="380" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="330" />
+                                        <ColumnDefinition Width="280" />
                                         <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="{Binding DataContext.NeededWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Title}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource TableCellText}" FontSize="32" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding PreviousMonthShortfall}" Style="{StaticResource TableCellText}" FontSize="22" Foreground="{StaticResource NearBrush}" TextTrimming="CharacterEllipsis"
+                                                   Visibility="{Binding PreviousMonthShortfall, Converter={StaticResource NullToVisibility}}" />
+                                    </StackPanel>
                                     <c:ProgressLine Grid.Column="1" Height="26" Margin="10,0,20,0" Fraction="{Binding MonthFraction}"
                                                     Fill="{Binding MonthStatus, Converter={StaticResource StatusBrush}}" />
                                     <TextBlock Grid.Column="2" Style="{StaticResource TableCellText}" FontSize="28" HorizontalAlignment="Right" Foreground="{StaticResource TextSecondary}">
@@ -49,6 +71,7 @@
                                     </TextBlock>
                                     <TextBlock Grid.Column="3" Text="{Binding MonthRate}" Style="{StaticResource TableCellText}" FontSize="34" FontWeight="Bold" HorizontalAlignment="Right"
                                                Foreground="{Binding MonthStatus, Converter={StaticResource StatusBrush}, ConverterParameter=text}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding NeededPerDay}" Style="{StaticResource TableCellText}" FontSize="34" FontWeight="Bold" HorizontalAlignment="Right" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

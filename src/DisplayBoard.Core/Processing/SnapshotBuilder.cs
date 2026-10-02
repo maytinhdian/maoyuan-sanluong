@@ -56,6 +56,9 @@ public sealed class SnapshotBuilder
                     MonthStatus = Status(l.MonthRate),
                     MonthRemaining = l.MonthRemaining,
                     LineMonthCumulative = l.LineMonthCumulative,
+                    PreviousMonthShortfall = l.PreviousMonthShortfall,
+                    WorkingDaysLeft = l.WorkingDaysLeft,
+                    NeededPerDay = l.NeededPerDay,
                     Hourly = l.Hourly,
                     StatusText = l.Status,
                     Note = l.Note,
@@ -91,6 +94,7 @@ public sealed class SnapshotBuilder
             CarriedShortfall = total?.CarriedShortfall ?? 0,
             CarriedProductCount = products.Count(p => p.CarriedShortfall > 0),
             LineMonthCumulative = total?.LineMonthCumulative,
+            WorkingDaysLeft = products.Select(p => p.WorkingDaysLeft).FirstOrDefault(d => d is not null),
             MetCount = products.Count(p => p.DailyStatus == ProgressStatus.Met),
             NotMetCount = products.Count(p => p.DailyStatus is ProgressStatus.Near or ProgressStatus.Behind),
         };

@@ -48,6 +48,11 @@ public sealed class ProductRow(ProductDaily p, int index)
     public ProgressStatus MonthStatus { get; } = p.MonthStatus;
     public double MonthFraction { get; } = Fraction(p.MonthCumulative ?? 0, p.MonthTarget ?? 0);
 
+    /// <summary>Cần làm mỗi ngày để kịp mục tiêu tháng (V19), rỗng khi file không có cột này.</summary>
+    public string? NeededPerDay { get; } = p.NeededPerDay is null ? null : Format.Number(p.NeededPerDay);
+    /// <summary>"Tháng trước thiếu 1.200" (V19), rỗng khi không thiếu.</summary>
+    public string? PreviousMonthShortfall { get; } = p.PreviousMonthShortfall is > 0 ? $"Tháng trước thiếu {Format.Number(p.PreviousMonthShortfall)}" : null;
+
     public static string StatusText(ProgressStatus status) => status switch
     {
         ProgressStatus.Met => "Đạt",

@@ -287,19 +287,31 @@
     render: function (s) {
       var withMonth = sortBy(s.products.filter(function (p) { return p.monthTarget > 0; }), 'monthRate');
       var shown = withMonth.length > 10 ? 9 : withMonth.length;
+      // V19 có thêm "cần làm mỗi ngày" và "thiếu tháng trước"; file V18 không có thì ẩn cột.
+      var hasNeed = withMonth.some(function (p) { return isNum(p.neededPerDay); });
+      var head = '<div class="t2" style="display:flex;align-items:flex-end;height:40px;font-size:24px">' +
+        '<div style="flex:1"></div><div class="r" style="width:280px">Lũy kế / Mục tiêu</div><div class="r" style="width:140px">% tháng</div>' +
+        (hasNeed ? '<div class="r" style="width:220px">Cần mỗi ngày</div>' : '') + '</div>';
       var rows = withMonth.slice(0, shown).map(function (p) {
-        return '<div style="display:flex;align-items:center;height:72px;font-size:32px">' +
-          '<div class="sb ell" style="width:260px">' + esc(title(p)) + '</div>' +
+        var prev = p.previousMonthShortfall > 0
+          ? '<div class="ell" style="font-size:22px;color:var(--near);line-height:1.1">Tháng trước thiếu ' + num(p.previousMonthShortfall) + '</div>' : '';
+        return '<div style="display:flex;align-items:center;height:80px;font-size:32px">' +
+          '<div style="width:380px;min-width:0"><div class="sb ell">' + esc(title(p)) + '</div>' + prev + '</div>' +
           '<div style="flex:1;margin:0 20px 0 10px">' + bar(frac(p.monthCumulative, p.monthTarget), p.monthStatus, 26) + '</div>' +
-          '<div class="r t2" style="width:330px;font-size:28px"><span style="color:#fff">' + num(p.monthCumulative) + '</span> / ' + num(p.monthTarget) + '</div>' +
-          '<div class="r b c-' + st(p.monthStatus) + '" style="width:140px;font-size:34px">' + pct(p.monthRate) + '</div></div>';
+          '<div class="r t2" style="width:280px;font-size:28px"><span style="color:#fff">' + num(p.monthCumulative) + '</span> / ' + num(p.monthTarget) + '</div>' +
+          '<div class="r b c-' + st(p.monthStatus) + '" style="width:140px;font-size:34px">' + pct(p.monthRate) + '</div>' +
+          (hasNeed ? '<div class="r b" style="width:220px;font-size:34px">' + (isNum(p.neededPerDay) ? num(p.neededPerDay) : '') + '</div>' : '') + '</div>';
       }).join('');
+      var days = s.summary.workingDaysLeft;
       return '<div style="flex:1;display:flex;margin:30px 40px 36px;min-height:0">' +
-        '<div class="card" style="width:620px;flex:none;margin-right:30px;display:flex;flex-direction:column;justify-content:center;text-align:center">' +
+        '<div class="card" style="width:600px;flex:none;margin-right:30px;display:flex;flex-direction:column;justify-content:center;text-align:center">' +
         '<div class="sb" style="font-size:40px">LŨY KẾ THÁNG</div><div class="b" style="font-size:120px;margin-top:40px">' + num(s.summary.lineMonthCumulative) + '</div>' +
         '<div class="t2" style="font-size:40px">' + esc(s.unit) + '</div><div class="t2" style="font-size:32px;margin-top:30px">Tổng 6 chuyền trong tháng</div>' +
-        '<div class="t2" style="font-size:28px;margin-top:8px">% tháng xem theo từng chuyền bên phải</div></div>' +
-        '<div class="card" style="flex:1;min-width:0"><div class="card-title" style="color:#fff;margin-bottom:10px">THEO TỪNG CHUYỀN</div>' + rows +
+        (isNum(days)
+          ? '<div style="font-size:36px;margin-top:40px">Còn <b style="font-size:56px">' + num(days) + '</b> ngày làm việc</div>' +
+            '<div class="t2" style="font-size:26px;margin-top:4px">tính cả hôm nay</div>'
+          : '<div class="t2" style="font-size:28px;margin-top:8px">% tháng xem theo từng chuyền bên phải</div>') + '</div>' +
+        '<div class="card" style="flex:1;min-width:0;padding-top:20px"><div style="display:flex;align-items:flex-end"><div class="card-title" style="color:#fff;flex:1">THEO TỪNG CHUYỀN</div></div>' + head + rows +
         (withMonth.length > shown ? '<div class="t2" style="font-size:28px;margin-top:10px">+' + (withMonth.length - shown) + ' chuyền khác</div>' : '') + '</div></div>';
     }
   };
