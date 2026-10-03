@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
 using Microsoft.AspNetCore.Builder;
@@ -39,15 +40,19 @@ public sealed class BoardServer : IBoardServer
     private readonly ConcurrentDictionary<Guid, Connection> _connections = new();
     private readonly ConcurrentDictionary<string, string> _images = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly EntryApi? _entry;
     private DisplayConfiguration _config;
     private WebApplication? _app;
 
-    public BoardServer(ISnapshotService snapshots, IConfigurationService configuration, TimeProvider time, ILogger<BoardServer> logger)
+    /// <param name="entry">Nhập liệu qua trình duyệt (/nhap). Null = không có trang nhập liệu.</param>
+    public BoardServer(ISnapshotService snapshots, IConfigurationService configuration, TimeProvider time, ILogger<BoardServer> logger,
+        EntryService? entry = null)
     {
         _snapshots = snapshots;
         _time = time;
         _logger = logger;
         _config = configuration.Current;
+        _entry = entry is null ? null : new EntryApi(entry, () => _config, time);
         _snapshots.SnapshotChanged += (_, _) => _ = BroadcastAsync();
     }
 
@@ -166,8 +171,11 @@ public sealed class BoardServer : IBoardServer
             AppName = _config.ResolveAppName(),
             Version,
             KeyRequired = KeyRequired,
-            Screens = _config.ResolveNetworkScreens().Select(s => new { s.Number, Name = ScreenName(s) })
+            Screens = _config.ResolveNetworkScreens().Select(s => new { s.Number, Name = ScreenName(s) }),
+            DataEntry = _entry is not null && _config.DataEntry.Enabled
         }, Json));
+
+        _entry?.Map(app);
 
         app.MapGet("/api/state", (HttpContext http, int? tv) =>
         {
@@ -361,6 +369,15 @@ public sealed class BoardServer : IBoardServer
         if (addresses.Count == 0)
             addresses = ["localhost"];
         return addresses.Select(a => $"http://{a}:{port}/tv/{screen}{suffix}").ToList();
+    }
+
+    /// <summary>Địa chỉ trang nhập liệu, mỗi địa chỉ IP một dòng.</summary>
+    public static IReadOnlyList<string> EntryUrls(int port)
+    {
+        var addresses = LocalAddresses();
+        if (addresses.Count == 0)
+            addresses = ["localhost"];
+        return addresses.Select(a => $"http://{a}:{port}/nhap").ToList();
     }
 
     public async ValueTask DisposeAsync()

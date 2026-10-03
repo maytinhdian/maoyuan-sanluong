@@ -38,6 +38,24 @@ public sealed class LanServerSettings
     public string? AccessKey { get; set; }
 }
 
+/// <summary>Nhập liệu qua trình duyệt (bản 3.x): tổ trưởng mở http://&lt;IP&gt;:&lt;cổng&gt;/nhap và đăng nhập bằng mã PIN.</summary>
+public sealed class DataEntrySettings
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Người được nhập liệu. Trống = chưa ai đăng nhập được.</summary>
+    public List<EntryUser> Users { get; set; } = [];
+}
+
+public sealed class EntryUser
+{
+    public string Name { get; set; } = "";
+    public string Pin { get; set; } = "";
+
+    /// <summary>Chuyền được nhập, đúng tên trong DANH_SACH_CHUYEN. Trống = tất cả chuyền.</summary>
+    public List<string> Lines { get; set; } = [];
+}
+
 /// <summary>Nội dung file display-config.json.</summary>
 public sealed class DisplayConfiguration
 {
@@ -59,6 +77,7 @@ public sealed class DisplayConfiguration
     public int MaxPagedViewSeconds { get; set; } = 60;
     public List<ScreenAssignment> Screens { get; set; } = [];
     public LanServerSettings Server { get; set; } = new();
+    public DataEntrySettings DataEntry { get; set; } = new();
 
     /// <summary>Các TV xem qua mạng. Trống (cấu hình từ bản 1.x) thì lấy theo TV1/TV2 ở <see cref="Screens"/>.</summary>
     public List<NetworkScreen> NetworkScreens { get; set; } = [];

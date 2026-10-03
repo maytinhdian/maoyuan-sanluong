@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F2447">
+<title>Nhập liệu</title>
+<link rel="stylesheet" href="/assets/nhap.css">
+</head>
+<body>
+<!-- Đăng nhập bằng mã PIN -->
+<section id="login" class="screen hidden">
+  <div class="login-box">
+    <div class="app-name" id="loginApp">Nhập liệu</div>
+    <h1>Nhập mã PIN</h1>
+    <p class="t2">Mã PIN do quản lý đặt trong app trên máy chủ.</p>
+    <input id="pin" class="pin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="••••">
+    <div id="loginError" class="error hidden"></div>
+    <button id="loginBtn" class="go">Vào nhập liệu</button>
+    <p id="loginNote" class="t2 small hidden"></p>
+  </div>
+</section>
+
+<!-- Nhập liệu -->
+<section id="main" class="screen hidden">
+  <header class="hdr">
+    <div class="t"><h2>Nhập liệu</h2><div class="s" id="today"></div></div>
+    <button class="who" id="who" title="Đăng xuất"></button>
+  </header>
+  <nav class="tabs">
+    <button data-tab="output" class="on">Sản lượng</button>
+    <button data-tab="defect">Hàng lỗi</button>
+    <button data-tab="sent">Đã gửi <span id="pendingBadge" class="badge hidden"></span></button>
+  </nav>
+  <div id="unavailable" class="banner b-bad hidden"></div>
+
+  <main class="body">
+    <div id="lineBlock">
+      <div class="lbl">CHUYỀN<span class="zh">產線</span></div>
+      <div class="chips" id="lines"></div>
+    </div>
+
+    <!-- Tab sản lượng -->
+    <div id="tab-output" class="tab">
+      <div class="card" id="planCard">
+        <div class="kv"><span class="t2">Mã sản phẩm</span><b id="pProduct">–</b></div>
+        <div class="kv"><span class="t2">Ca · Mục tiêu/giờ</span><b id="pShift">–</b></div>
+        <div class="kv"><span class="t2">Đã làm / Mục tiêu ngày</span><b id="pActual">–</b></div>
+        <div class="prog"><i id="pBar"></i></div>
+        <div class="card-foot"><span id="planNote" class="t2 small"></span><button class="link" id="editPlan">Sửa kế hoạch</button></div>
+      </div>
+
+      <div class="card hidden" id="planForm">
+        <div class="form-title">Kế hoạch hôm nay của <span id="planLine"></span></div>
+        <div id="planWhy" class="t2 small"></div>
+        <label class="lbl">MÃ SẢN PHẨM<span class="zh">产品代码</span></label>
+        <select id="fProduct"></select>
+        <label class="lbl">MÃ CA<span class="zh">工作時間</span></label>
+        <select id="fShift"></select>
+        <label class="lbl">MỤC TIÊU MỖI GIỜ (PCS)<span class="zh">每小时目标产量</span></label>
+        <input id="fTarget" type="number" inputmode="numeric" min="1">
+        <div class="row2"><button class="ghost" id="cancelPlan">Huỷ</button><button class="go small-go" id="savePlan">Lưu kế hoạch</button></div>
+      </div>
+
+      <div id="hourBlock">
+        <div class="lbl">CÁC GIỜ TRONG CA (bấm để chọn giờ cần nhập hoặc sửa)</div>
+        <div class="hours" id="hours"></div>
+        <div class="lbl" id="hourLabel" style="margin-top:12px"></div>
+        <div class="big">
+          <button class="btnr" data-step="-1" data-for="qty">−</button>
+          <input id="qty" class="inp" type="number" inputmode="numeric" min="0" placeholder="0">
+          <button class="btnr" data-step="1" data-for="qty">+</button>
+        </div>
+        <div class="hint" id="hourHint"></div>
+      </div>
+      <div class="spacer"></div>
+      <button class="go sticky" id="sendHour">Ghi vào Excel</button>
+    </div>
+
+    <!-- Tab hàng lỗi -->
+    <div id="tab-defect" class="tab hidden">
+      <div class="card tight">
+        <div class="kv"><span class="t2">Mã sản phẩm (tự lấy)</span><b id="dProduct">–</b></div>
+        <div class="kv"><span class="t2">Giờ ghi nhận</span><b id="dTime">–</b></div>
+      </div>
+      <label class="lbl">LOẠI LỖI<span class="zh">不良類型</span></label>
+      <select id="dType"></select>
+      <label class="lbl">SỐ LƯỢNG<span class="zh">數量PCS</span></label>
+      <div class="big">
+        <button class="btnr" data-step="-1" data-for="dQty">−</button>
+        <input id="dQty" class="inp mid" type="number" inputmode="numeric" min="1" value="1">
+        <button class="btnr" data-step="1" data-for="dQty">+</button>
+      </div>
+      <label class="lbl">ẢNH (chụp bằng camera, tối đa 4 ảnh)<span class="zh">照片</span></label>
+      <div class="photos" id="photos">
+        <label class="ph add" id="addPhoto"><span class="ic">📷</span>Chụp ảnh<input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden></label>
+      </div>
+      <label class="lbl">GHI CHÚ</label>
+      <textarea id="dNote" maxlength="200" placeholder="Không bắt buộc"></textarea>
+      <div class="spacer"></div>
+      <button class="go sticky" id="sendDefect">Gửi hàng lỗi</button>
+    </div>
+
+    <!-- Tab đã gửi -->
+    <div id="tab-sent" class="tab hidden">
+      <div id="sentBanners"></div>
+      <div class="list" id="jobs"></div>
+      <p class="t2 small center" id="noJobs">Chưa gửi gì.</p>
+    </div>
+  </main>
+  <footer class="foot">Công ty TNHH Giải Pháp Sáng Tạo TMT Việt Nam · 0393 080 822</footer>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/assets/nhap.js"></script>
+</body>
+</html>
