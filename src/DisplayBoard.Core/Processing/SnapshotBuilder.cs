@@ -112,10 +112,12 @@ public sealed class SnapshotBuilder
             .ToList();
 
         // Chỉ dòng có tên file ảnh; giờ ghi mới nhất lên trước, cùng giờ thì giữ thứ tự trong Excel.
+        // Một dòng có thể có nhiều ảnh, tên cách nhau bởi ";" (trang nhập liệu web gửi tối đa 4 ảnh một lần): mỗi ảnh một ô.
         var colors = products.GroupBy(p => p.Line).ToDictionary(g => g.Key, g => g.First().Color);
         var photos = sheet.DefectLog
             .Where(d => !string.IsNullOrWhiteSpace(d.ImageFile))
-            .Select((d, i) => (d, i))
+            .SelectMany(d => d.ImageFile!.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(file => (d, file)))
+            .Select((x, i) => (x.d, x.file, i))
             .OrderByDescending(x => x.d.Time ?? TimeOnly.MinValue)
             .ThenBy(x => x.i)
             .Select(x => new DefectPhoto
@@ -126,8 +128,8 @@ public sealed class SnapshotBuilder
                 DefectType = x.d.DefectType,
                 Quantity = x.d.Quantity,
                 Time = x.d.Time,
-                ImageFile = x.d.ImageFile!.Trim(),
-                ImagePath = images.ResolveDefectImage(x.d.ImageFile),
+                ImageFile = x.file,
+                ImagePath = images.ResolveDefectImage(x.file),
                 Note = x.d.Note,
             })
             .ToList();

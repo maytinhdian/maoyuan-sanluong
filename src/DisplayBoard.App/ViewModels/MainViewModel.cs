@@ -3,6 +3,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DisplayBoard.Core.Display;
+using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
 using DisplayBoard.Server;
@@ -21,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IScreenManager _screens;
     private readonly IDisplayManager _display;
     private readonly IBoardServer _server;
+    private readonly EntryService _entry;
     private readonly ILogger<MainViewModel> _logger;
     private readonly List<IDisplayViewDefinition> _views;
 
@@ -31,6 +33,7 @@ public sealed partial class MainViewModel : ObservableObject
         IScreenManager screens,
         IDisplayManager display,
         IBoardServer server,
+        EntryService entry,
         IEnumerable<IDisplayViewDefinition> views,
         DisplayHostViewModel previewHost,
         ILogger<MainViewModel> logger)
@@ -41,6 +44,7 @@ public sealed partial class MainViewModel : ObservableObject
         _screens = screens;
         _display = display;
         _server = server;
+        _entry = entry;
         _logger = logger;
         PreviewHost = previewHost;
 
@@ -51,6 +55,7 @@ public sealed partial class MainViewModel : ObservableObject
         _screens.MonitorsChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshMonitors);
         _display.RunningChanged += (_, _) => IsRunning = _display.IsRunning;
         _server.StateChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshServer);
+        _entry.Changed += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshEntry);
 
         LoadFromConfiguration(_config.Current);
         RefreshStatus();
@@ -69,6 +74,20 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Địa chỉ trang chọn TV của máy chủ, mỗi địa chỉ IP một dòng.</summary>
     public ObservableCollection<string> ServerAddresses { get; } = [];
     public ObservableCollection<string> ConnectedTvs { get; } = [];
+
+    /// <summary>Người được nhập liệu qua trình duyệt (bản 3.x).</summary>
+    public ObservableCollection<EntryUserViewModel> EntryUsers { get; } = [];
+
+    /// <summary>Địa chỉ trang nhập liệu /nhap, mỗi địa chỉ IP một dòng.</summary>
+    public ObservableCollection<string> EntryAddresses { get; } = [];
+
+    /// <summary>Các phiếu nhập gần đây (mới nhất trước).</summary>
+    public ObservableCollection<string> EntryJobs { get; } = [];
+
+    [ObservableProperty] private bool _entryEnabled = true;
+    [ObservableProperty] private EntryUserViewModel? _selectedEntryUser;
+    [ObservableProperty] private string _entryStatusText = "";
+    [ObservableProperty] private string? _entryError;
 
     [ObservableProperty] private NetworkTvViewModel? _selectedTv;
     [ObservableProperty] private NetworkTvViewModel? _previewTv;
@@ -121,6 +140,11 @@ public sealed partial class MainViewModel : ObservableObject
         DebounceMilliseconds = config.DebounceMilliseconds.ToString();
         ImagesFolder = config.ImagesFolder;
         AutoReload = config.AutoReload;
+        EntryEnabled = config.DataEntry.Enabled;
+        EntryUsers.Clear();
+        foreach (var user in config.DataEntry.Users)
+            EntryUsers.Add(EntryUserViewModel.From(user));
+        SelectedEntryUser = EntryUsers.FirstOrDefault();
         ServerEnabled = config.Server.Enabled;
         ServerPort = config.Server.Port.ToString();
         ServerAccessKey = config.Server.AccessKey;
@@ -165,6 +189,11 @@ public sealed partial class MainViewModel : ObservableObject
             Enabled = ServerEnabled,
             Port = ParseInt(ServerPort, LanServerSettings.DefaultPort, 1024, 65535),
             AccessKey = string.IsNullOrWhiteSpace(ServerAccessKey) ? null : ServerAccessKey.Trim()
+        },
+        DataEntry = new DataEntrySettings
+        {
+            Enabled = EntryEnabled,
+            Users = EntryUsers.Select(u => u.ToUser()).Where(u => u.Name.Length > 0 || u.Pin.Length > 0).ToList()
         }
     };
 
@@ -225,6 +254,11 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task ApplySettingsAsync()
     {
         var config = BuildConfiguration();
+        if (EntryUsersProblem(config.DataEntry) is { } problem)
+        {
+            MessageBox.Show(problem, AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         AppTitle = config.ResolveAppName();
         try
         {
@@ -301,6 +335,76 @@ public sealed partial class MainViewModel : ObservableObject
         AddLog($"Xoá {tv.DisplayName}. Bấm Lưu để áp dụng.");
     }
 
+    /// <summary>Mỗi người cần tên và PIN riêng (ít nhất 4 ký tự) vì đăng nhập chỉ bằng PIN.</summary>
+    private static string? EntryUsersProblem(DataEntrySettings settings)
+    {
+        var users = settings.Users;
+        if (users.FirstOrDefault(u => u.Name.Length == 0) is { } noName)
+            return $"Người nhập liệu có PIN {noName.Pin} chưa có tên.";
+        if (users.FirstOrDefault(u => u.Pin.Length < 4) is { } shortPin)
+            return $"Mã PIN của {shortPin.Name} cần ít nhất 4 ký tự.";
+        if (users.GroupBy(u => u.Pin).FirstOrDefault(g => g.Count() > 1) is { } same)
+            return $"{string.Join(" và ", same.Select(u => u.Name))} đang trùng mã PIN. Mỗi người cần một mã PIN riêng.";
+        if (users.GroupBy(u => u.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } twice)
+            return $"Có hai người cùng tên \"{twice.Key}\".";
+        return null;
+    }
+
+    [RelayCommand]
+    private void AddEntryUser()
+    {
+        var pins = EntryUsers.Select(u => u.Pin).ToHashSet();
+        string pin;
+        do
+            pin = Random.Shared.Next(1000, 10000).ToString();
+        while (pins.Contains(pin));
+        var user = new EntryUserViewModel { Name = $"Tổ trưởng {EntryUsers.Count + 1}", Pin = pin };
+        EntryUsers.Add(user);
+        SelectedEntryUser = user;
+        AddLog($"Thêm người nhập liệu {user.Name}. Bấm Lưu để áp dụng.");
+    }
+
+    [RelayCommand]
+    private void RemoveEntryUser(EntryUserViewModel? user)
+    {
+        user ??= SelectedEntryUser;
+        if (user is null)
+            return;
+        EntryUsers.Remove(user);
+        SelectedEntryUser = EntryUsers.FirstOrDefault();
+        AddLog($"Xoá người nhập liệu {user.Name}. Bấm Lưu để áp dụng.");
+    }
+
+    private void RefreshEntry()
+    {
+        var status = _entry.Status;
+        EntryError = _entry.UnavailableReason ?? status.WaitingReason ?? status.LastError;
+        EntryStatusText = !_server.IsRunning ? "Máy chủ đang tắt nên chưa nhập liệu được."
+            : !EntryEnabled ? "Đang tắt nhập liệu."
+            : EntryUsers.Count == 0 ? "Chưa có ai được nhập liệu. Thêm người và mã PIN bên dưới."
+            : status.Pending > 0 ? $"Đang chờ ghi {status.Pending} phiếu vào Excel"
+            : status.LastWriteAt is { } at ? $"Sẵn sàng · ghi vào Excel lần cuối lúc {at.LocalDateTime:HH:mm dd/MM}"
+            : "Sẵn sàng";
+
+        EntryAddresses.Clear();
+        if (_server.IsRunning)
+            foreach (var url in BoardServer.EntryUrls(_server.Port))
+                EntryAddresses.Add(url);
+
+        EntryJobs.Clear();
+        foreach (var job in _entry.Recent(null, 15))
+        {
+            var state = job.Status switch
+            {
+                EntryJobStatus.Done => "đã ghi",
+                EntryJobStatus.Failed => "lỗi: " + job.Message,
+                EntryJobStatus.Waiting => "đang chờ Excel",
+                _ => "đang ghi"
+            };
+            EntryJobs.Add($"{job.CreatedAt.LocalDateTime:HH:mm}  {job.User} · {job.Line} · {job.Summary} · {state}");
+        }
+    }
+
     [RelayCommand]
     private void StartPresentation()
     {
@@ -351,6 +455,7 @@ public sealed partial class MainViewModel : ObservableObject
             foreach (var url in BoardServer.ScreenUrls(_server.Port, 0))
                 ServerAddresses.Add(url[..url.IndexOf("/tv/", StringComparison.Ordinal)] + "/");
         UpdateTvLinks();
+        RefreshEntry();
 
         ConnectedTvs.Clear();
         foreach (var client in clients)
