@@ -275,5 +275,17 @@ public sealed class ExcelComHost : IWorkbookHost, IDisposable
             var row = sheet.ListObjects[1].ListRows.Add();
             return (int)row.Range.Row;
         }
+
+        public void FillFormulasFromAbove(int row)
+        {
+            var last = LastColumn;
+            for (var col = 1; col <= last; col++)
+            {
+                var cell = sheet.Cells[row, col];
+                var above = sheet.Cells[row - 1, col];
+                if ((bool)above.HasFormula && !(bool)cell.HasFormula && cell.Value2 is null)
+                    cell.FormulaR1C1 = above.FormulaR1C1;
+            }
+        }
     }
 }

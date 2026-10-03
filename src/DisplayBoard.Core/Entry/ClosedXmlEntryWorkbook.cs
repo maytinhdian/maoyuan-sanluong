@@ -91,14 +91,20 @@ public sealed class ClosedXmlEntryWorkbook(XLWorkbook workbook) : IEntryWorkbook
             if (newRow - 1 > range.FirstAddress.RowNumber)
             {
                 for (var col = range.FirstAddress.ColumnNumber; col <= range.LastAddress.ColumnNumber; col++)
-                {
-                    var above = sheet.Cell(newRow - 1, col);
-                    if (above.HasFormula)
-                        sheet.Cell(newRow, col).FormulaR1C1 = above.FormulaR1C1;
-                    sheet.Cell(newRow, col).Style = above.Style;
-                }
+                    sheet.Cell(newRow, col).Style = sheet.Cell(newRow - 1, col).Style;
             }
             return newRow;
+        }
+
+        public void FillFormulasFromAbove(int row)
+        {
+            for (var col = 1; col <= LastColumn; col++)
+            {
+                var cell = sheet.Cell(row, col);
+                var above = sheet.Cell(row - 1, col);
+                if (above.HasFormula && !cell.HasFormula && cell.IsEmpty())
+                    cell.FormulaR1C1 = above.FormulaR1C1;
+            }
         }
     }
 }

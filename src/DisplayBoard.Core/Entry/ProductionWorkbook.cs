@@ -342,7 +342,10 @@ public static class ProductionWorkbook
         {
             var rows = Rows().ToList();
             var blankTail = rows.AsEnumerable().Reverse().TakeWhile(r => keyHeaders.All(h => Text(r, h) is null)).LastOrDefault();
-            return blankTail > 0 ? blankTail : Sheet.AppendTableRow();
+            var row = blankTail > 0 ? blankTail : Sheet.AppendTableRow();
+            if (row > LabelRow + 1)
+                Sheet.FillFormulasFromAbove(row);
+            return row;
         }
     }
 }

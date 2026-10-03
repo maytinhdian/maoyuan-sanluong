@@ -27,6 +27,12 @@ public interface IEntrySheet
 
     /// <summary>Thêm một dòng cuối Table (Excel tự điền cột công thức) và trả về số dòng mới. Sheet không có Table thì trả về dòng sau dòng cuối.</summary>
     int AppendTableRow();
+
+    /// <summary>
+    /// Ô trống ở dòng này mà ô ngay trên có công thức thì chép công thức xuống. Cần khi Table không có cột công thức
+    /// (vd file đã qua LibreOffice): Excel thêm dòng mới sẽ để trống cột MÃ SẢN PHẨM, HIỆN TRÊN TV... và ảnh không lên TV.
+    /// </summary>
+    void FillFormulasFromAbove(int row);
 }
 
 /// <summary>Lỗi do dữ liệu nhập (thiếu kế hoạch, sai chuyền...): báo nguyên văn cho người nhập, không thử lại.</summary>
