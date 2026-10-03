@@ -177,8 +177,10 @@
   function renderOutput() {
     const day = state.context.line;
     const hasPlan = !!(day && day.plan);
-    $('hourBlock').classList.toggle('hidden', !hasPlan);
-    $('sendHour').classList.toggle('hidden', !hasPlan);
+    // Đang sửa kế hoạch thì ẩn phần nhập giờ để không bấm nhầm "Ghi vào Excel".
+    const editing = !$('planForm').classList.contains('hidden');
+    $('hourBlock').classList.toggle('hidden', !hasPlan || editing);
+    $('sendHour').classList.toggle('hidden', !hasPlan || editing);
     $('planCard').classList.toggle('hidden', !day);
     if (!day) return;
     if (!hasPlan) { showPlanForm('Chuyền này chưa có kế hoạch. Chọn mã sản phẩm, ca và mục tiêu mỗi giờ để bắt đầu nhập.'); }
@@ -237,11 +239,17 @@
     fill($('fProduct'), c.products.map((p) => [p.code, p.name ? p.code + ' · ' + p.name : p.code]), day.plan && day.plan.productCode);
     fill($('fShift'), c.shifts.map((s) => [s.code, s.name ? s.code + ' · ' + s.name : s.code]), day.plan && day.plan.shiftCode);
     $('fTarget').value = day.plan ? day.plan.hourlyTarget : '';
-    $('planForm').classList.remove('hidden');
     $('cancelPlan').classList.toggle('hidden', !day.plan);
+    if ($('planForm').classList.contains('hidden')) {
+      $('planForm').classList.remove('hidden');
+      renderOutput();
+    }
   }
 
-  function hidePlanForm() { $('planForm').classList.add('hidden'); }
+  function hidePlanForm() {
+    $('planForm').classList.add('hidden');
+    if (state.context) renderOutput();
+  }
 
   function fill(select, items, selected) {
     select.innerHTML = '';

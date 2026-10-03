@@ -4,6 +4,7 @@ using DisplayBoard.App.Services;
 using DisplayBoard.App.ViewModels;
 using DisplayBoard.App.Views;
 using DisplayBoard.Core.Display;
+using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Excel;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Processing;
@@ -113,6 +114,9 @@ public partial class App : Application
         services.AddSingleton<IExcelWatcher, ExcelWatcher>();
         services.AddSingleton<IScreenManager, ScreenManager>();
         services.AddSingleton<IDisplayManager, DisplayManager>();
+        // Nhập liệu qua trình duyệt: ghi vào file qua chính Excel trên máy này.
+        services.AddSingleton<IWorkbookHost, ExcelComHost>();
+        services.AddSingleton<EntryService>();
         services.AddSingleton<IBoardServer, BoardServer>();
         foreach (var view in ViewCatalog.CreateDefault())
             services.AddSingleton(view);

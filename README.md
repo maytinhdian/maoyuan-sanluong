@@ -2,7 +2,16 @@
 
 App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_THI`) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
 
-> **Hai phiên bản:** nhánh `master` là bản 1.x (TV nối thẳng vào máy có Excel). Nhánh `v2-lan` là bản 2.x: máy có Excel làm máy chủ, TV xem qua trình duyệt trong mạng LAN. Bản 2.x vẫn chiếu được lên TV nối thẳng như 1.x, và bộ cài 2.x cài đè lên 1.x.
+> **Ba phiên bản:** nhánh `master` là bản 1.x (TV nối thẳng vào máy có Excel). Nhánh `v2-lan` là bản 2.x: máy có Excel làm máy chủ, TV xem qua trình duyệt trong mạng LAN. Nhánh `v3` là bản 3.x: như 2.x và thêm trang nhập liệu cho tổ trưởng trên điện thoại. Bộ cài bản sau cài đè lên bản trước.
+
+## Bản 3.x: nhập liệu qua trình duyệt
+
+- Tổ trưởng mở `http://<IP máy chủ>:5080/nhap` trên điện thoại, đăng nhập bằng mã PIN (đặt ở tab **Nhập liệu** của app, mỗi người một PIN, có thể giới hạn chuyền).
+- Tab **Sản lượng**: chọn chuyền, app tự chọn giờ đang làm theo ca (CAU_HINH_CA), nhập số rồi **Ghi vào Excel**: số vào ô `GIỜ n` của dòng hôm nay ở `NHAP_LIEU`. Chuyền chưa có dòng hôm nay thì app tự tạo dòng mới, chép mã sản phẩm, ca, mục tiêu giờ từ ngày làm trước (sửa bằng **Sửa kế hoạch**). Số lớn hơn 3 lần mục tiêu giờ bị chặn.
+- Tab **Hàng lỗi**: loại lỗi, số lượng, tối đa 4 ảnh chụp bằng camera (thu nhỏ còn 1600px trên điện thoại). Ảnh lưu vào `images\hang_loi`, thêm một dòng vào `HANG_LOI`; nhiều ảnh ghi chung một ô `TÊN FILE ẢNH`, cách nhau bởi `; `.
+- Tab **Đã gửi**: trạng thái từng phiếu (đang ghi, đang chờ Excel, đã ghi, lỗi).
+- Máy chủ ghi qua **chính Microsoft Excel trên máy chủ** (COM), không sửa file trực tiếp: file đang mở thì ghi vào cửa sổ Excel đó rồi lưu, chưa mở thì mở ngầm, ghi, lưu, đóng. Nhờ vậy công thức tự tính lại và TV cập nhật ngay. Có người đang sửa ô trong Excel thì phiếu chờ và tự ghi khi họ bấm Enter/Esc (chờ tối đa 15 phút). Cần cài Excel bản desktop trên máy chủ.
+- Chỉ ghi vào ô nhập tay (NGÀY, CHUYỀN, MÃ SẢN PHẨM, MÃ CA, MỤC TIÊU MỖI GIỜ, GIỜ 1–12; ở HANG_LOI: NGÀY, GIỜ, CHUYỀN, LOẠI LỖI, SỐ LƯỢNG, TÊN FILE ẢNH, GHI CHÚ). Cột tìm theo tiêu đề tiếng Việt nên dùng được file V20 trở lên.
 
 ## Bản 2.x: TV xem qua mạng LAN
 
@@ -103,7 +112,7 @@ src/DisplayBoard.Core      Đọc Excel (HIEN_THI), dựng snapshot, theo dõi f
 src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 10 view, khay hệ thống
 src/DisplayBoard.Server    Máy chủ LAN (Kestrel): /tv/{n}, /api/state, /ws, /img, và giao diện web trong wwwroot
 tests/DisplayBoard.Tests   Unit test cho Core (chạy được trên mọi hệ điều hành)
-tests/DisplayBoard.Server.Tests  Test máy chủ LAN: trang TV, playlist, mã truy cập, WebSocket, ảnh, đổi cổng
+tests/DisplayBoard.Server.Tests  Test máy chủ LAN: trang TV, playlist, mã truy cập, WebSocket, ảnh, đổi cổng, trang nhập liệu
 tests/DisplayBoard.App.Tests  Render từng view ra PNG và bắt lỗi binding (chỉ Windows)
 tools/DisplayBoard.SampleGenerator  Tạo file nội dung phụ mẫu
 ```

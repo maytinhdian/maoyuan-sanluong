@@ -287,6 +287,63 @@
                 </ScrollViewer>
             </TabItem>
 
+            <TabItem Header="Nhập liệu">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left" Margin="0,0,0,20">
+                        <GroupBox Header="NHẬP LIỆU QUA TRÌNH DUYỆT">
+                            <StackPanel>
+                                <TextBlock Text="{Binding EntryStatusText}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding EntryError}" Foreground="#B91C1C" FontWeight="Normal" TextWrapping="Wrap" Margin="0,0,0,8"
+                                           Visibility="{Binding EntryError, Converter={StaticResource NullToVisibility}}" />
+                                <TextBlock FontWeight="Normal" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Text="Tổ trưởng mở địa chỉ dưới đây trên điện thoại (cùng mạng Wi‑Fi xưởng) và đăng nhập bằng mã PIN. Số liệu được ghi thẳng vào file Excel qua chính Excel trên máy này, công thức tự tính lại và TV cập nhật ngay. Khi có người đang sửa ô trong Excel, phiếu sẽ chờ đến khi bấm Enter hoặc Esc." />
+                                <ItemsControl ItemsSource="{Binding EntryAddresses}" FontWeight="Normal">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,2">
+                                                <Button DockPanel.Dock="Right" Content="Mở" MinWidth="60" Margin="6,0,0,0"
+                                                        Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                <Button DockPanel.Dock="Right" Content="Copy" MinWidth="60" Margin="6,0,0,0"
+                                                        Command="{Binding DataContext.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                <TextBox Text="{Binding Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="15" VerticalContentAlignment="Center" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="NGƯỜI ĐƯỢC NHẬP LIỆU">
+                            <StackPanel>
+                                <CheckBox Content="Cho phép nhập liệu qua trình duyệt" IsChecked="{Binding EntryEnabled}" FontWeight="Normal" Margin="0,0,0,8" />
+                                <DataGrid ItemsSource="{Binding EntryUsers}" SelectedItem="{Binding SelectedEntryUser}" AutoGenerateColumns="False"
+                                          CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" FontWeight="Normal"
+                                          MinHeight="120" MaxHeight="320" RowHeight="30" GridLinesVisibility="Horizontal">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Tên" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="200" />
+                                        <DataGridTextColumn Header="Mã PIN" Binding="{Binding Pin, UpdateSourceTrigger=PropertyChanged}" Width="110" />
+                                        <DataGridTextColumn Header="Chuyền được nhập (trống = tất cả)" Binding="{Binding LinesText, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Content="Thêm người" Command="{Binding AddEntryUserCommand}" />
+                                    <Button Content="Xoá người đang chọn" Command="{Binding RemoveEntryUserCommand}" />
+                                </StackPanel>
+                                <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           Text="Mỗi người một mã PIN riêng (ít nhất 4 số). Chuyền ghi đúng tên trong sheet DANH_SACH_CHUYEN, nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="PHIẾU GẦN ĐÂY">
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding EntryJobs}" FontWeight="Normal" />
+                                <TextBlock Text="Chưa có phiếu nào." FontWeight="Normal" Foreground="#555"
+                                           Visibility="{Binding EntryJobs.Count, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+                            </StackPanel>
+                        </GroupBox>
+                        <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <TabItem Header="Chiếu trên máy này">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>

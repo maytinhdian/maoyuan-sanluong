@@ -91,3 +91,5 @@ textarea { height: 64px; resize: vertical; }
 .foot { font-size: 11px; color: var(--none); text-align: center; padding: 8px 0 14px; }
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); max-width: 92vw; background: #111827; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.4); z-index: 20; }
 .toast.bad { background: #7F1D1D; }
+input[type=number] { -moz-appearance: textfield; }
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
