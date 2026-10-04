@@ -277,12 +277,17 @@ public sealed class EntryApiTests : IAsyncLifetime
     public async Task Manager_saves_catalogs_and_month_targets()
     {
         await LoginAsync("9999");
-        var catalog = await PostAsync("/api/quanly/shifts", new[]
-        {
-            new { code = "8H", name = "Ca ngày", periods = new[] { "07:30-11:30", "12:30-16:30" }, active = true },
-            new { code = "4H", name = (string?)null, periods = new[] { "07:30-11:30" }, active = true },
-        });
-        Assert.Equal(["8H", "4H"], catalog.GetProperty("shifts").EnumerateArray().Select(s => s.GetProperty("code").GetString()));
+        var shifts = _database.Store.Load().Shifts
+            .Select(s => new { code = s.Code, name = s.Name, periods = s.Periods.Select(p => $"{p.Start:HH\\:mm}-{p.End:HH\\:mm}").ToArray(), active = true })
+            .ToList();
+        // Ca đã có số liệu thì không xoá được (giờ ca của ngày cũ tính theo mã ca).
+        var removed = await _http.PostAsJsonAsync("/api/quanly/shifts", shifts.Where(s => s.code != "8H"));
+        Assert.Equal(HttpStatusCode.BadRequest, removed.StatusCode);
+        Assert.Contains("Ngừng sử dụng", await ErrorAsync(removed));
+
+        shifts.Add(new { code = "4H", name = (string?)null, periods = new[] { "07:30-11:30" }, active = true });
+        var catalog = await PostAsync("/api/quanly/shifts", shifts);
+        Assert.Contains("4H", catalog.GetProperty("shifts").EnumerateArray().Select(s => s.GetProperty("code").GetString()));
 
         var bad = await _http.PostAsJsonAsync("/api/quanly/shifts", new[] { new { code = "X", periods = new[] { "11:30-07:30" }, active = true } });
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
@@ -320,6 +325,7 @@ public sealed class EntryApiTests : IAsyncLifetime
 
         await PostAsync("/api/quanly/import/" + preview.GetProperty("id").GetString(), new { });
         Assert.Null(_database.Store.Load().FindLine("X1"));
+        Assert.False(Directory.Exists(Path.Combine(_folder, "images")));   // không lấy ảnh từ thư mục làm việc của máy chủ
         Assert.Equal(HttpStatusCode.BadRequest, (await _http.PostAsJsonAsync("/api/quanly/import/" + preview.GetProperty("id").GetString(), new { })).StatusCode);
     }
 

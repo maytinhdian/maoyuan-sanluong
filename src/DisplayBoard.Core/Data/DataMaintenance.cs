@@ -184,6 +184,12 @@ public sealed class DataMaintenance : IDisposable
             BackupNow();
         _database.Store.ReplaceAll(preview.Result.Data, user, Path.GetFileName(preview.Path));
 
+        _logger.LogInformation("Nhập dữ liệu từ {Path}: {Entries} dòng nhập liệu, {Defects} phiếu lỗi", preview.Path,
+            preview.Result.Data.Entries.Count, preview.Result.Data.Defects.Count);
+
+        // File tải lên qua trình duyệt chỉ có tên file, không có thư mục gốc để chép ảnh theo.
+        if (!Path.IsPathRooted(preview.Path) || !File.Exists(preview.Path))
+            return;
         var config = _config.Current;
         var source = Path.GetDirectoryName(Path.GetFullPath(preview.Path))!;
         CopyMissing(Path.Combine(source, "images"), config.ResolveImagesFolder()!);
@@ -193,8 +199,6 @@ public sealed class DataMaintenance : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(content, target);
         }
-        _logger.LogInformation("Nhập dữ liệu từ {Path}: {Entries} dòng nhập liệu, {Defects} phiếu lỗi", preview.Path,
-            preview.Result.Data.Entries.Count, preview.Result.Data.Defects.Count);
     }
 
     private static void CopyMissing(string from, string to)

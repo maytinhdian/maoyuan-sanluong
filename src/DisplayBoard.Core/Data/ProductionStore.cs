@@ -198,7 +198,15 @@ public sealed class ProductionStore : IDisposable
     // ---------- Ghi: danh mục ----------
 
     public void SaveShifts(IReadOnlyList<ShiftDef> shifts, string user) =>
-        Write(user, "Danh sách ca", _ => ReplaceList("ca", () => InsertShifts(shifts), shifts.Count));
+        Write(user, "Danh sách ca", _ =>
+        {
+            // Giờ ca của ngày cũ tính theo mã ca: xoá mã đang dùng thì mục tiêu ngày cũ mất.
+            var used = Strings("SELECT DISTINCT ma_ca FROM nhap_lieu WHERE ma_ca IS NOT NULL");
+            var missing = used.Where(u => !shifts.Any(s => ProductionData.Same(s.Code, u))).ToList();
+            if (missing.Count > 0)
+                throw new InvalidOperationException($"Ca {string.Join(", ", missing)} đã có số liệu nên không xoá hay đổi mã được; hãy chuyển sang Ngừng sử dụng.");
+            return ReplaceList("ca", () => InsertShifts(shifts), shifts.Count);
+        });
 
     public void SaveLines(IReadOnlyList<LineDef> lines, string user) =>
         Write(user, "Danh sách chuyền", _ =>
