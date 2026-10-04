@@ -59,7 +59,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
             _failures.TryRemove(ip, out _);
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
             _sessions[token] = new Session(user.Name, user.Pin, now + SessionTime);
-            return Results.Json(new { Token = token, user.Name, user.Lines }, BoardServer.Json);
+            return Results.Json(new { Token = token, user.Name, user.Lines, user.Manager }, BoardServer.Json);
         });
 
         app.MapGet("/api/nhap/context", (HttpContext http, string? line) =>
@@ -117,7 +117,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
     }
 
     /// <summary>Người dùng của mã phiên, lấy theo cấu hình hiện tại (đã bị xoá hoặc đổi PIN thì không còn).</summary>
-    private EntryUser? Authenticate(HttpContext http)
+    internal EntryUser? Authenticate(HttpContext http)
     {
         var token = http.Request.Headers[TokenHeader].ToString();
         if (token.Length == 0 || !_sessions.TryGetValue(token, out var session))

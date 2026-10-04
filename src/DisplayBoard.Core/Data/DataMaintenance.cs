@@ -44,6 +44,8 @@ public sealed class DataMaintenance : IDisposable
 
     public event EventHandler? Changed;
 
+    public ProductionDatabase Database => _database;
+
     /// <summary>Bắt đầu kiểm tra mỗi phút. Chạy một lần ngay để sao lưu khi vừa mở app.</summary>
     public void Start() => _timer ??= _time.CreateTimer(_ => RunDue(), null, TimeSpan.Zero, CheckInterval);
 

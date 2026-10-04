@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using DisplayBoard.App.Services;
 using DisplayBoard.App.ViewModels;
 using DisplayBoard.App.Views;
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Display;
 using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Excel;
@@ -31,7 +32,7 @@ public partial class App : Application
 
         _services = ConfigureServices();
 
-        // Startup flow: cấu hình → màn hình → Excel → snapshot → watcher → cửa sổ chính.
+        // Startup flow: cấu hình → cơ sở dữ liệu → snapshot → theo dõi file nội dung phụ → máy chủ → cửa sổ chính.
         var config = _services.GetRequiredService<IConfigurationService>().Current;
         var snapshots = _services.GetRequiredService<ISnapshotService>();
         var watcher = _services.GetRequiredService<IExcelWatcher>();
@@ -43,12 +44,13 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Lỗi khi đọc lại Excel");
+                Log.Error(ex, "Lỗi khi đọc lại file nội dung phụ");
             }
         };
-        if (!string.IsNullOrWhiteSpace(config.ExcelFile) && config.AutoReload)
-            watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
-        await snapshots.ReloadAsync();
+        await snapshots.ReloadAsync();   // mở (hoặc tạo) sanluong.db, thư mục dữ liệu có từ đây
+        watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
+        // Sao lưu hằng ngày và tự xuất Excel theo giờ đặt trong cài đặt.
+        _services.GetRequiredService<DataMaintenance>().Start();
 
         // Máy chủ LAN cho TV xem qua trình duyệt. Lỗi (vd trùng cổng) chỉ hiện ở tab Mạng LAN, không chặn app.
         var server = _services.GetRequiredService<IBoardServer>();
@@ -110,12 +112,13 @@ public partial class App : Application
         services.AddSingleton<IConfigurationService>(sp => new ConfigurationService(sp.GetRequiredService<ILogger<ConfigurationService>>()));
         services.AddSingleton<IExcelDataReader, ExcelDataReader>();
         services.AddSingleton<SnapshotBuilder>();
+        services.AddSingleton<ProductionDatabase>();
+        services.AddSingleton<DataMaintenance>();
         services.AddSingleton<ISnapshotService, SnapshotService>();
         services.AddSingleton<IExcelWatcher, ExcelWatcher>();
         services.AddSingleton<IScreenManager, ScreenManager>();
         services.AddSingleton<IDisplayManager, DisplayManager>();
-        // Nhập liệu qua trình duyệt: ghi vào file qua chính Excel trên máy này.
-        services.AddSingleton<IWorkbookHost, ExcelComHost>();
+        // Nhập liệu (/nhap) và trang quản lý (/quan-ly) qua trình duyệt: ghi thẳng vào cơ sở dữ liệu.
         services.AddSingleton<EntryService>();
         services.AddSingleton<IBoardServer, BoardServer>();
         foreach (var view in ViewCatalog.CreateDefault())

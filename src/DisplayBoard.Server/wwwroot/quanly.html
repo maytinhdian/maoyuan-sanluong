@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0F2447">
+<title>Quản lý</title>
+<link rel="stylesheet" href="/assets/quanly.css">
+</head>
+<body>
+<!-- Đăng nhập bằng mã PIN của quản lý -->
+<section id="login" class="login hidden">
+  <div class="box">
+    <div class="app" id="loginApp">Quản lý</div>
+    <h1>Trang quản lý</h1>
+    <p class="t2">Nhập mã PIN của người được đánh dấu "Quản lý" trong app trên máy chủ.</p>
+    <input id="pin" class="pin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="••••">
+    <div id="loginError" class="msg bad hidden"></div>
+    <button id="loginBtn" class="btn primary big">Vào trang quản lý</button>
+  </div>
+</section>
+
+<section id="main" class="hidden">
+  <header class="hdr">
+    <div class="title"><b id="appName">Quản lý</b><span class="t2" id="dbInfo"></span></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="day" class="on">Theo ngày</button>
+      <button data-tab="targets">Mục tiêu tháng</button>
+      <button data-tab="catalog">Danh mục</button>
+      <button data-tab="calendar">Lịch làm việc</button>
+      <button data-tab="files">Xuất / nhập Excel</button>
+      <button data-tab="audit">Nhật ký</button>
+    </nav>
+    <button class="who" id="who" title="Đăng xuất"></button>
+  </header>
+
+  <main class="body">
+    <!-- Theo ngày: kế hoạch, sản lượng từng giờ, hàng lỗi -->
+    <div class="tab" id="tab-day">
+      <div class="bar">
+        <button class="btn" id="dayPrev" title="Ngày trước">◀</button>
+        <input type="date" id="dayDate">
+        <button class="btn" id="dayNext" title="Ngày sau">▶</button>
+        <button class="btn" id="dayToday">Hôm nay</button>
+        <span class="grow"></span>
+        <button class="btn" id="copyPlan" title="Chuyền nào chưa có dòng ngày này thì lấy mã sản phẩm, ca, mục tiêu của ngày làm gần nhất">Chép kế hoạch ngày trước</button>
+      </div>
+      <p class="t2 small">Sửa ô rồi bấm <b>Lưu</b> ở cuối dòng. Để trống mã sản phẩm, ca hoặc mục tiêu thì chuyền đó không lên TV ngày này.</p>
+      <div class="scroll"><table class="grid" id="dayTable"></table></div>
+
+      <h3>Hàng lỗi ngày này</h3>
+      <div class="scroll"><table class="grid" id="defectTable"></table></div>
+      <button class="btn" id="addDefect">+ Thêm phiếu lỗi</button>
+    </div>
+
+    <!-- Mục tiêu tháng theo mã sản phẩm -->
+    <div class="tab hidden" id="tab-targets">
+      <div class="bar">
+        <label>Tháng <input type="month" id="targetMonth"></label>
+        <span class="t2" id="workDays"></span>
+      </div>
+      <div class="scroll"><table class="grid" id="targetTable"></table></div>
+      <div class="bar">
+        <button class="btn" id="addTarget">+ Thêm mã sản phẩm</button>
+        <button class="btn primary" id="saveTargets">Lưu mục tiêu tháng</button>
+      </div>
+    </div>
+
+    <!-- Danh mục -->
+    <div class="tab hidden" id="tab-catalog">
+      <section class="panel" data-list="lines">
+        <h3>Chuyền</h3>
+        <p class="t2 small">Mã chuyền không đổi được sau khi đã có số liệu. TV hiện các chuyền "Đang dùng" theo thứ tự trong danh sách.</p>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm chuyền</button><button class="btn primary save">Lưu danh sách chuyền</button></div>
+      </section>
+      <section class="panel" data-list="products">
+        <h3>Mã sản phẩm</h3>
+        <p class="t2 small">Tên sản phẩm hiện trên TV dưới mã.</p>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm mã sản phẩm</button><button class="btn primary save">Lưu danh sách sản phẩm</button></div>
+      </section>
+      <section class="panel" data-list="shifts">
+        <h3>Ca làm việc</h3>
+        <p class="t2 small">Mỗi đợt ghi dạng 07:30-11:30. Giờ ca = tổng các đợt; mỗi đợt chia thành GIỜ 1, GIỜ 2...</p>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm ca</button><button class="btn primary save">Lưu danh sách ca</button></div>
+      </section>
+      <section class="panel" data-list="reasons">
+        <h3>Lý do không đạt</h3>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm lý do</button><button class="btn primary save">Lưu danh sách lý do</button></div>
+      </section>
+      <section class="panel" data-list="defectTypes">
+        <h3>Loại lỗi</h3>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm loại lỗi</button><button class="btn primary save">Lưu danh sách loại lỗi</button></div>
+      </section>
+    </div>
+
+    <!-- Lịch làm việc và ngày hiện trên TV -->
+    <div class="tab hidden" id="tab-calendar">
+      <section class="panel">
+        <h3>Ngày hiện trên TV</h3>
+        <p class="t2 small" id="displayInfo"></p>
+        <div class="bar">
+          <input type="date" id="displayDate">
+          <button class="btn primary" id="setDisplay">Cho TV hiện ngày này</button>
+          <button class="btn" id="clearDisplay">Hiện ngày mới nhất (mặc định)</button>
+        </div>
+      </section>
+      <section class="panel" data-list="calendar">
+        <h3>Ngày nghỉ và ngày làm bù</h3>
+        <p class="t2 small">Thứ 2 đến thứ 7 mặc định đi làm, Chủ nhật mặc định nghỉ. Chỉ ghi ngày khác mặc định: "Nghỉ" cho ngày thường được nghỉ, "Làm bù" cho Chủ nhật đi làm.</p>
+        <div class="scroll"><table class="grid"></table></div>
+        <div class="bar"><button class="btn add">+ Thêm ngày</button><button class="btn primary save">Lưu lịch làm việc</button></div>
+      </section>
+    </div>
+
+    <!-- Xuất và nhập Excel -->
+    <div class="tab hidden" id="tab-files">
+      <section class="panel">
+        <h3>Xuất file Excel</h3>
+        <p class="t2 small">File đúng mẫu V20, các cột tính vẫn là công thức để kiểm tra lại. File của một ngày chứa mọi số liệu đến hết ngày đó (lũy kế tháng, thiếu hôm trước tính đủ), sheet HIEN_THI hiện ngày đó.</p>
+        <div class="bar">
+          <input type="date" id="exportDate">
+          <button class="btn primary" id="exportDay">Tải file của ngày</button>
+        </div>
+        <div class="bar">
+          <input type="month" id="exportMonth">
+          <button class="btn primary" id="exportMonthBtn">Tải file của tháng</button>
+        </div>
+        <p class="t2 small">Máy chủ cũng tự xuất mỗi ngày một file vào thư mục XuatExcel (giờ xuất đặt trong app, mặc định 22:00).</p>
+      </section>
+      <section class="panel">
+        <h3>Nhập dữ liệu từ file Excel cũ (bản 3.x)</h3>
+        <p class="t2 small">Chọn file Theo_doi_san_luong V20 đang dùng. Máy chủ đọc và so số trước, <b>chưa ghi gì</b>. Bấm xác nhận thì toàn bộ dữ liệu hiện có được thay bằng dữ liệu trong file (bản hiện có được sao lưu trước).</p>
+        <div class="bar">
+          <input type="file" id="importFile" accept=".xlsx,.xlsm">
+          <button class="btn" id="importRead">Đọc và so số</button>
+        </div>
+        <div id="importResult" class="hidden"></div>
+      </section>
+    </div>
+
+    <!-- Nhật ký sửa -->
+    <div class="tab hidden" id="tab-audit">
+      <p class="t2 small">300 lần ghi gần nhất: ai sửa, lúc nào, trước và sau.</p>
+      <div class="scroll"><table class="grid" id="auditTable"></table></div>
+    </div>
+  </main>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/assets/quanly.js"></script>
+</body>
+</html>

@@ -99,7 +99,7 @@
             </DockPanel>
         </Border>
 
-        <!-- Cảnh báo khi đọc Excel lỗi; TV vẫn giữ dữ liệu cũ -->
+        <!-- Cảnh báo khi tính dữ liệu lỗi; TV vẫn giữ dữ liệu cũ -->
         <Border DockPanel.Dock="Top" Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="0,0,0,1" Padding="20,8"
                 Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
             <TextBlock TextWrapping="Wrap"><Run Text="⚠ " /><Run Text="{Binding LastError, Mode=OneWay}" /><Run Text=" — TV vẫn hiển thị dữ liệu hợp lệ gần nhất." /></TextBlock>
@@ -123,28 +123,33 @@
             <TabItem Header="Trang chủ">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <GroupBox Header="FILE DỮ LIỆU">
+                        <GroupBox Header="DỮ LIỆU">
                             <StackPanel>
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Đọc lại" Command="{Binding ReloadCommand}" Margin="8,0,0,0" />
-                                    <Button DockPanel.Dock="Right" Content="Chọn file…" Command="{Binding ChooseFileCommand}" Margin="8,0,0,0" />
-                                    <TextBox Text="{Binding ExcelFile}" IsReadOnly="True" FontWeight="Normal" VerticalContentAlignment="Center" />
+                                    <TextBlock DockPanel.Dock="Left" Text="Thư mục dữ liệu:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Button DockPanel.Dock="Right" Content="Mở thư mục" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0" />
+                                    <Button DockPanel.Dock="Right" Content="Đổi…" Command="{Binding ChooseDataFolderCommand}" Margin="8,0,0,0" />
+                                    <TextBox Text="{Binding DataFolderText, Mode=OneWay}" IsReadOnly="True" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Chứa sanluong.db (số liệu), images (ảnh), SaoLuu (bản sao lưu hằng ngày), XuatExcel (file Excel tự xuất)" />
                                 </DockPanel>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Mở trang quản lý" Style="{StaticResource PrimaryButton}" Command="{Binding OpenAdminPageCommand}" Margin="0,0,8,0" />
+                                    <TextBlock Text="Xuất Excel ngày" FontWeight="Normal" VerticalAlignment="Center" Margin="8,0,6,0" />
+                                    <DatePicker SelectedDate="{Binding ExportDate}" Width="130" VerticalContentAlignment="Center" />
+                                    <Button Content="Xuất file ngày…" Command="{Binding ExportDayCommand}" Margin="6,0,0,0" />
+                                    <Button Content="Xuất cả tháng…" Command="{Binding ExportMonthCommand}" Margin="6,0,0,0" />
+                                    <Button Content="Nhập từ file Excel cũ…" Command="{Binding ImportExcelCommand}" Margin="16,0,0,0" />
+                                </WrapPanel>
                                 <Grid Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="200" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Sheet:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBox Grid.Column="1" Text="{Binding SheetName}" FontWeight="Normal" VerticalContentAlignment="Center"
-                                             ToolTip="Để trống: đọc sheet HIEN_THI. Chỉ ghi tên khi sheet hiển thị được đổi tên." />
-                                    <TextBlock Grid.Column="2" Text="File nội dung phụ:" FontWeight="Normal" VerticalAlignment="Center" Margin="16,0,8,0" />
-                                    <TextBox Grid.Column="3" Text="{Binding ContentFile}" FontWeight="Normal" VerticalContentAlignment="Center"
-                                             ToolTip="Để trống: display-content.xlsx cạnh file dữ liệu" />
-                                    <Button Grid.Column="4" Content="Chọn…" Command="{Binding ChooseContentFileCommand}" Margin="8,0,0,0" />
+                                    <TextBlock Text="File nội dung phụ:" FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBox Grid.Column="1" Text="{Binding ContentFile}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                             ToolTip="Thông báo, khẩu hiệu. Để trống: display-content.xlsx trong thư mục dữ liệu" />
+                                    <Button Grid.Column="2" Content="Chọn…" Command="{Binding ChooseContentFileCommand}" Margin="8,0,0,0" />
                                 </Grid>
                                 <TextBlock FontWeight="Normal" Margin="0,8,0,0" Foreground="#555" Text="{Binding DataInfoText}"
                                            Visibility="{Binding DataInfoText, Converter={StaticResource NullToVisibility}}" />
@@ -152,6 +157,8 @@
                                     <Run Text="Trạng thái: " /><Run Text="{Binding StatusText, Mode=OneWay}" FontWeight="SemiBold" />
                                     <Run Text="   Cập nhật lúc: " /><Run Text="{Binding LastLoadedText, Mode=OneWay}" />
                                 </TextBlock>
+                                <TextBlock FontWeight="Normal" Margin="0,4,0,0" Foreground="#555" Text="{Binding MaintenanceText}" TextWrapping="Wrap"
+                                           Visibility="{Binding MaintenanceText, Converter={StaticResource NullToVisibility}}" />
                             </StackPanel>
                         </GroupBox>
 
@@ -244,7 +251,7 @@
                                 <TextBlock Text="{Binding ServerError}" Foreground="#B91C1C" FontWeight="Normal" TextWrapping="Wrap" Margin="0,0,0,8"
                                            Visibility="{Binding ServerError, Converter={StaticResource NullToVisibility}}" />
                                 <TextBlock FontWeight="Normal" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,10"
-                                           Text="Máy này đọc file Excel và phát số liệu qua mạng nội bộ. Địa chỉ riêng của từng TV nằm ở Trang chủ. Trang dưới đây liệt kê tất cả TV để chọn nhanh trên TV mới." />
+                                           Text="Máy này giữ cơ sở dữ liệu và phát số liệu qua mạng nội bộ. Địa chỉ riêng của từng TV nằm ở Trang chủ. Trang dưới đây liệt kê tất cả TV để chọn nhanh trên TV mới." />
                                 <ItemsControl ItemsSource="{Binding ServerAddresses}" FontWeight="Normal">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -296,7 +303,7 @@
                                 <TextBlock Text="{Binding EntryError}" Foreground="#B91C1C" FontWeight="Normal" TextWrapping="Wrap" Margin="0,0,0,8"
                                            Visibility="{Binding EntryError, Converter={StaticResource NullToVisibility}}" />
                                 <TextBlock FontWeight="Normal" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,10"
-                                           Text="Tổ trưởng mở địa chỉ dưới đây trên điện thoại (cùng mạng Wi‑Fi xưởng) và đăng nhập bằng mã PIN. Số liệu được ghi thẳng vào file Excel qua chính Excel trên máy này, công thức tự tính lại và TV cập nhật ngay. Khi có người đang sửa ô trong Excel, phiếu sẽ chờ đến khi bấm Enter hoặc Esc." />
+                                           Text="Tổ trưởng mở địa chỉ dưới đây trên điện thoại (cùng mạng Wi‑Fi xưởng) và đăng nhập bằng mã PIN. Số liệu được lưu ngay vào cơ sở dữ liệu trên máy này và TV cập nhật sau một hai giây. Tổ trưởng chỉ nhập cho ngày hôm nay; sửa ngày cũ, đặt kế hoạch và mục tiêu tháng làm ở trang quản lý (địa chỉ /quan-ly, đăng nhập bằng PIN của người được đánh dấu Quản lý)." />
                                 <ItemsControl ItemsSource="{Binding EntryAddresses}" FontWeight="Normal">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -322,6 +329,7 @@
                                         <DataGridTextColumn Header="Tên" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="200" />
                                         <DataGridTextColumn Header="Mã PIN" Binding="{Binding Pin, UpdateSourceTrigger=PropertyChanged}" Width="110" />
                                         <DataGridTextColumn Header="Chuyền được nhập (trống = tất cả)" Binding="{Binding LinesText, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                                        <DataGridCheckBoxColumn Header="Quản lý" Binding="{Binding Manager, UpdateSourceTrigger=PropertyChanged}" Width="80" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
@@ -329,7 +337,7 @@
                                     <Button Content="Xoá người đang chọn" Command="{Binding RemoveEntryUserCommand}" />
                                 </StackPanel>
                                 <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
-                                           Text="Mỗi người một mã PIN riêng (ít nhất 4 số). Chuyền ghi đúng tên trong sheet DANH_SACH_CHUYEN, nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
+                                           Text="Mỗi người một mã PIN riêng (ít nhất 4 số). Chuyền ghi đúng tên trong danh sách chuyền (trang quản lý), nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Header="PHIẾU GẦN ĐÂY">
@@ -412,13 +420,24 @@
                             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxPagedViewSeconds}" Margin="0,4" />
                         </Grid>
                     </GroupBox>
-                    <GroupBox Header="THEO DÕI FILE">
+                    <GroupBox Header="TỰ XUẤT EXCEL VÀ SAO LƯU">
                         <StackPanel>
-                            <CheckBox Content="Tự cập nhật khi file Excel được lưu" IsChecked="{Binding AutoReload}" FontWeight="Normal" Margin="0,0,0,8" />
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Chờ sau khi lưu (ms)" Style="{StaticResource Label}" Width="280" />
-                                <TextBox Text="{Binding DebounceMilliseconds}" Width="120" />
+                            <CheckBox Content="Tự xuất file Excel mỗi ngày" IsChecked="{Binding ExportEnabled}" FontWeight="Normal" Margin="0,0,0,8" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Giờ xuất (HH:mm)" Style="{StaticResource Label}" Width="280" />
+                                <TextBox Text="{Binding ExportTime}" Width="120" />
                             </StackPanel>
+                            <DockPanel Margin="0,0,0,6">
+                                <TextBlock DockPanel.Dock="Left" Text="Thư mục lưu file xuất" Style="{StaticResource Label}" Width="280" />
+                                <Button DockPanel.Dock="Right" Content="Chọn…" Command="{Binding ChooseExportFolderCommand}" Margin="8,0,0,0" />
+                                <TextBox Text="{Binding ExportFolder}" FontWeight="Normal" VerticalContentAlignment="Center" ToolTip="Để trống: thư mục XuatExcel trong thư mục dữ liệu" />
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Số bản sao lưu hằng ngày giữ lại" Style="{StaticResource Label}" Width="280" />
+                                <TextBox Text="{Binding BackupCount}" Width="120" />
+                            </StackPanel>
+                            <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="Mỗi ngày một file SanLuong_năm-tháng-ngày.xlsx, chứa mọi số liệu đến hết ngày đó. Sao lưu cơ sở dữ liệu nằm trong thư mục SaoLuu." />
                         </StackPanel>
                     </GroupBox>
                     <GroupBox Header="THƯ MỤC ẢNH">
@@ -428,7 +447,7 @@
                                 <TextBox Text="{Binding ImagesFolder}" FontWeight="Normal" VerticalContentAlignment="Center" />
                             </DockPanel>
                             <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Để trống = thư mục 'images' cạnh file Excel. Ảnh sản phẩm đặt tên theo mã sản phẩm (vd 883.jpg) hoặc khai báo ở sheet SAN_PHAM." />
+                                       Text="Để trống = thư mục 'images' trong thư mục dữ liệu. Ảnh sản phẩm đặt tên theo mã sản phẩm (vd 883.jpg)." />
                         </StackPanel>
                     </GroupBox>
                     <Button Content="Lưu cài đặt" Style="{StaticResource PrimaryButton}" Command="{Binding ApplySettingsCommand}" HorizontalAlignment="Left" />

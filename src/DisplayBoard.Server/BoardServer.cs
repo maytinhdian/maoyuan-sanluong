@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
@@ -41,18 +42,21 @@ public sealed class BoardServer : IBoardServer
     private readonly ConcurrentDictionary<string, string> _images = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly EntryApi? _entry;
+    private readonly AdminApi? _admin;
     private DisplayConfiguration _config;
     private WebApplication? _app;
 
     /// <param name="entry">Nhập liệu qua trình duyệt (/nhap). Null = không có trang nhập liệu.</param>
+    /// <param name="maintenance">Trang quản lý (/quan-ly), cần cả <paramref name="entry"/> để đăng nhập. Null = không có trang quản lý.</param>
     public BoardServer(ISnapshotService snapshots, IConfigurationService configuration, TimeProvider time, ILogger<BoardServer> logger,
-        EntryService? entry = null)
+        EntryService? entry = null, DataMaintenance? maintenance = null)
     {
         _snapshots = snapshots;
         _time = time;
         _logger = logger;
         _config = configuration.Current;
         _entry = entry is null ? null : new EntryApi(entry, () => _config, time);
+        _admin = _entry is null || maintenance is null ? null : new AdminApi(_entry, maintenance, time);
         _snapshots.SnapshotChanged += (_, _) => _ = BroadcastAsync();
     }
 
@@ -172,10 +176,12 @@ public sealed class BoardServer : IBoardServer
             Version,
             KeyRequired = KeyRequired,
             Screens = _config.ResolveNetworkScreens().Select(s => new { s.Number, Name = ScreenName(s) }),
-            DataEntry = _entry is not null && _config.DataEntry.Enabled
+            DataEntry = _entry is not null && _config.DataEntry.Enabled,
+            Admin = _admin is not null && _config.DataEntry.Enabled
         }, Json));
 
         _entry?.Map(app);
+        _admin?.Map(app);
 
         app.MapGet("/api/state", (HttpContext http, int? tv) =>
         {

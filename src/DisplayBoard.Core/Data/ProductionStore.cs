@@ -115,6 +115,33 @@ public sealed class ProductionStore : IDisposable
         });
     }
 
+    /// <summary>Ghi cả dòng của chuyền trong ngày (trang quản lý): kế hoạch, 12 giờ và các cột thông tin. Chưa có dòng thì tạo.</summary>
+    public void SaveEntry(DayEntry entry, string user)
+    {
+        if (entry.Hours.Count != DayEntry.MaxHours)
+            throw new ArgumentException($"Cần đủ {DayEntry.MaxHours} giờ.", nameof(entry));
+        Write(user, $"Sửa dòng {entry.LineCode} {Day(entry.Date)}", _ =>
+        {
+            var before = DescribeEntry(entry.Date, entry.LineCode);
+            var hours = Enumerable.Range(1, DayEntry.MaxHours).Select(h => $"$g{h}").ToList();
+            var parameters = new List<(string, object?)>
+            {
+                ("$ngay", Day(entry.Date)), ("$chuyen", entry.LineCode.Trim()), ("$sp", Clean(entry.ProductCode)), ("$ca", Clean(entry.ShiftCode)),
+                ("$mt", entry.HourlyTarget), ("$cn", entry.Workers), ("$ld", Clean(entry.Reason)), ("$pd", entry.DowntimeMinutes),
+                ("$tt", Clean(entry.Status)), ("$gc", Clean(entry.Note)),
+            };
+            parameters.AddRange(hours.Select((p, i) => (p, (object?)entry.Hours[i])));
+            Execute($"""
+                INSERT INTO nhap_lieu(ngay, ma_chuyen, ma_san_pham, ma_ca, muc_tieu_gio, so_cong_nhan, ly_do, phut_dung_may, trang_thai, ghi_chu, {HourColumns})
+                VALUES($ngay, $chuyen, $sp, $ca, $mt, $cn, $ld, $pd, $tt, $gc, {string.Join(", ", hours)})
+                ON CONFLICT(ngay, ma_chuyen) DO UPDATE SET ma_san_pham = excluded.ma_san_pham, ma_ca = excluded.ma_ca, muc_tieu_gio = excluded.muc_tieu_gio,
+                    so_cong_nhan = excluded.so_cong_nhan, ly_do = excluded.ly_do, phut_dung_may = excluded.phut_dung_may, trang_thai = excluded.trang_thai,
+                    ghi_chu = excluded.ghi_chu, {string.Join(", ", Enumerable.Range(1, DayEntry.MaxHours).Select(h => $"gio_{h} = excluded.gio_{h}"))}
+                """, parameters.ToArray());
+            return (before, DescribeEntry(entry.Date, entry.LineCode));
+        });
+    }
+
     /// <summary>Xoá cả dòng của chuyền trong ngày (kế hoạch và sản lượng các giờ).</summary>
     public void DeleteEntry(DateOnly date, string lineCode, string user)
     {

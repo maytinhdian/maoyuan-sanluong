@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Display;
 using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Interfaces;
@@ -23,6 +24,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IDisplayManager _display;
     private readonly IBoardServer _server;
     private readonly EntryService _entry;
+    private readonly DataMaintenance _maintenance;
     private readonly ILogger<MainViewModel> _logger;
     private readonly List<IDisplayViewDefinition> _views;
 
@@ -34,6 +36,7 @@ public sealed partial class MainViewModel : ObservableObject
         IDisplayManager display,
         IBoardServer server,
         EntryService entry,
+        DataMaintenance maintenance,
         IEnumerable<IDisplayViewDefinition> views,
         DisplayHostViewModel previewHost,
         ILogger<MainViewModel> logger)
@@ -45,6 +48,7 @@ public sealed partial class MainViewModel : ObservableObject
         _display = display;
         _server = server;
         _entry = entry;
+        _maintenance = maintenance;
         _logger = logger;
         PreviewHost = previewHost;
 
@@ -56,6 +60,7 @@ public sealed partial class MainViewModel : ObservableObject
         _display.RunningChanged += (_, _) => IsRunning = _display.IsRunning;
         _server.StateChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshServer);
         _entry.Changed += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshEntry);
+        _maintenance.Changed += (_, _) => Application.Current.Dispatcher.BeginInvoke(RefreshMaintenance);
 
         LoadFromConfiguration(_config.Current);
         RefreshStatus();
@@ -95,9 +100,19 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _appName;
     /// <summary>Tên đang dùng (đã lưu); để trống ô tên thì là "Display Board".</summary>
     [ObservableProperty] private string _appTitle = DisplayConfiguration.DefaultAppName;
-    [ObservableProperty] private string? _excelFile;
-    [ObservableProperty] private string? _sheetName;
+    [ObservableProperty] private string? _dataFolder;
     [ObservableProperty] private string? _contentFile;
+    [ObservableProperty] private DateTime? _exportDate = DateTime.Today;
+    [ObservableProperty] private bool _exportEnabled = true;
+    [ObservableProperty] private string _exportTime = "22:00";
+    [ObservableProperty] private string? _exportFolder;
+    [ObservableProperty] private string _backupCount = "30";
+    [ObservableProperty] private string? _maintenanceText;
+
+    /// <summary>Thư mục dữ liệu đang dùng (để trống là thư mục mặc định).</summary>
+    public string DataFolderText => string.IsNullOrWhiteSpace(DataFolder) ? DisplayConfiguration.DefaultDataFolder : DataFolder;
+
+    partial void OnDataFolderChanged(string? value) => OnPropertyChanged(nameof(DataFolderText));
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private LoadStatus _status;
     [ObservableProperty] private string? _lastLoadedText;
@@ -107,9 +122,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isRunning;
     [ObservableProperty] private string _defaultViewSeconds = "15";
     [ObservableProperty] private string _maxPagedViewSeconds = "60";
-    [ObservableProperty] private string _debounceMilliseconds = "800";
     [ObservableProperty] private string? _imagesFolder;
-    [ObservableProperty] private bool _autoReload = true;
     [ObservableProperty] private bool _serverEnabled = true;
     [ObservableProperty] private string _serverPort = LanServerSettings.DefaultPort.ToString();
     [ObservableProperty] private string? _serverAccessKey;
@@ -131,15 +144,16 @@ public sealed partial class MainViewModel : ObservableObject
     {
         AppName = config.AppName;
         AppTitle = config.ResolveAppName();
-        ExcelFile = config.ExcelFile;
-        SheetName = config.SheetName;
+        DataFolder = config.DataFolder;
         ContentFile = config.ContentFile;
+        ExportEnabled = config.Export.Enabled;
+        ExportTime = config.Export.Time;
+        ExportFolder = config.Export.Folder;
+        BackupCount = config.BackupCount.ToString();
         IsMirror = config.DisplayMode == DisplayMode.Mirror;
         DefaultViewSeconds = config.DefaultViewSeconds.ToString();
         MaxPagedViewSeconds = config.MaxPagedViewSeconds.ToString();
-        DebounceMilliseconds = config.DebounceMilliseconds.ToString();
         ImagesFolder = config.ImagesFolder;
-        AutoReload = config.AutoReload;
         EntryEnabled = config.DataEntry.Enabled;
         EntryUsers.Clear();
         foreach (var user in config.DataEntry.Users)
@@ -173,12 +187,19 @@ public sealed partial class MainViewModel : ObservableObject
     public DisplayConfiguration BuildConfiguration() => new()
     {
         AppName = string.IsNullOrWhiteSpace(AppName) ? null : AppName.Trim(),
-        ExcelFile = ExcelFile,
-        SheetName = string.IsNullOrWhiteSpace(SheetName) ? null : SheetName.Trim(),
+        DataFolder = string.IsNullOrWhiteSpace(DataFolder) ? null : DataFolder.Trim(),
+        ExcelFile = _config.Current.ExcelFile,
         ContentFile = string.IsNullOrWhiteSpace(ContentFile) ? null : ContentFile,
+        Export = new ExcelExportSettings
+        {
+            Enabled = ExportEnabled,
+            Time = TimeOnly.TryParse(ExportTime, System.Globalization.CultureInfo.InvariantCulture, out var at) ? at.ToString("HH:mm") : "22:00",
+            Folder = string.IsNullOrWhiteSpace(ExportFolder) ? null : ExportFolder.Trim()
+        },
+        BackupCount = ParseInt(BackupCount, 30, 1, 3650),
         DisplayMode = IsMirror ? DisplayMode.Mirror : DisplayMode.Independent,
-        AutoReload = AutoReload,
-        DebounceMilliseconds = ParseInt(DebounceMilliseconds, 800, 100, 10000),
+        AutoReload = _config.Current.AutoReload,
+        DebounceMilliseconds = _config.Current.DebounceMilliseconds,
         ImagesFolder = string.IsNullOrWhiteSpace(ImagesFolder) ? null : ImagesFolder,
         DefaultViewSeconds = ParseInt(DefaultViewSeconds, 15, 3, 3600),
         MaxPagedViewSeconds = ParseInt(MaxPagedViewSeconds, 60, 5, 3600),
@@ -213,19 +234,159 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ChooseFileAsync()
+    private async Task ChooseDataFolderAsync()
     {
+        var dialog = new OpenFolderDialog { Title = "Chọn thư mục dữ liệu (chứa sanluong.db)", InitialDirectory = DataFolderText };
+        if (dialog.ShowDialog() != true)
+            return;
+        if (MessageBox.Show($"Dùng thư mục dữ liệu {dialog.FolderName}?\n\nNếu thư mục chưa có sanluong.db thì app bắt đầu với dữ liệu trống. Dữ liệu ở thư mục cũ vẫn giữ nguyên.",
+                AppTitle, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+        DataFolder = dialog.FolderName;
+        _logger.LogInformation("Đổi thư mục dữ liệu {Path}", DataFolder);
+        await ApplySettingsAsync();
+    }
+
+    [RelayCommand]
+    private void OpenDataFolder()
+    {
+        Directory.CreateDirectory(DataFolderText);
+        OpenLink(DataFolderText);
+    }
+
+    [RelayCommand]
+    private void OpenAdminPage()
+    {
+        if (!_server.IsRunning)
+        {
+            MessageBox.Show("Máy chủ đang tắt. Bật máy chủ ở tab Máy chủ trước.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (!_config.Current.DataEntry.Users.Any(u => u.Manager))
+            MessageBox.Show("Chưa có ai được đánh dấu Quản lý. Vào tab Nhập liệu, tích ô Quản lý cho người cần vào trang quản lý rồi bấm Lưu cài đặt.",
+                AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+        OpenLink($"http://localhost:{_server.Port}/quan-ly");
+    }
+
+    [RelayCommand]
+    private void ExportDay()
+    {
+        var date = DateOnly.FromDateTime(ExportDate ?? DateTime.Today);
+        SaveExport(() => _maintenance.ExportDay(date));
+    }
+
+    [RelayCommand]
+    private void ExportMonth()
+    {
+        var date = ExportDate ?? DateTime.Today;
+        SaveExport(() => _maintenance.ExportMonth(new DateOnly(date.Year, date.Month, 1)));
+    }
+
+    private void SaveExport(Func<ExportFile> export)
+    {
+        ExportFile file;
+        try
+        {
+            file = export();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            MessageBox.Show($"Không xuất được file Excel: {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var dialog = new SaveFileDialog
+        {
+            Title = "Lưu file Excel",
+            Filter = "Excel (*.xlsx)|*.xlsx",
+            FileName = file.FileName,
+            InitialDirectory = _config.Current.ResolveExportFolder()
+        };
+        Directory.CreateDirectory(dialog.InitialDirectory);
+        if (dialog.ShowDialog() != true)
+            return;
+        try
+        {
+            File.WriteAllBytes(dialog.FileName, file.Content);
+            AddLog($"Đã xuất {dialog.FileName}");
+            if (MessageBox.Show($"Đã lưu {Path.GetFileName(dialog.FileName)}. Mở file ngay?", AppTitle, MessageBoxButton.YesNo, MessageBoxImage.Information)
+                == MessageBoxResult.Yes)
+                OpenLink(dialog.FileName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show($"Không lưu được file (có thể file đang mở trong Excel): {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    /// <summary>Nhập dữ liệu từ file Excel V20 của bản 3.x: đọc, so số, hỏi lại rồi mới thay dữ liệu.</summary>
+    [RelayCommand]
+    private async Task ImportExcelAsync()
+    {
+        var old = _config.Current.ExcelFile;
         var dialog = new OpenFileDialog
         {
-            Title = "Chọn file Excel dữ liệu",
+            Title = "Chọn file Excel đang dùng ở bản 3.x (Theo_doi_san_luong V20)",
             Filter = "Excel (*.xlsx;*.xlsm)|*.xlsx;*.xlsm",
-            FileName = ExcelFile ?? ""
+            FileName = old is not null && File.Exists(old) ? old : ""
         };
         if (dialog.ShowDialog() != true)
             return;
-        ExcelFile = dialog.FileName;
-        _logger.LogInformation("Chọn file Excel {Path}", ExcelFile);
-        await ApplySettingsAsync();
+        ImportPreview preview;
+        try
+        {
+            preview = await Task.Run(() => DataMaintenance.PreviewImport(dialog.FileName));
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            MessageBox.Show($"Không đọc được file: {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var data = preview.Result.Data;
+        var check = preview.Check;
+        var text = $"File {Path.GetFileName(dialog.FileName)}: {data.Lines.Count} chuyền, {data.Products.Count} mã sản phẩm, " +
+                   $"{data.Entries.Count} dòng nhập liệu, {data.Defects.Count} phiếu hàng lỗi.\n\n" +
+                   (!check.HasExcelValues ? "File chưa được lưu bằng Excel nên không có số để so.\n\n"
+                    : check.Mismatches == 0 ? $"Đã so {check.Rows.Count} dòng: số app tính khớp với file Excel.\n\n"
+                    : $"CÓ {check.Mismatches} CHỖ KHÁC NHAU giữa file và số app tính, ví dụ:\n" +
+                      string.Join("\n", check.Rows.Where(r => !r.Matches).Take(5).Select(r =>
+                          $"  {r.Date:dd/MM} {r.Line}: Excel {r.ExcelActual:N0}/{r.ExcelTarget:N0}, app {r.AppActual:N0}/{r.AppTarget:N0}")
+                          .Concat(check.DisplayDifferences.Take(5).Select(d => "  " + d))) + "\n\n") +
+                   (preview.Result.Warnings.Count > 0 ? "Lưu ý:\n" + string.Join("\n", preview.Result.Warnings.Take(8).Select(w => "  " + w)) + "\n\n" : "") +
+                   "Thay toàn bộ dữ liệu trên máy này bằng dữ liệu trong file? (Dữ liệu hiện có được sao lưu trước. Ảnh và file nội dung phụ cạnh file Excel được chép sang.)";
+        if (MessageBox.Show(text, AppTitle, MessageBoxButton.YesNo, check.Mismatches == 0 ? MessageBoxImage.Question : MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            await Task.Run(() => _maintenance.ApplyImport(preview, "App trên máy chủ"));
+            AddLog($"Đã nhập dữ liệu từ {dialog.FileName}");
+            MessageBox.Show("Đã nhập dữ liệu. TV đã cập nhật.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show($"Không nhập được: {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void ChooseExportFolder()
+    {
+        var dialog = new OpenFolderDialog { Title = "Chọn thư mục lưu file Excel tự xuất" };
+        if (dialog.ShowDialog() == true)
+            ExportFolder = dialog.FolderName;
+    }
+
+    private void RefreshMaintenance()
+    {
+        var parts = new List<string>();
+        if (_maintenance.LastBackup is { } backup)
+            parts.Add($"Sao lưu: {Path.GetFileName(backup)}");
+        if (_maintenance.LastExport is { } export)
+            parts.Add($"Tự xuất Excel: {Path.GetFileName(export)}");
+        if (_maintenance.LastError is { } error)
+            parts.Add($"Lỗi sao lưu/xuất Excel: {error}");
+        MaintenanceText = parts.Count == 0 ? null : string.Join("   ·   ", parts);
+        if (_maintenance.LastError is { } e)
+            AddLog($"Lỗi sao lưu/xuất Excel: {e}");
     }
 
     [RelayCommand]
@@ -270,12 +431,8 @@ public sealed partial class MainViewModel : ObservableObject
             MessageBox.Show($"Không lưu được cấu hình: {ex.Message}", AppTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        if (!string.IsNullOrWhiteSpace(config.ExcelFile) && config.AutoReload)
-            _watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
-        else
-            _watcher.Stop();
-
         await _snapshots.ReloadAsync();
+        _watcher.Watch(config.WatchedFiles(), config.DebounceMilliseconds);
         await _server.ApplyAsync(config);
         StartPreview();
         if (_display.IsRunning)
@@ -382,8 +539,7 @@ public sealed partial class MainViewModel : ObservableObject
         EntryStatusText = !_server.IsRunning ? "Máy chủ đang tắt nên chưa nhập liệu được."
             : !EntryEnabled ? "Đang tắt nhập liệu."
             : EntryUsers.Count == 0 ? "Chưa có ai được nhập liệu. Thêm người và mã PIN bên dưới."
-            : status.Pending > 0 ? $"Đang chờ ghi {status.Pending} phiếu vào Excel"
-            : status.LastWriteAt is { } at ? $"Sẵn sàng · ghi vào Excel lần cuối lúc {at.LocalDateTime:HH:mm dd/MM}"
+            : status.LastWriteAt is { } at ? $"Sẵn sàng · lưu phiếu gần nhất lúc {at.LocalDateTime:HH:mm dd/MM}"
             : "Sẵn sàng";
 
         EntryAddresses.Clear();
@@ -398,7 +554,7 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 EntryJobStatus.Done => "đã ghi",
                 EntryJobStatus.Failed => "lỗi: " + job.Message,
-                EntryJobStatus.Waiting => "đang chờ Excel",
+                EntryJobStatus.Waiting => "đang chờ",
                 _ => "đang ghi"
             };
             EntryJobs.Add($"{job.CreatedAt.LocalDateTime:HH:mm}  {job.User} · {job.Line} · {job.Summary} · {state}");
@@ -508,10 +664,9 @@ public sealed partial class MainViewModel : ObservableObject
         LastLoadedText = _snapshots.LastLoadedAt is { } at ? at.LocalDateTime.ToString("HH:mm:ss dd/MM/yyyy") : null;
         OnPropertyChanged(nameof(IsHealthy));
 
-        if (_snapshots.Current is { } current && current.SheetName.Length > 0)
-            DataInfoText = current.HasMultipleLines
-                ? $"{current.Lines.Count} chuyền ({current.SheetName}) · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm"
-                : $"Sheet \"{current.SheetName}\" · ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm";
+        DataInfoText = _snapshots.Current is { } current
+            ? $"{current.Lines.Count} chuyền · TV đang hiện ngày {current.Summary.Date:dd/MM/yyyy} · {current.Summary.ProductCount} sản phẩm"
+            : Status == LoadStatus.NoData ? "Chưa có dữ liệu. Bấm \"Nhập từ file Excel cũ…\" để lấy số liệu từ file đang dùng ở bản 3.x, hoặc khai báo chuyền, sản phẩm, ca ở trang quản lý." : null;
         if (Status == LoadStatus.Updated && _snapshots.Current is { } snapshot)
         {
             Warnings.Clear();
