@@ -8,7 +8,9 @@ public enum LoadStatus
     FileLocked,
     InvalidData,
     FileNotFound,
-    NoFileSelected
+    NoFileSelected,
+    /// <summary>Bản 4.x: cơ sở dữ liệu chưa có chuyền nào (chưa nhập dữ liệu cũ, chưa khai báo danh mục).</summary>
+    NoData
 }
 
 public static class LoadStatusText
@@ -22,6 +24,7 @@ public static class LoadStatusText
         LoadStatus.InvalidData => "Dữ liệu không hợp lệ",
         LoadStatus.FileNotFound => "Không tìm thấy file",
         LoadStatus.NoFileSelected => "Chưa chọn file",
+        LoadStatus.NoData => "Chưa có dữ liệu",
         _ => status.ToString()
     };
 }

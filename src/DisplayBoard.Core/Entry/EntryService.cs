@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Channels;
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Excel;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
@@ -10,16 +10,6 @@ using DisplayBoard.Core.Processing;
 using Microsoft.Extensions.Logging;
 
 namespace DisplayBoard.Core.Entry;
-
-/// <summary>Ghi file Excel nhập liệu. Bản chạy thật điều khiển chính Excel trên máy chủ để công thức tự tính lại.</summary>
-public interface IWorkbookHost
-{
-    /// <summary>Null = ghi được. Khác null = lý do không ghi được (vd máy chưa cài Excel).</summary>
-    string? UnavailableReason { get; }
-
-    /// <summary>Mở file, chạy <paramref name="action"/>, lưu. Ném <see cref="WorkbookBusyException"/> khi Excel đang bận.</summary>
-    Task RunAsync(string path, Action<IEntryWorkbook> action, CancellationToken ct = default);
-}
 
 public enum EntryJobStatus
 {
@@ -46,10 +36,11 @@ public sealed record EntryQueueStatus(int Pending, DateTimeOffset? LastWriteAt, 
 public sealed record EntryPhoto(byte[] Content, string FileName);
 
 /// <summary>
-/// Nhập liệu qua trình duyệt: kiểm tra số liệu, xếp hàng các lần ghi và ghi lần lượt vào file Excel.
-/// Excel bận (có người đang sửa ô) thì phiếu chờ và tự ghi lại; người nhập xem trạng thái ở tab "Đã gửi".
+/// Nhập liệu qua trình duyệt (trang /nhap): kiểm tra số liệu rồi ghi thẳng vào SQLite. Bản 4.x không còn hàng đợi chờ Excel:
+/// mỗi lần gửi ghi xong ngay (vài phần nghìn giây). Lịch sử gửi vẫn giữ để người nhập xem ở tab "Đã gửi".
+/// Tổ trưởng chỉ nhập cho ngày hôm nay; sửa ngày cũ do quản lý làm ở trang /quan-ly.
 /// </summary>
-public sealed class EntryService : IDisposable
+public sealed class EntryService
 {
     public const int MaxPhotos = 4;
     public const int MaxPhotoBytes = 8 * 1024 * 1024;
@@ -58,41 +49,39 @@ public sealed class EntryService : IDisposable
     private const int HistoryLimit = 300;
 
     private readonly IConfigurationService _config;
-    private readonly IWorkbookHost _host;
+    private readonly ProductionDatabase _database;
     private readonly TimeProvider _time;
     private readonly ILogger<EntryService> _logger;
-    private readonly Channel<Job> _queue = Channel.CreateUnbounded<Job>(new UnboundedChannelOptions { SingleReader = true });
-    private readonly ConcurrentQueue<Job> _history = new();
-    private readonly SemaphoreSlim _readGate = new(1, 1);
-    private readonly CancellationTokenSource _stop = new();
-    private readonly Task _worker;
-    private (string Path, DateTime Written, long Length, ClosedXmlEntryWorkbook Workbook)? _cache;
+    private readonly ConcurrentQueue<EntryJobInfo> _history = new();
     private DateTimeOffset? _lastWriteAt;
     private string? _lastError;
-    private string? _waitingReason;
 
-    public EntryService(IConfigurationService config, IWorkbookHost host, TimeProvider time, ILogger<EntryService> logger)
+    public EntryService(IConfigurationService config, ProductionDatabase database, TimeProvider time, ILogger<EntryService> logger)
     {
         _config = config;
-        _host = host;
+        _database = database;
         _time = time;
         _logger = logger;
-        _worker = Task.Run(() => ProcessAsync(_stop.Token));
     }
-
-    /// <summary>Excel bận thì thử lại sau khoảng này.</summary>
-    public TimeSpan RetryInterval { get; init; } = TimeSpan.FromSeconds(3);
-
-    /// <summary>Chờ Excel quá lâu thì báo lỗi để người nhập biết mà nhập lại.</summary>
-    public TimeSpan MaxWait { get; init; } = TimeSpan.FromMinutes(15);
 
     public event EventHandler? Changed;
 
-    public EntryQueueStatus Status => new(
-        _history.Count(j => j.Status is EntryJobStatus.Pending or EntryJobStatus.Waiting), _lastWriteAt, _lastError, _waitingReason);
+    public EntryQueueStatus Status => new(0, _lastWriteAt, _lastError, null);
 
-    public string? UnavailableReason =>
-        string.IsNullOrWhiteSpace(_config.Current.ExcelFile) ? "Máy chủ chưa chọn file Excel." : _host.UnavailableReason;
+    public string? UnavailableReason
+    {
+        get
+        {
+            try
+            {
+                return _database.Store.Load().Lines.Count == 0 ? "Máy chủ chưa có danh sách chuyền." : null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ex.Message;
+            }
+        }
+    }
 
     // ---------- Đăng nhập ----------
 
@@ -108,31 +97,60 @@ public sealed class EntryService : IDisposable
 
     // ---------- Đọc ----------
 
-    public async Task<EntryContext> GetContextAsync(EntryUser user, string? line, CancellationToken ct = default)
+    public Task<EntryContext> GetContextAsync(EntryUser user, string? line, CancellationToken ct = default)
     {
-        var now = _time.GetLocalNow();
-        var workbook = await OpenForReadAsync(ct).ConfigureAwait(false);
-        await _readGate.WaitAsync(ct).ConfigureAwait(false);
-        try
+        var now = _time.GetLocalNow().DateTime;
+        var data = Data();
+        return Task.FromResult(BuildContext(data, DateOnly.FromDateTime(now), TimeOnly.FromDateTime(now), user.Lines, line));
+    }
+
+    public static EntryContext BuildContext(ProductionData data, DateOnly date, TimeOnly now, IReadOnlyCollection<string>? allowedLines, string? line)
+    {
+        var shifts = data.Shifts.Where(s => s.Active).Select(ToShiftInfo).ToList();
+        var lines = data.Lines.Where(l => l.Active && Allowed(allowedLines, l.Name)).ToList();
+        var selected = line is null ? null : lines.FirstOrDefault(l => ProductionData.Same(l.Name, line) || ProductionData.Same(l.Code, line));
+        return new EntryContext(
+            date,
+            lines.Select(l => l.Name).ToList(),
+            data.Products.Where(p => p.Active).Select(p => new ProductOption(p.Code, p.Name)).ToList(),
+            shifts,
+            data.DefectTypes.Select(t => t.Name).ToList(),
+            selected is null ? null : ReadLineDay(data, date, now, selected));
+    }
+
+    public static LineDay ReadLineDay(ProductionData data, DateOnly date, TimeOnly now, LineDef line)
+    {
+        var entry = DisplayCalculator.Entry(data, date, line.Code);
+        DayPlan? plan = entry is null ? null : Plan(entry);
+        DateOnly? copiedFrom = null;
+        if (entry is null && PreviousPlan(data, date, line.Code) is { } previous)
+            (plan, copiedFrom) = (previous.Plan, previous.Date);
+
+        var shift = plan is null ? null : data.Shifts.FirstOrDefault(s => ProductionData.Same(s.Code, plan.ShiftCode));
+        var slots = shift?.Slots() ?? [];
+        var slotCount = slots.Count > 0 ? slots.Count : DayEntry.MaxHours;
+        var hours = new List<HourValue>();
+        for (var n = 1; n <= slotCount; n++)
         {
-            return ProductionWorkbook.ReadContext(workbook, DateOnly.FromDateTime(now.DateTime), TimeOnly.FromDateTime(now.DateTime), user.Lines, line);
+            var slot = slots.ElementAtOrDefault(n - 1);
+            decimal? target = plan is null ? null : Math.Round(plan.HourlyTarget * (decimal)(slot?.Hours ?? 1), 0, MidpointRounding.AwayFromZero);
+            hours.Add(new HourValue(n, slot?.Start, slot?.End, entry?.Hours.ElementAtOrDefault(n - 1), target));
         }
-        finally
-        {
-            _readGate.Release();
-        }
+        decimal? dailyTarget = plan is null || shift is null ? null : DisplayCalculator.Round(plan.HourlyTarget * shift.Hours);
+        return new LineDay(line.Name, date, entry is not null, plan, copiedFrom, hours, hours.Sum(h => h.Quantity ?? 0), dailyTarget,
+            ProductionWorkbook.SuggestHour(hours, now));
     }
 
     public IReadOnlyList<EntryJobInfo> Recent(EntryUser? user, int max = 30) =>
-        _history.Reverse().Where(j => user is null || j.User == user.Name).Take(max).Select(j => j.Info()).ToList();
+        _history.Reverse().Where(j => user is null || j.User == user.Name).Take(max).ToList();
 
-    public EntryJobInfo? Find(Guid id) => _history.FirstOrDefault(j => j.Id == id)?.Info();
+    public EntryJobInfo? Find(Guid id) => _history.FirstOrDefault(j => j.Id == id);
 
     // ---------- Gửi ----------
 
     public async Task<EntryJobInfo> SubmitHourlyAsync(EntryUser user, string line, int hour, decimal? quantity, CancellationToken ct = default)
     {
-        var context = await CheckAsync(user, line, ct).ConfigureAwait(false);
+        var (context, def) = await CheckAsync(user, line, ct).ConfigureAwait(false);
         var day = context.Line!;
         if (day.Plan is null)
             throw new EntryException($"{day.Line} chưa có kế hoạch hôm nay. Hãy chọn mã sản phẩm, ca và mục tiêu mỗi giờ trước.");
@@ -144,41 +162,39 @@ public sealed class EntryService : IDisposable
         if (quantity > limit)
             throw new EntryException($"{quantity:N0} lớn hơn 3 lần mục tiêu giờ này ({slot.Target:N0}). Kiểm tra lại số.");
 
-        var date = context.Date;
         var summary = quantity is null ? $"Xoá sản lượng giờ {hour}" : $"Sản lượng giờ {hour} · {quantity:N0}";
-        return Enqueue(user, day.Line, "hourly", summary, wb => ProductionWorkbook.WriteHour(wb, date, day.Line, hour, quantity));
+        return Run(user, day.Line, "hourly", summary, store =>
+        {
+            EnsureRow(store, context.Date, def, day, user);
+            store.SetHour(context.Date, def.Code, hour, quantity, user.Name);
+        });
     }
 
     public async Task<EntryJobInfo> SubmitPlanAsync(EntryUser user, string line, DayPlan plan, CancellationToken ct = default)
     {
-        var context = await CheckAsync(user, line, ct).ConfigureAwait(false);
-        var product = context.Products.Count == 0 ? plan.ProductCode.Trim()
-            : context.Products.FirstOrDefault(p => ProductionWorkbook.Same(p.Code, plan.ProductCode))?.Code
-              ?? throw new EntryException($"Mã sản phẩm \"{plan.ProductCode}\" không có trong DANH_SACH_SAN_PHAM.");
-        var shift = context.Shifts.FirstOrDefault(s => ProductionWorkbook.Same(s.Code, plan.ShiftCode))?.Code
-            ?? throw new EntryException($"Mã ca \"{plan.ShiftCode}\" không có trong CAU_HINH_CA.");
+        var (context, def) = await CheckAsync(user, line, ct).ConfigureAwait(false);
+        var product = context.Products.FirstOrDefault(p => ProductionData.Same(p.Code, plan.ProductCode))?.Code
+            ?? throw new EntryException($"Mã sản phẩm \"{plan.ProductCode}\" không có trong danh sách sản phẩm.");
+        var shift = context.Shifts.FirstOrDefault(s => ProductionData.Same(s.Code, plan.ShiftCode))?.Code
+            ?? throw new EntryException($"Mã ca \"{plan.ShiftCode}\" không có trong danh sách ca.");
         if (plan.HourlyTarget is <= 0 or > MaxQuantity)
             throw new EntryException("Mục tiêu mỗi giờ phải lớn hơn 0.");
-        if (product.Length == 0)
-            throw new EntryException("Chưa chọn mã sản phẩm.");
 
-        var date = context.Date;
         var day = context.Line!;
-        var fixedPlan = new DayPlan(product, shift, plan.HourlyTarget);
-        return Enqueue(user, day.Line, "plan", $"Kế hoạch · {product} · ca {shift} · {plan.HourlyTarget:N0}/giờ",
-            wb => ProductionWorkbook.EnsureDayRow(wb, date, day.Line, fixedPlan));
+        return Run(user, day.Line, "plan", $"Kế hoạch · {product} · ca {shift} · {plan.HourlyTarget:N0}/giờ",
+            store => store.SavePlan(context.Date, def.Code, product, shift, plan.HourlyTarget, user.Name));
     }
 
     public async Task<EntryJobInfo> SubmitDefectAsync(
         EntryUser user, string line, string defectType, decimal quantity, string? note, IReadOnlyList<EntryPhoto> photos, CancellationToken ct = default)
     {
-        var context = await CheckAsync(user, line, ct).ConfigureAwait(false);
+        var (context, def) = await CheckAsync(user, line, ct).ConfigureAwait(false);
         var day = context.Line!;
         if (!day.HasRow && day.Plan is null)
             throw new EntryException($"{day.Line} chưa có kế hoạch hôm nay. Hãy nhập kế hoạch ở tab Sản lượng trước.");
         var type = context.DefectTypes.Count == 0 ? defectType.Trim()
-            : context.DefectTypes.FirstOrDefault(t => ProductionWorkbook.Same(t, defectType))
-              ?? throw new EntryException($"Loại lỗi \"{defectType}\" không có trong DANH_SACH_LOAI_LOI.");
+            : context.DefectTypes.FirstOrDefault(t => ProductionData.Same(t, defectType))
+              ?? throw new EntryException($"Loại lỗi \"{defectType}\" không có trong danh sách loại lỗi.");
         if (type.Length == 0)
             throw new EntryException("Chưa chọn loại lỗi.");
         if (quantity is <= 0 or > MaxQuantity)
@@ -190,31 +206,74 @@ public sealed class EntryService : IDisposable
 
         var now = _time.GetLocalNow().DateTime;
         var names = await SavePhotosAsync(day.Line, now, photos, ct).ConfigureAwait(false);
-        var record = new DefectRecord(context.Date, new TimeOnly(now.Hour, now.Minute), day.Line, type, quantity,
-            names.Count == 0 ? null : string.Join("; ", names), note);
+        var row = new DefectRow
+        {
+            Date = context.Date,
+            Time = new TimeOnly(now.Hour, now.Minute),
+            LineCode = def.Code,
+            DefectType = type,
+            Quantity = quantity,
+            ImageFiles = names.Count == 0 ? null : string.Join("; ", names),
+            Note = note,
+        };
         var summary = $"Hàng lỗi · {type} · {quantity:N0} cái" + (names.Count > 0 ? $" · {names.Count} ảnh" : "");
-        return Enqueue(user, day.Line, "defect", summary, wb => ProductionWorkbook.AddDefect(wb, record));
+        return Run(user, day.Line, "defect", summary, store =>
+        {
+            EnsureRow(store, context.Date, def, day, user);
+            store.AddDefect(row, user.Name);
+        });
     }
 
-    private async Task<EntryContext> CheckAsync(EntryUser user, string line, CancellationToken ct)
+    /// <summary>Chưa có dòng hôm nay nhưng có kế hoạch của ngày làm trước: tạo dòng với kế hoạch đó (như bản Excel).</summary>
+    private static void EnsureRow(ProductionStore store, DateOnly date, LineDef line, LineDay day, EntryUser user)
+    {
+        if (!day.HasRow && day.Plan is { } plan)
+            store.SavePlan(date, line.Code, plan.ProductCode, plan.ShiftCode, plan.HourlyTarget, user.Name);
+    }
+
+    private async Task<(EntryContext Context, LineDef Line)> CheckAsync(EntryUser user, string line, CancellationToken ct)
     {
         if (UnavailableReason is { } reason)
             throw new EntryException(reason);
-        if (!ProductionWorkbook.Allowed(user.Lines, line))
+        if (!Allowed(user.Lines, line))
             throw new EntryException($"{user.Name} không được nhập cho {line}.");
         var context = await GetContextAsync(user, line, ct).ConfigureAwait(false);
         if (context.Line is null)
-            throw new EntryException($"Không có \"{line}\" trong DANH_SACH_CHUYEN.");
-        return context;
+            throw new EntryException($"Không có \"{line}\" trong danh sách chuyền.");
+        return (context, Data().FindLine(context.Line.Line)!);
     }
 
-    /// <summary>Lưu ảnh vào images\hang_loi cạnh file Excel. Chỉ nhận JPEG/PNG (kiểm tra nội dung, không tin đuôi file).</summary>
+    private EntryJobInfo Run(EntryUser user, string line, string kind, string summary, Action<ProductionStore> write)
+    {
+        var now = _time.GetLocalNow();
+        EntryJobInfo job;
+        try
+        {
+            write(_database.Store);
+            job = new EntryJobInfo(Guid.NewGuid(), user.Name, line, kind, summary, now, EntryJobStatus.Done, null, now);
+            _lastWriteAt = now;
+            _lastError = null;
+            _logger.LogInformation("Nhập liệu: {User} ghi {Summary} ({Line})", user.Name, summary, line);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _lastError = ex.Message;
+            _logger.LogWarning("Không ghi được {Summary} ({Line}): {Message}", summary, line, ex.Message);
+            throw new EntryException(ex.Message);
+        }
+        _history.Enqueue(job);
+        while (_history.Count > HistoryLimit)
+            _history.TryDequeue(out _);
+        Changed?.Invoke(this, EventArgs.Empty);
+        return job;
+    }
+
+    /// <summary>Lưu ảnh vào images\hang_loi trong thư mục dữ liệu. Chỉ nhận JPEG/PNG (kiểm tra nội dung, không tin đuôi file).</summary>
     private async Task<IReadOnlyList<string>> SavePhotosAsync(string line, DateTime now, IReadOnlyList<EntryPhoto> photos, CancellationToken ct)
     {
         if (photos.Count == 0)
             return [];
-        var folder = _config.Current.ResolveImagesFolder() ?? throw new EntryException("Máy chủ chưa chọn file Excel.");
-        folder = Path.Combine(folder, ImageResolver.DefectFolder);
+        var folder = Path.Combine(_config.Current.ResolveImagesFolder()!, ImageResolver.DefectFolder);
         Directory.CreateDirectory(folder);
         var slug = SheetTable.NormalizeHeader(line);
         var names = new List<string>();
@@ -238,157 +297,30 @@ public sealed class EntryService : IDisposable
         : bytes.Length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 ? ".png"
         : null;
 
-    // ---------- Hàng đợi ----------
-
-    private EntryJobInfo Enqueue(EntryUser user, string line, string kind, string summary, Action<IEntryWorkbook> apply)
-    {
-        var job = new Job(Guid.NewGuid(), user.Name, line, kind, summary, _time.GetLocalNow(), apply);
-        _history.Enqueue(job);
-        while (_history.Count > HistoryLimit && _history.TryPeek(out var old) && old.Status is EntryJobStatus.Done or EntryJobStatus.Failed)
-            _history.TryDequeue(out _);
-        _queue.Writer.TryWrite(job);
-        _logger.LogInformation("Nhập liệu: {User} gửi {Summary} ({Line})", user.Name, summary, line);
-        Changed?.Invoke(this, EventArgs.Empty);
-        return job.Info();
-    }
-
-    private async Task ProcessAsync(CancellationToken ct)
+    private ProductionData Data()
     {
         try
         {
-            await foreach (var job in _queue.Reader.ReadAllAsync(ct).ConfigureAwait(false))
-                await RunJobAsync(job, ct).ConfigureAwait(false);
+            return _database.Store.Load();
         }
-        catch (OperationCanceledException)
+        catch (InvalidOperationException ex)
         {
+            throw new EntryException(ex.Message);
         }
     }
 
-    /// <summary>Ghi lần lượt từng phiếu. Phiếu đang chờ Excel thì các phiếu sau chờ theo, để giữ đúng thứ tự nhập.</summary>
-    private async Task RunJobAsync(Job job, CancellationToken ct)
-    {
-        while (true)
-        {
-            var path = _config.Current.ExcelFile;
-            try
-            {
-                if (string.IsNullOrWhiteSpace(path))
-                    throw new EntryException("Máy chủ chưa chọn file Excel.");
-                await _host.RunAsync(path, job.Apply, ct).ConfigureAwait(false);
-                job.Set(EntryJobStatus.Done, null, _time.GetLocalNow());
-                _lastWriteAt = _time.GetLocalNow();
-                _lastError = null;
-                _waitingReason = null;
-                _logger.LogInformation("Đã ghi vào Excel: {Summary} ({Line}, {User})", job.Summary, job.Line, job.User);
-            }
-            catch (WorkbookBusyException ex)
-            {
-                if (_time.GetLocalNow() - job.CreatedAt > MaxWait)
-                {
-                    Fail(job, $"Chờ Excel quá {MaxWait.TotalMinutes:0} phút nên chưa ghi được. {ex.Message} Hãy nhập lại.");
-                }
-                else
-                {
-                    _waitingReason = ex.Message;
-                    if (job.Status != EntryJobStatus.Waiting)
-                    {
-                        job.Set(EntryJobStatus.Waiting, ex.Message, _time.GetLocalNow());
-                        _logger.LogInformation("Excel đang bận, chờ để ghi {Summary}: {Reason}", job.Summary, ex.Message);
-                        Changed?.Invoke(this, EventArgs.Empty);
-                    }
-                    await Task.Delay(RetryInterval, _time, ct).ConfigureAwait(false);
-                    continue;
-                }
-            }
-            catch (EntryException ex)
-            {
-                Fail(job, ex.Message);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi ghi vào Excel: {Summary}", job.Summary);
-                Fail(job, "Lỗi khi ghi vào Excel: " + ex.Message);
-            }
-            Changed?.Invoke(this, EventArgs.Empty);
-            return;
-        }
-    }
+    public static bool Allowed(IReadOnlyCollection<string>? allowedLines, string line) =>
+        allowedLines is null || allowedLines.Count == 0 || allowedLines.Any(a => ProductionData.Same(a, line));
 
-    private void Fail(Job job, string message)
-    {
-        job.Set(EntryJobStatus.Failed, message, _time.GetLocalNow());
-        _lastError = message;
-        _waitingReason = null;
-        _logger.LogWarning("Không ghi được {Summary} ({Line}): {Message}", job.Summary, job.Line, message);
-    }
+    private static ShiftInfo ToShiftInfo(ShiftDef s) => new(s.Code, s.Name, s.Hours, s.Slots());
 
-    /// <summary>Đọc file đã lưu (Excel đang mở vẫn đọc được). File chưa đổi thì dùng lại bản đã đọc.</summary>
-    private async Task<ClosedXmlEntryWorkbook> OpenForReadAsync(CancellationToken ct)
-    {
-        var path = _config.Current.ExcelFile;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            throw new EntryException("Máy chủ chưa chọn file Excel hoặc không tìm thấy file.");
-        var info = new FileInfo(path);
-        var cache = _cache;
-        if (cache is { } c && c.Path == path && c.Written == info.LastWriteTimeUtc && c.Length == info.Length)
-            return c.Workbook;
-        try
-        {
-            var workbook = await ClosedXmlEntryWorkbook.OpenReadAsync(path, ct).ConfigureAwait(false);
-            _cache = (path, info.LastWriteTimeUtc, info.Length, workbook);
-            return workbook;
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
-        {
-            if (cache is { } old && old.Path == path)
-                return old.Workbook;
-            throw new EntryException("Không đọc được file Excel: " + ex.Message);
-        }
-    }
+    private static DayPlan? Plan(DayEntry e) =>
+        e.ProductCode is null || e.ShiftCode is null || e.HourlyTarget is null ? null : new DayPlan(e.ProductCode, e.ShiftCode, e.HourlyTarget.Value);
 
-    public void Dispose()
-    {
-        _stop.Cancel();
-        _queue.Writer.TryComplete();
-        try
-        {
-            _worker.Wait(TimeSpan.FromSeconds(2));
-        }
-        catch (AggregateException)
-        {
-        }
-        _stop.Dispose();
-        _readGate.Dispose();
-    }
-
-    private sealed class Job(Guid id, string user, string line, string kind, string summary, DateTimeOffset createdAt, Action<IEntryWorkbook> apply)
-    {
-        private readonly Lock _lock = new();
-        private string? _message;
-        private DateTimeOffset _updatedAt = createdAt;
-
-        public Guid Id { get; } = id;
-        public string User { get; } = user;
-        public string Line { get; } = line;
-        public string Summary { get; } = summary;
-        public DateTimeOffset CreatedAt { get; } = createdAt;
-        public Action<IEntryWorkbook> Apply { get; } = apply;
-        public EntryJobStatus Status { get; private set; } = EntryJobStatus.Pending;
-
-        public void Set(EntryJobStatus status, string? message, DateTimeOffset at)
-        {
-            lock (_lock)
-                (Status, _message, _updatedAt) = (status, message, at);
-        }
-
-        public EntryJobInfo Info()
-        {
-            lock (_lock)
-                return new EntryJobInfo(Id, User, Line, kind, Summary, CreatedAt, Status, _message, _updatedAt);
-        }
-    }
+    /// <summary>Kế hoạch đủ (mã sản phẩm, ca, mục tiêu) của ngày gần nhất trước <paramref name="date"/>.</summary>
+    private static (DayPlan Plan, DateOnly Date)? PreviousPlan(ProductionData data, DateOnly date, string lineCode) =>
+        data.Entries.Where(e => e.Date < date && ProductionData.Same(e.LineCode, lineCode))
+            .OrderByDescending(e => e.Date)
+            .Select(e => Plan(e) is { } p ? (p, e.Date) : ((DayPlan, DateOnly)?)null)
+            .FirstOrDefault(p => p is not null);
 }

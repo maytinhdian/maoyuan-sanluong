@@ -1,126 +1,91 @@
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Excel;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
 using DisplayBoard.Core.Processing;
 using DisplayBoard.Core.Services;
+using DisplayBoard.Tests.Data;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DisplayBoard.Tests;
 
-public class SnapshotServiceTests
+public sealed class SnapshotServiceTests : IDisposable
 {
-    private sealed class FakeConfig(string? path) : IConfigurationService
+    private readonly string _dir = Directory.CreateTempSubdirectory("snapshot-").FullName;
+    private readonly ProductionDatabase _database;
+    private readonly SnapshotService _service;
+
+    private sealed class FakeConfig(string folder) : IConfigurationService
     {
-        public DisplayConfiguration Current { get; } = new() { ExcelFile = path };
+        public DisplayConfiguration Current { get; } = new() { DataFolder = folder };
         public DisplayConfiguration Load() => Current;
         public void Save(DisplayConfiguration configuration) { }
     }
 
-    private sealed class FakeReader(Queue<Func<DisplaySheet>> results) : IExcelDataReader
+    public SnapshotServiceTests()
     {
-        public int Calls { get; private set; }
-        public Task<DisplaySheet> ReadDisplayAsync(string filePath, string? sheetName, CancellationToken ct)
+        var config = new FakeConfig(_dir);
+        _database = new ProductionDatabase(config, TimeProvider.System, NullLogger<ProductionDatabase>.Instance);
+        _service = new SnapshotService(_database, new ExcelDataReader(), new SnapshotBuilder(), config, TimeProvider.System,
+            NullLogger<SnapshotService>.Instance) { ChangeDelay = TimeSpan.FromMilliseconds(20) };
+    }
+
+    [Fact]
+    public async Task Empty_database_reports_no_data()
+    {
+        await _service.ReloadAsync();
+
+        Assert.Equal(LoadStatus.NoData, _service.Status);
+        Assert.Null(_service.Current);
+    }
+
+    [Fact]
+    public async Task Snapshot_matches_calculator_and_uses_product_names()
+    {
+        var data = SampleProduction.Create();
+        data = data with { Products = data.Products.Select(p => p with { Name = $"Tên {p.Code}" }).ToList() };
+        _database.Store.ReplaceAll(data, "test");
+
+        await _service.ReloadAsync();
+
+        var sheet = DisplayCalculator.Compute(data);
+        Assert.Equal(LoadStatus.Updated, _service.Status);
+        Assert.Equal(sheet.Total!.DailyActual ?? 0, _service.Current!.Summary.DailyActual);
+        Assert.Equal(sheet.Lines.Count, _service.Current.Products.Count);
+        var first = _service.Current.Products[0];
+        Assert.Equal($"Tên {first.ProductCode}", first.DisplayName);
+    }
+
+    [Fact]
+    public async Task Write_to_database_refreshes_snapshot()
+    {
+        var data = SampleProduction.Create();
+        _database.Store.ReplaceAll(data, "test");
+        await _service.ReloadAsync();
+        var before = _service.Current!.Summary.DailyActual;
+        var updated = new TaskCompletionSource<DisplayDataSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // Lần ghi ReplaceAll ở trên cũng hẹn một lần tính lại: chờ đúng snapshot có số mới.
+        _service.SnapshotChanged += (_, s) =>
         {
-            Calls++;
-            return Task.FromResult(results.Dequeue()());
-        }
+            if (s.Summary.DailyActual != before)
+                updated.TrySetResult(s);
+        };
 
-        public Task<ContentData> ReadContentAsync(string filePath, CancellationToken ct) => Task.FromResult(ContentData.Empty);
-    }
+        var entry = DisplayCalculator.DisplayLines(data)
+            .Select(l => DisplayCalculator.Entry(data, SampleProduction.LastDay, l.Code))
+            .First(e => e is not null && e.HasHours)!;
+        var hour = entry.Hours.ToList().FindIndex(h => h is not null) + 1;
+        _database.Store.SetHour(SampleProduction.LastDay, entry.LineCode, hour, entry.Hours[hour - 1]! + 7, "Lan");
 
-    private static DisplaySheet Data(decimal qty) => new(
-        "HIEN_THI", DateOnly.FromDateTime(DateTime.Today),
-        [new LineRecord { RowNumber = 5, Line = "Chuyền 1", ProductCode = "A", DailyTarget = 100, DailyActual = qty }],
-        new LineRecord { RowNumber = 12, Line = "TỔNG CỘNG", DailyTarget = 100, DailyActual = qty },
-        []);
-
-    private static (SnapshotService Service, FakeReader Reader, string Path) Create(params Func<DisplaySheet>[] results)
-    {
-        var path = System.IO.Path.GetTempFileName();
-        var reader = new FakeReader(new Queue<Func<DisplaySheet>>(results));
-        var service = new SnapshotService(reader, new SnapshotBuilder(), new FakeConfig(path), TimeProvider.System, NullLogger<SnapshotService>.Instance);
-        return (service, reader, path);
-    }
-
-    [Fact]
-    public async Task Successful_reload_replaces_snapshot_and_notifies()
-    {
-        var (service, _, path) = Create(() => Data(10));
-        DisplayDataSnapshot? notified = null;
-        service.SnapshotChanged += (_, s) => notified = s;
-
-        await service.ReloadAsync();
-
-        Assert.Equal(LoadStatus.Updated, service.Status);
-        Assert.Same(service.Current, notified);
-        Assert.Equal(10m, service.Current!.Summary.DailyActual);
-        File.Delete(path);
-    }
-
-    [Fact]
-    public async Task Invalid_data_keeps_last_good_snapshot()
-    {
-        var (service, _, path) = Create(() => Data(10), () => throw new ExcelValidationException("thiếu cột"));
-        await service.ReloadAsync();
-        var good = service.Current;
-
-        await service.ReloadAsync();
-
-        Assert.Equal(LoadStatus.InvalidData, service.Status);
-        Assert.Equal("thiếu cột", service.LastError);
-        Assert.Same(good, service.Current);
-        File.Delete(path);
-    }
-
-    [Fact]
-    public async Task Locked_file_is_retried_then_succeeds()
-    {
-        var (service, reader, path) = Create(
-            () => throw new IOException("locked"),
-            () => throw new IOException("locked"),
-            () => Data(20));
-
-        await service.ReloadAsync();
-
-        Assert.Equal(3, reader.Calls);
-        Assert.Equal(LoadStatus.Updated, service.Status);
-        File.Delete(path);
-    }
-
-    [Fact]
-    public async Task Locked_file_gives_up_after_max_attempts_and_keeps_snapshot()
-    {
-        var results = new List<Func<DisplaySheet>> { () => Data(5) };
-        results.AddRange(Enumerable.Repeat<Func<DisplaySheet>>(() => throw new IOException("locked"), SnapshotService.MaxAttempts));
-        var (service, reader, path) = Create(results.ToArray());
-        await service.ReloadAsync();
-
-        await service.ReloadAsync();
-
-        Assert.Equal(1 + SnapshotService.MaxAttempts, reader.Calls);
-        Assert.Equal(LoadStatus.FileLocked, service.Status);
-        Assert.Equal(5m, service.Current!.Summary.DailyActual);
-        File.Delete(path);
-    }
-
-    [Fact]
-    public async Task Missing_file_reports_not_found_and_keeps_snapshot()
-    {
-        var (service, _, path) = Create(() => Data(5));
-        await service.ReloadAsync();
-        File.Delete(path);
-
-        await service.ReloadAsync();
-
-        Assert.Equal(LoadStatus.FileNotFound, service.Status);
-        Assert.NotNull(service.Current);
+        var snapshot = await updated.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(before + 7, snapshot.Summary.DailyActual);
     }
 
     [Fact]
     public async Task Real_reader_can_read_while_file_is_open_for_writing()
     {
-        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lock-{Guid.NewGuid():N}.xlsx");
-        File.Copy(System.IO.Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V18_mau.xlsx"), path);
+        var path = Path.Combine(_dir, "lock.xlsx");
+        File.Copy(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V18_mau.xlsx"), path);
 
         // Giống Excel: giữ file mở và cho phép người khác đọc.
         await using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
@@ -128,6 +93,13 @@ public class SnapshotServiceTests
             var sheet = await new ExcelDataReader().ReadDisplayAsync(path, null, CancellationToken.None);
             Assert.Equal(6, sheet.Lines.Count);
         }
-        File.Delete(path);
+    }
+
+    public void Dispose()
+    {
+        _service.Dispose();
+        _database.Dispose();
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(_dir, true); } catch (IOException) { }
     }
 }

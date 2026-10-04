@@ -4,6 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Mẫu V20 dùng khi xuất Excel (bản 4.x). Tạo lại bằng tools/excel/build_v20.py. -->
+    <EmbeddedResource Include="Data\Templates\Theo_doi_san_luong_V20.xlsx" LogicalName="DisplayBoard.Core.Data.Templates.Theo_doi_san_luong_V20.xlsx" />
   </ItemGroup>
 </Project>

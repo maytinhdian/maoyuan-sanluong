@@ -52,14 +52,43 @@ public sealed class EntryUser
     public string Name { get; set; } = "";
     public string Pin { get; set; } = "";
 
-    /// <summary>Chuyền được nhập, đúng tên trong DANH_SACH_CHUYEN. Trống = tất cả chuyền.</summary>
+    /// <summary>Chuyền được nhập, đúng tên trong danh sách chuyền. Trống = tất cả chuyền.</summary>
     public List<string> Lines { get; set; } = [];
+
+    /// <summary>Quản lý (bản 4.x): vào được trang /quan-ly, lập kế hoạch, sửa số của ngày cũ, xuất Excel.</summary>
+    public bool Manager { get; set; }
+}
+
+/// <summary>Tự xuất file Excel mẫu V20 mỗi ngày (bản 4.x).</summary>
+public sealed class ExcelExportSettings
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Giờ xuất trong ngày, dạng HH:mm.</summary>
+    public string Time { get; set; } = "22:00";
+
+    /// <summary>Thư mục lưu file. Null = thư mục XuatExcel trong thư mục dữ liệu.</summary>
+    public string? Folder { get; set; }
+
+    public TimeOnly ResolveTime() => TimeOnly.TryParse(Time, System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : new TimeOnly(22, 0);
 }
 
 /// <summary>Nội dung file display-config.json.</summary>
 public sealed class DisplayConfiguration
 {
+    /// <summary>
+    /// Thư mục dữ liệu bản 4.x: file sanluong.db, ảnh (images), nội dung phụ, bản sao lưu, file Excel xuất ra.
+    /// Null = thư mục mặc định <see cref="DefaultDataFolder"/>.
+    /// </summary>
+    public string? DataFolder { get; set; }
+
+    /// <summary>File Excel của bản 3.x. Bản 4.x không đọc file này nữa, chỉ gợi ý khi nhập dữ liệu cũ vào SQLite.</summary>
     public string? ExcelFile { get; set; }
+
+    public ExcelExportSettings Export { get; set; } = new();
+
+    /// <summary>Số bản sao lưu hằng ngày giữ lại.</summary>
+    public int BackupCount { get; set; } = 30;
 
     /// <summary>Tên hiện ở cửa sổ chính và khay hệ thống. Null = "Display Board".</summary>
     public string? AppName { get; set; }
@@ -105,29 +134,25 @@ public sealed class DisplayConfiguration
 
     public string ResolveAppName() => string.IsNullOrWhiteSpace(AppName) ? DefaultAppName : AppName.Trim();
 
-    public string? ResolveContentFile()
-    {
-        if (!string.IsNullOrWhiteSpace(ContentFile))
-            return ContentFile;
-        var dir = string.IsNullOrWhiteSpace(ExcelFile) ? null : Path.GetDirectoryName(ExcelFile);
-        return dir is null ? null : Path.Combine(dir, DefaultContentFileName);
-    }
+    /// <summary>C:\Users\Public\Documents\DisplayBoard: mọi tài khoản Windows trên máy đều đọc ghi được.</summary>
+    public static string DefaultDataFolder =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments), "DisplayBoard");
 
-    /// <summary>Các file cần theo dõi thay đổi: file sản lượng và file nội dung phụ.</summary>
-    public IReadOnlyList<string> WatchedFiles()
-    {
-        if (string.IsNullOrWhiteSpace(ExcelFile))
-            return [];
-        var content = ResolveContentFile();
-        return content is null ? [ExcelFile] : [ExcelFile, content];
-    }
+    public string ResolveDataFolder() => string.IsNullOrWhiteSpace(DataFolder) ? DefaultDataFolder : DataFolder;
 
-    /// <summary>Thư mục ảnh thực tế: cấu hình hoặc thư mục <c>images</c> cạnh file Excel.</summary>
-    public string? ResolveImagesFolder()
-    {
-        if (!string.IsNullOrWhiteSpace(ImagesFolder))
-            return ImagesFolder;
-        var dir = string.IsNullOrWhiteSpace(ExcelFile) ? null : Path.GetDirectoryName(ExcelFile);
-        return dir is null ? null : Path.Combine(dir, "images");
-    }
+    public string ResolveDatabaseFile() => Path.Combine(ResolveDataFolder(), "sanluong.db");
+
+    public string ResolveBackupFolder() => Path.Combine(ResolveDataFolder(), "SaoLuu");
+
+    public string ResolveExportFolder() => string.IsNullOrWhiteSpace(Export.Folder) ? Path.Combine(ResolveDataFolder(), "XuatExcel") : Export.Folder;
+
+    public string? ResolveContentFile() =>
+        string.IsNullOrWhiteSpace(ContentFile) ? Path.Combine(ResolveDataFolder(), DefaultContentFileName) : ContentFile;
+
+    /// <summary>File cần theo dõi thay đổi: file nội dung phụ (số liệu nằm trong SQLite, ghi xong là TV tự cập nhật).</summary>
+    public IReadOnlyList<string> WatchedFiles() => ResolveContentFile() is { } content ? [content] : [];
+
+    /// <summary>Thư mục ảnh thực tế: cấu hình hoặc thư mục <c>images</c> trong thư mục dữ liệu.</summary>
+    public string? ResolveImagesFolder() =>
+        string.IsNullOrWhiteSpace(ImagesFolder) ? Path.Combine(ResolveDataFolder(), "images") : ImagesFolder;
 }

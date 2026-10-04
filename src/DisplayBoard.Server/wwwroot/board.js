@@ -370,7 +370,7 @@
       return '<div class="tbl" style="flex:1"><div class="th" style="height:70px"><div style="width:360px;flex:none">Chuyền</div>' +
         '<div class="hours">' + heads + '</div><div class="r" style="width:200px">Tiến độ</div></div>' + rows + '</div>' +
         '<div class="t2" style="font-size:26px;margin:0 40px 28px">Màu ô: xanh ≥ mục tiêu giờ · vàng 90–99% · đỏ &lt; 90% · dấu chấm = chưa nhập. ' +
-        'Tiến độ = % so với mục tiêu tới giờ đã nhập (Excel tính).</div>';
+        'Tiến độ = % so với mục tiêu tới giờ đã nhập.</div>';
     }
   };
 
@@ -410,7 +410,7 @@
       '<div class="grow">Chuyền · Mã hàng</div><div class="col r" style="width:170px">Thực tế</div><div class="col r" style="width:170px">Số lỗi</div>' +
       '<div class="col" style="width:200px"></div><div class="col r" style="width:170px;padding-right:10px">Tỷ lệ lỗi</div></div>' + rows +
       (list.length > shown ? '<div class="t2" style="font-size:30px;margin:14px 0 0 20px">+' + (list.length - shown) + ' chuyền khác</div>' : '') + '</div></div></div>' +
-      '<div class="t2" style="font-size:26px;margin:16px 40px 28px">Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ lấy từ file Excel (sheet HIEN_THI).</div>';
+      '<div class="t2" style="font-size:26px;margin:16px 40px 28px">Màu tỷ lệ lỗi: xanh ≤ 1% · vàng 1–3% · đỏ &gt; 3%. Số lỗi và tỷ lệ tính từ các phiếu hàng lỗi.</div>';
   }
 
   // Thứ tự chuyền theo số lỗi (Excel đã cộng từ HANG_LOI), chưa nhập xếp cuối.
@@ -540,7 +540,7 @@
     if (!next.data) {
       stopRotation();
       stage.innerHTML = '';
-      showOverlay(next.status === 'NoFileSelected' ? 'Máy chủ chưa chọn file Excel<small>Mở Display Board trên máy chủ và chọn file dữ liệu.</small>'
+      showOverlay(next.status === 'NoData' ? 'Máy chủ chưa có dữ liệu<small>' + esc(next.error || 'Nhập dữ liệu ở trang quản lý trên máy chủ.') + '</small>'
         : 'Đang chờ dữ liệu từ máy chủ…' + (next.error ? '<small>' + esc(next.error) + '</small>' : ''));
       return;
     }
