@@ -20,7 +20,7 @@ namespace DisplayBoard.Server;
 
 /// <summary>
 /// Máy chủ HTTP + WebSocket trong mạng LAN. Đọc dữ liệu từ <see cref="ISnapshotService"/> (vẫn là sheet HIEN_THI, chỉ đọc)
-/// và đẩy sang các TV ngay khi Excel đổi. TV chỉ cần trình duyệt mở http://&lt;IP&gt;:&lt;cổng&gt;/tv/1.
+/// và đẩy sang các TV ngay khi dữ liệu đổi. TV chỉ cần trình duyệt mở http://&lt;IP&gt;:&lt;cổng&gt;/tv/1.
 /// </summary>
 public sealed class BoardServer : IBoardServer
 {

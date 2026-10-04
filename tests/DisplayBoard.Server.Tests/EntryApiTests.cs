@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Text.Json;
-using ClosedXML.Excel;
+using DisplayBoard.Core.Data;
 using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Interfaces;
 using DisplayBoard.Core.Models;
@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DisplayBoard.Server.Tests;
 
-/// <summary>Trang nhập liệu /nhap: đăng nhập PIN, ghi giờ, kế hoạch, hàng lỗi kèm ảnh, chờ khi Excel bận.</summary>
+/// <summary>Trang nhập liệu /nhap: đăng nhập PIN, ghi giờ, kế hoạch, hàng lỗi kèm ảnh vào SQLite (dữ liệu nhập từ file mẫu V20).</summary>
 public sealed class EntryApiTests : IAsyncLifetime
 {
     /// <summary>Giờ máy chủ cố định 30/09/2026 13:42 (ngày có dữ liệu trong file mẫu V20), hẹn giờ vẫn chạy thật.</summary>
@@ -39,40 +39,21 @@ public sealed class EntryApiTests : IAsyncLifetime
         public Task ReloadAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    /// <summary>Ghi bằng ClosedXML thay cho Excel. BusyTimes &gt; 0 thì giả lập Excel đang có người sửa ô.</summary>
-    private sealed class FileHost : IWorkbookHost
-    {
-        public int BusyTimes;
-        public string? UnavailableReason => null;
-
-        public Task RunAsync(string path, Action<IEntryWorkbook> action, CancellationToken ct = default)
-        {
-            if (Interlocked.Decrement(ref BusyTimes) >= 0)
-                throw new WorkbookBusyException("Có người đang sửa ô trong Excel.");
-            using var workbook = new XLWorkbook(path);
-            action(new ClosedXmlEntryWorkbook(workbook));
-            workbook.Save();
-            return Task.CompletedTask;
-        }
-    }
-
     private readonly string _folder = Path.Combine(Path.GetTempPath(), $"nhap-{Guid.NewGuid():N}");
     private readonly HttpClient _http = new();
-    private readonly FileHost _host = new();
+    private static readonly DateOnly Today = new(2026, 9, 30);
     private DisplayConfiguration _config = null!;
+    private ProductionDatabase _database = null!;
     private EntryService _entry = null!;
     private BoardServer _server = null!;
-    private string _file = null!;
 
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(_folder);
-        _file = Path.Combine(_folder, "san_luong.xlsx");
-        File.Copy(Path.Combine(RepoRoot(), "samples", "Theo_doi_san_luong_V20_mau.xlsx"), _file);
         var port = FreePort();
         _config = new DisplayConfiguration
         {
-            ExcelFile = _file,
+            DataFolder = _folder,
             Server = new LanServerSettings { Port = port },
             DataEntry = new DataEntrySettings
             {
@@ -85,7 +66,9 @@ public sealed class EntryApiTests : IAsyncLifetime
         };
         var config = new FakeConfig(_config);
         var clock = new FixedClock();
-        _entry = new EntryService(config, _host, clock, NullLogger<EntryService>.Instance) { RetryInterval = TimeSpan.FromMilliseconds(50) };
+        _database = new ProductionDatabase(config, clock, NullLogger<ProductionDatabase>.Instance);
+        _database.Store.ReplaceAll(V20Importer.Read(Path.Combine(RepoRoot(), "samples", "Theo_doi_san_luong_V20_mau.xlsx")).Data, "test", "V20");
+        _entry = new EntryService(config, _database, clock, NullLogger<EntryService>.Instance);
         _server = new BoardServer(new FakeSnapshots(), config, clock, NullLogger<BoardServer>.Instance, _entry);
         await _server.ApplyAsync(_config);
         _http.BaseAddress = new Uri($"http://127.0.0.1:{port}");
@@ -94,7 +77,8 @@ public sealed class EntryApiTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         await _server.DisposeAsync();
-        _entry.Dispose();
+        _database.Dispose();
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         _http.Dispose();
         try { Directory.Delete(_folder, true); } catch (IOException) { }
     }
@@ -104,7 +88,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     {
         var page = await _http.GetStringAsync("/nhap");
         Assert.Contains("nhap.js", page);
-        Assert.Contains("Ghi vào Excel", page);
+        Assert.Contains(">Lưu<", page);
         Assert.Equal(HttpStatusCode.OK, (await _http.GetAsync("/assets/nhap.js")).StatusCode);
         var info = await _http.GetFromJsonAsync<JsonElement>("/api/nhap/info");
         Assert.True(info.GetProperty("enabled").GetBoolean());
@@ -136,14 +120,13 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Hourly_output_is_written_to_the_workbook()
+    public async Task Hourly_output_is_written_to_the_database()
     {
         await LoginAsync("1234");
         var job = await PostAsync("/api/nhap/hourly", new { line = "Chuyền 3", hour = 6, quantity = 182 });
         Assert.Equal("Done", (await WaitAsync(job)).GetProperty("status").GetString());
 
-        using var workbook = new XLWorkbook(_file);
-        Assert.Equal(182, workbook.Worksheet("NHAP_LIEU").Cell("M7").GetDouble());
+        Assert.Equal(182, Entry("Chuyền 3")!.Hours[5]);
         var jobs = await _http.GetFromJsonAsync<JsonElement>("/api/nhap/jobs");
         Assert.Equal("Sản lượng giờ 6 · 182", jobs[0].GetProperty("summary").GetString());
     }
@@ -164,11 +147,10 @@ public sealed class EntryApiTests : IAsyncLifetime
         var job = await PostAsync("/api/nhap/plan", new { line = "Chuyền 5", productCode = "883", shiftCode = "8H", hourlyTarget = 50 });
         Assert.Equal("Done", (await WaitAsync(job)).GetProperty("status").GetString());
 
-        using var workbook = new XLWorkbook(_file);
-        var sheet = workbook.Worksheet("NHAP_LIEU");
-        Assert.Equal("Chuyền 5", sheet.Cell("B10").GetString());
-        Assert.Equal("8H", sheet.Cell("D10").GetString());
-        Assert.Equal(50, sheet.Cell("E10").GetDouble());
+        var entry = Entry("Chuyền 5")!;
+        Assert.Equal("883", entry.ProductCode);
+        Assert.Equal("8H", entry.ShiftCode);
+        Assert.Equal(50, entry.HourlyTarget);
     }
 
     [Fact]
@@ -191,11 +173,12 @@ public sealed class EntryApiTests : IAsyncLifetime
 
         var photos = Directory.GetFiles(Path.Combine(_folder, "images", "hang_loi")).Select(Path.GetFileName).Order().ToList();
         Assert.Equal(["chuyen3_20260930_134200_1.jpg", "chuyen3_20260930_134200_2.jpg"], photos);
-        using var workbook = new XLWorkbook(_file);
-        var sheet = workbook.Worksheet("HANG_LOI");
-        Assert.Equal("Bung chỉ", sheet.Cell("E11").GetString());
-        Assert.Equal("chuyen3_20260930_134200_1.jpg; chuyen3_20260930_134200_2.jpg", sheet.Cell("G11").GetString());
-        Assert.Equal("vai trái", sheet.Cell("H11").GetString());
+        var defect = _database.Store.Load().Defects.MaxBy(d => d.Id)!;
+        Assert.Equal("Bung chỉ", defect.DefectType);
+        Assert.Equal(new TimeOnly(13, 42), defect.Time);
+        Assert.Equal("chuyen3_20260930_134200_1.jpg; chuyen3_20260930_134200_2.jpg", defect.ImageFiles);
+        Assert.Equal("vai trái", defect.Note);
+        Assert.Contains(_database.Store.Audit(), a => a.User == "Tổ trưởng C3");
     }
 
     [Fact]
@@ -215,14 +198,22 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Busy_excel_makes_the_entry_wait_then_write()
+    public async Task Hour_without_plan_today_uses_the_last_plan()
     {
-        _host.BusyTimes = 3;
+        var line = _database.Store.Load().FindLine("Chuyền 3")!;
+        // Hôm qua chạy 883 ca 11H30, hôm nay chưa có dòng.
+        _database.Store.SavePlan(Today.AddDays(-1), line.Code, "883", "11H30", 185, "test");
+        _database.Store.DeleteEntry(Today, line.Code, "test");
         await LoginAsync("1234");
-        var job = await PostAsync("/api/nhap/hourly", new { line = "Chuyền 3", hour = 6, quantity = 180 });
-        var waiting = await WaitAsync(job, s => s == "Waiting");
-        Assert.Equal("Có người đang sửa ô trong Excel.", waiting.GetProperty("message").GetString());
-        Assert.Equal("Done", (await WaitAsync(job)).GetProperty("status").GetString());
+        var context = await _http.GetFromJsonAsync<JsonElement>("/api/nhap/context?line=Chuyền 3");
+        Assert.False(context.GetProperty("line").GetProperty("hasRow").GetBoolean());
+
+        var job = await PostAsync("/api/nhap/hourly", new { line = "Chuyền 3", hour = 1, quantity = 150 });
+
+        Assert.Equal("Done", job.GetProperty("status").GetString());
+        var entry = Entry("Chuyền 3")!;
+        Assert.Equal(150, entry.Hours[0]);
+        Assert.Equal(("883", "11H30", 185m), (entry.ProductCode, entry.ShiftCode, entry.HourlyTarget));
     }
 
     [Fact]
@@ -232,6 +223,12 @@ public sealed class EntryApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, (await _http.GetAsync("/api/nhap/jobs")).StatusCode);
         _config.DataEntry.Users.RemoveAt(0);
         Assert.Equal(HttpStatusCode.Unauthorized, (await _http.GetAsync("/api/nhap/jobs")).StatusCode);
+    }
+
+    private DayEntry? Entry(string line)
+    {
+        var data = _database.Store.Load();
+        return DisplayCalculator.Entry(data, Today, data.FindLine(line)!.Code);
     }
 
     private static async Task<string> ErrorAsync(HttpResponseMessage response) =>

@@ -5,6 +5,22 @@ public sealed record ShiftDef(string Code, string? Name, IReadOnlyList<WorkPerio
 {
     /// <summary>TỔNG GIỜ, làm tròn 2 số lẻ như công thức Excel.</summary>
     public decimal Hours => Math.Round((decimal)Periods.Sum(p => (p.End - p.Start).TotalHours), 2, MidpointRounding.AwayFromZero);
+
+    /// <summary>Các khung giờ GIỜ 1, GIỜ 2... của ca: mỗi đợt chia thành từng giờ, giờ cuối của đợt có thể ngắn hơn 60 phút.</summary>
+    public IReadOnlyList<Entry.HourSlot> Slots()
+    {
+        var slots = new List<Entry.HourSlot>();
+        foreach (var (start, end) in Periods.Where(p => p.End > p.Start).Select(p => (p.Start, p.End)))
+        {
+            for (var s = start; s < end && slots.Count < DayEntry.MaxHours;)
+            {
+                var e = (end - s) > TimeSpan.FromHours(1) ? s.AddHours(1) : end;
+                slots.Add(new Entry.HourSlot(slots.Count + 1, s, e));
+                s = e;
+            }
+        }
+        return slots;
+    }
 }
 
 public sealed record WorkPeriod(TimeOnly Start, TimeOnly End);

@@ -1,5 +1,5 @@
 // Trang nhập liệu cho tổ trưởng: sản lượng theo giờ, kế hoạch trong ngày, hàng lỗi kèm ảnh.
-// Máy chủ ghi vào file Excel qua chính Excel trên máy chủ; trang này chỉ gửi và xem trạng thái từng phiếu.
+// Máy chủ ghi thẳng vào cơ sở dữ liệu (bản 4.x); trang này chỉ gửi và xem trạng thái từng phiếu.
 (function () {
   'use strict';
 
@@ -139,7 +139,7 @@
       for (const j of state.jobs) {
         if (!state.mine.has(j.id) || (j.status !== 'Done' && j.status !== 'Failed')) continue;
         state.mine.delete(j.id);
-        toast(j.status === 'Done' ? '✓ Đã ghi vào Excel: ' + j.summary : '✗ ' + (j.message || 'Không ghi được'), j.status !== 'Done');
+        toast(j.status === 'Done' ? '✓ Đã lưu: ' + j.summary : '✗ ' + (j.message || 'Không ghi được'), j.status !== 'Done');
         refresh = refresh || j.status === 'Done';
       }
       renderJobs();
@@ -177,7 +177,7 @@
   function renderOutput() {
     const day = state.context.line;
     const hasPlan = !!(day && day.plan);
-    // Đang sửa kế hoạch thì ẩn phần nhập giờ để không bấm nhầm "Ghi vào Excel".
+    // Đang sửa kế hoạch thì ẩn phần nhập giờ để không bấm nhầm "Lưu".
     const editing = !$('planForm').classList.contains('hidden');
     $('hourBlock').classList.toggle('hidden', !hasPlan || editing);
     $('sendHour').classList.toggle('hidden', !hasPlan || editing);
@@ -297,15 +297,15 @@
     const banners = $('sentBanners');
     banners.innerHTML = '';
     const last = jobs[0];
-    if (last && last.status === 'Done') banners.appendChild(banner('b-ok', '✓ Đã ghi vào Excel: ' + last.summary + ' · ' + last.line + '.'));
+    if (last && last.status === 'Done') banners.appendChild(banner('b-ok', '✓ Đã lưu: ' + last.summary + ' · ' + last.line + '.'));
     const waiting = jobs.find((j) => j.status === 'Waiting');
-    if (waiting) banners.appendChild(banner('b-wait', '⏳ ' + (waiting.message || 'Excel trên máy chủ đang bận.') + ' Phiếu sẽ tự ghi khi Excel rảnh.'));
+    if (waiting) banners.appendChild(banner('b-wait', '⏳ ' + (waiting.message || 'Máy chủ đang bận.') + ' Phiếu sẽ tự ghi khi máy chủ rảnh.'));
 
     const list = $('jobs');
     list.innerHTML = '';
     for (const j of jobs) {
       const [dot, sign, text] = j.status === 'Done' ? ['d-ok', '✓', 'đã ghi'] : j.status === 'Failed' ? ['d-bad', '!', 'không ghi được: ' + (j.message || '')]
-        : j.status === 'Waiting' ? ['d-wait', '…', 'đang chờ Excel'] : ['d-wait', '…', 'đang ghi'];
+        : j.status === 'Waiting' ? ['d-wait', '…', 'đang chờ'] : ['d-wait', '…', 'đang ghi'];
       const it = document.createElement('div');
       it.className = 'it';
       it.innerHTML = '<div class="dot ' + dot + '">' + sign + '</div><div class="m"></div><div class="tm"></div>';
@@ -331,7 +331,7 @@
     try {
       const job = await action();
       state.mine.add(job.id);
-      toast('Đã gửi. Đang ghi vào Excel…');
+      toast('Đã gửi. Đang lưu…');
       await loadJobs();
       schedulePoll(1000);
       return true;
