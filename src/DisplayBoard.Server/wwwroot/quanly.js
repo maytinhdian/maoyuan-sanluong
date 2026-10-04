@@ -110,7 +110,7 @@
     const today = state.catalog.today;
     $('dayDate').value = state.catalog.displayDate || today;
     $('exportDate').value = state.catalog.displayDate || today;
-    $('targetMonth').value = today.slice(0, 7);
+    $('targetMonth').value = (state.catalog.displayDate || today).slice(0, 7);
     $('exportMonth').value = today.slice(0, 7);
     showTab(state.tab);
   }
@@ -163,7 +163,7 @@
     }
     if (c.type === 'periods') {
       const p = value || [];
-      return [0, 1, 2].map((i) => '<input class="m" placeholder="07:30-11:30" value="' + esc(p[i] || '') + '">').join(' ');
+      return [0, 1, 2].map((i) => '<input class="m"' + (i === 0 && !p[0] ? ' placeholder="07:30-11:30"' : '') + ' value="' + esc(p[i] || '') + '">').join(' ');
     }
     if (c.type === 'readonly') return '<span class="num">' + esc(value == null ? '' : value) + '</span>';
     return '<input class="' + (c.cls || (c.type === 'num' ? 'n' : '')) + '" ' + (c.type === 'num' ? 'inputmode="decimal" ' : '') +
@@ -203,8 +203,9 @@
       const e = l.entry || { hours: [] };
       const tr = document.createElement('tr');
       if (!l.active) tr.classList.add('off');
-      const rate = l.dailyRate == null ? '' : Math.round(l.dailyRate * 100) + '%';
-      const rateCls = l.dailyRate == null ? '' : l.dailyRate >= 1 ? 'ok' : l.dailyRate >= 0.9 ? 'low' : 'bad';
+      // % đạt như cột % HOÀN THÀNH của HIEN_THI (đã nhân 100).
+      const rate = l.dailyRate == null ? '' : Math.round(l.dailyRate) + '%';
+      const rateCls = l.dailyRate == null ? '' : l.dailyRate >= 100 ? 'ok' : l.dailyRate >= 90 ? 'low' : 'bad';
       tr.innerHTML = '<td><b>' + esc(l.name) + '</b>' + (l.active ? '' : ' <span class="t2 small">(ngừng)</span>') + '</td>' +
         '<td>' + sel(products, e.productCode) + '</td><td>' + sel(shifts, e.shiftCode) + '</td>' +
         '<td><input class="n" inputmode="decimal" value="' + esc(e.hourlyTarget == null ? '' : e.hourlyTarget) + '"></td>' +
