@@ -61,7 +61,8 @@ public sealed class EntryApiTests : IAsyncLifetime
                 Users =
                 [
                     new EntryUser { Name = "Tổ trưởng C3", Pin = "1234", Lines = ["Chuyền 3"] },
-                    new EntryUser { Name = "Quản lý", Pin = "9999", Manager = true }
+                    new EntryUser { Name = "Quản lý", Pin = "999999", Manager = true },
+                    new EntryUser { Name = "Quản lý cũ", Pin = "8888", Manager = true }
                 ]
             }
         };
@@ -145,7 +146,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     [Fact]
     public async Task Plan_creates_the_row_for_a_line_without_one()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         var job = await PostAsync("/api/nhap/plan", new { line = "Chuyền 5", productCode = "883", shiftCode = "8H", hourlyTarget = 50 });
         Assert.Equal("Done", (await WaitAsync(job)).GetProperty("status").GetString());
 
@@ -243,7 +244,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     [Fact]
     public async Task Manager_edits_an_earlier_day_and_it_is_audited()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         var day = Today.AddDays(-1);
         var hours = new decimal?[12];
         hours[0] = 80;
@@ -265,9 +266,19 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Manager_with_a_short_pin_must_change_it_first()
+    {
+        await LoginAsync("8888");
+        var response = await _http.GetAsync("/api/quanly/catalog");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("quá ngắn", await ErrorAsync(response));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _http.GetAsync("/api/quanly/export?date=2026-09-30")).StatusCode);
+    }
+
+    [Fact]
     public async Task Copy_plan_fills_lines_without_a_row()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         var result = await PostAsync("/api/quanly/copy-plan?date=2026-10-01", new { });
         var planned = result.GetProperty("lines").EnumerateArray().Count(l => l.TryGetProperty("entry", out _));
         Assert.Equal(_database.Store.Load().Entries.Count(e => e.Date == Today), planned);
@@ -276,7 +287,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     [Fact]
     public async Task Manager_saves_catalogs_and_month_targets()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         var shifts = _database.Store.Load().Shifts
             .Select(s => new { code = s.Code, name = s.Name, periods = s.Periods.Select(p => $"{p.Start:HH\\:mm}-{p.End:HH\\:mm}").ToArray(), active = true })
             .ToList();
@@ -300,7 +311,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     [Fact]
     public async Task Manager_downloads_excel_for_a_day()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         var response = await _http.GetAsync("/api/quanly/export?date=2026-09-30");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("SanLuong_2026-09-30.xlsx", response.Content.Headers.ContentDisposition!.FileName?.Trim('"'));
@@ -311,7 +322,7 @@ public sealed class EntryApiTests : IAsyncLifetime
     [Fact]
     public async Task Import_reads_then_replaces_after_confirmation()
     {
-        await LoginAsync("9999");
+        await LoginAsync("999999");
         _database.Store.SaveLines([.. _database.Store.Load().Lines, new LineDef("X1", "Chuyền thử", Active: false)], "test");
         using var form = new MultipartFormDataContent
         {

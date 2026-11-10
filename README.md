@@ -1,10 +1,26 @@
 # Display Board – Bảng sản lượng trên TV
 
-App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_THI`) và trình chiếu dashboard lên 2 TV phụ. Nhân viên vẫn mở, sửa và lưu Excel như bình thường; app chỉ đọc và tự cập nhật sau khi file được lưu.
+App Windows chạy trên một máy chủ ở xưởng: lưu sản lượng của các chuyền, cho tổ trưởng nhập số trên điện thoại, và trình chiếu dashboard lên các TV trong mạng LAN (hoặc TV cắm thẳng vào máy chủ).
 
-> **Ba phiên bản:** nhánh `master` là bản 1.x (TV nối thẳng vào máy có Excel). Nhánh `v2-lan` là bản 2.x: máy có Excel làm máy chủ, TV xem qua trình duyệt trong mạng LAN. Nhánh `v3` là bản 3.x: như 2.x và thêm trang nhập liệu cho tổ trưởng trên điện thoại. Bộ cài bản sau cài đè lên bản trước.
+> **Bốn phiên bản, mỗi bản một nhánh:** `master` là bản 1.x (TV nối thẳng vào máy có Excel, app chỉ đọc Excel). `v2-lan` là bản 2.x: máy có Excel làm máy chủ, TV xem qua trình duyệt trong mạng LAN. `v3` là bản 3.x: như 2.x và thêm trang nhập liệu cho tổ trưởng, ghi vào Excel. `v4` (nhánh này) là bản 4.x: số liệu lưu trong SQLite, Excel chỉ để xuất và nhập dữ liệu cũ. Bộ cài bản sau cài đè lên bản trước.
 
-## Bản 3.x: nhập liệu qua trình duyệt
+## Bản 4.x: SQLite là nơi lưu chính
+
+- Toàn bộ số liệu nằm trong `sanluong.db` (SQLite) ở **thư mục dữ liệu**, mặc định `C:\Users\Public\Documents\DisplayBoard` (đổi ở Trang chủ, mục DỮ LIỆU). Không cần cài Excel trên máy chủ.
+- Chỉ app trên máy chủ mở file này. Mỗi lần ghi chạy trong một transaction và được ghi vào **nhật ký** (ai sửa, lúc nào, số cũ, số mới).
+- Số trên TV do `DisplayCalculator` tính, đúng như các công thức của sheet `HIEN_THI` trong mẫu V20. Test `ExcelExportFormulaTests` xuất ra Excel, cho LibreOffice tính lại và so từng ô.
+- **Nhập liệu** `http://<IP máy chủ>:5080/nhap`: tổ trưởng đăng nhập bằng PIN, nhập kế hoạch, sản lượng từng giờ và hàng lỗi (kèm ảnh) cho ngày hôm nay.
+- **Trang quản lý** `http://<IP máy chủ>:5080/quan-ly`, chỉ người được tích **Quản lý** ở tab Nhập liệu:
+  - sửa kế hoạch, sản lượng giờ và hàng lỗi của bất kỳ ngày nào, chép kế hoạch của ngày làm trước;
+  - mục tiêu tháng, danh mục chuyền / sản phẩm / ca / lý do / loại lỗi, lịch nghỉ và làm bù;
+  - chọn ngày TV hiển thị, xem nhật ký sửa, tải file Excel theo ngày hoặc tháng;
+  - nhập dữ liệu từ file Excel V20 của bản 3.x (đọc và so số trước, xác nhận mới thay dữ liệu).
+- **Mã PIN:** tổ trưởng ít nhất 4 ký tự, quản lý ít nhất 6 ký tự (PIN quản lý ngắn hơn bị từ chối ở trang quản lý cho đến khi đổi). Sai PIN 5 lần thì địa chỉ máy đó bị khoá 15 phút.
+- **Sao lưu:** mỗi ngày một bản `sanluong_năm-tháng-ngày.db`, giữ 30 bản gần nhất (đổi ở tab Cài đặt). Mặc định nằm trong `SaoLuu` của thư mục dữ liệu, tức cùng ổ đĩa; nên chọn **Thư mục sao lưu** ở ổ khác, USB hoặc thư mục OneDrive. Trước mỗi lần nhập file Excel, app sao lưu thêm một bản `sanluong_năm-tháng-ngày_giờphútgiây_truoc-nhap.db`; các bản này không bị xoá tự động.
+  Khôi phục: thoát app, chép bản sao lưu vào thư mục dữ liệu và đổi tên thành `sanluong.db`.
+- **Tự xuất Excel:** mỗi ngày lúc 22:00 (đổi ở tab Cài đặt) ra `XuatExcel\SanLuong_năm-tháng-ngày.xlsx`, đúng mẫu V20, các cột tính vẫn là công thức.
+
+## Bản 3.x: nhập liệu qua trình duyệt (ghi vào Excel)
 
 - Tổ trưởng mở `http://<IP máy chủ>:5080/nhap` trên điện thoại, đăng nhập bằng mã PIN (đặt ở tab **Nhập liệu** của app, mỗi người một PIN, có thể giới hạn chuyền).
 - Tab **Sản lượng**: chọn chuyền, app tự chọn giờ đang làm theo ca (CAU_HINH_CA), nhập số rồi **Ghi vào Excel**: số vào ô `GIỜ n` của dòng hôm nay ở `NHAP_LIEU`. Chuyền chưa có dòng hôm nay thì app tự tạo dòng mới, chép mã sản phẩm, ca, mục tiêu giờ từ ngày làm trước (sửa bằng **Sửa kế hoạch**). Số lớn hơn 3 lần mục tiêu giờ bị chặn.
@@ -35,7 +51,7 @@ App Windows đọc file Excel theo dõi sản lượng (6 chuyền, sheet `HIEN_
 dotnet run --project src/DisplayBoard.App
 ```
 
-1. Bấm **Chọn file…** và chọn `samples/Theo_doi_san_luong_V19_mau.xlsx` (file V19 với số liệu thử; file V18 vẫn đọc được).
+1. Ở Trang chủ, mục **DỮ LIỆU**, bấm **Nhập từ file Excel cũ…** và chọn `samples/Theo_doi_san_luong_V20_mau.xlsx` để có số liệu thử trong `sanluong.db`.
 2. Ở **TV XEM QUA MẠNG LAN**, chọn TV, tick các nội dung muốn chiếu, sắp thứ tự bằng ↑↓, bấm **Lưu & áp dụng**.
 3. Bấm **Mở** để xem trang TV trong trình duyệt, hoặc xem ở tab **Xem trước**. TV nối dây: tab **Chiếu trên máy này** > **Bắt đầu trình chiếu**.
 4. Khi đang trình chiếu, bấm X chỉ ẩn cửa sổ xuống khay hệ thống; thoát hẳn bằng menu **Thoát** ở khay.
@@ -56,7 +72,7 @@ Tạo `dist/DisplayBoard-win-x64.zip`: một file `DisplayBoard.exe` chạy đư
 
 Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở `tools/installer/DisplayBoard.iss`) được tạo tự động và đưa lên trang **Releases**: vào Actions > Release > Run workflow và nhập số phiên bản, hoặc đẩy tag dạng `v1.0.1`.
 
-## File Excel sản lượng
+## File Excel sản lượng (bản 1.x–3.x)
 
 **Mọi con số đều do công thức Excel tính**, để nhân viên dùng chính file đó kiểm tra. App chỉ đọc sheet `HIEN_THI` (bảng `tblHienThi`) và **không bao giờ ghi vào file**, không tự tính %, chênh lệch hay phần thiếu.
 
@@ -108,9 +124,10 @@ Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang
 ## Cấu trúc mã nguồn
 
 ```text
-src/DisplayBoard.Core      Đọc Excel (HIEN_THI), dựng snapshot, theo dõi file, xoay trang (không phụ thuộc WPF)
+src/DisplayBoard.Core      SQLite (Data/ProductionStore), tính bảng hiển thị (Data/DisplayCalculator), sao lưu và xuất/nhập Excel
+                           (Data/DataMaintenance), nhập liệu (Entry/EntryService), dựng snapshot, xoay trang (không phụ thuộc WPF)
 src/DisplayBoard.App       WPF: cửa sổ chính, cửa sổ TV, 10 view, khay hệ thống
-src/DisplayBoard.Server    Máy chủ LAN (Kestrel): /tv/{n}, /api/state, /ws, /img, và giao diện web trong wwwroot
+src/DisplayBoard.Server    Máy chủ LAN (Kestrel): /tv/{n}, /api/state, /ws, /img, /nhap, /quan-ly, và giao diện web trong wwwroot
 tests/DisplayBoard.Tests   Unit test cho Core (chạy được trên mọi hệ điều hành)
 tests/DisplayBoard.Server.Tests  Test máy chủ LAN: trang TV, playlist, mã truy cập, WebSocket, ảnh, đổi cổng, trang nhập liệu
 tests/DisplayBoard.App.Tests  Render từng view ra PNG và bắt lỗi binding (chỉ Windows)

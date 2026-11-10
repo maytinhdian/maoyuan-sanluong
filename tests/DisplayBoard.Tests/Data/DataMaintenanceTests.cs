@@ -103,11 +103,52 @@ public sealed class DataMaintenanceTests : IDisposable
         Assert.Equal(0, preview.Check.Mismatches);
         _maintenance.ApplyImport(preview, "Quản lý");
 
-        Assert.Single(DataMaintenance.Backups(_settings.ResolveBackupFolder()));
+        Assert.Single(DataMaintenance.BackupsBeforeImport(_settings.ResolveBackupFolder()));
         Assert.Equal(preview.Result.Data.Entries.Count, _database.Store.Load().Entries.Count);
         Assert.True(File.Exists(Path.Combine(_settings.ResolveImagesFolder()!, "hang_loi", "x.jpg")));
         Assert.True(File.Exists(Path.Combine(_settings.ResolveImagesFolder()!, "883.jpg")));
         Directory.Delete(source, true);
+    }
+
+    [Fact]
+    public void Importing_twice_in_a_day_keeps_both_backups_taken_before_import()
+    {
+        _database.Store.ReplaceAll(SampleProduction.Create(), "test");
+        var original = _database.Store.Load().Entries.Count;
+        _maintenance.RunDue();   // bản sao lưu hằng ngày
+        var preview = DataMaintenance.PreviewImport(Path.Combine(TestPaths.RepoRoot(), "samples", "Theo_doi_san_luong_V20_mau.xlsx"));
+
+        _maintenance.ApplyImport(preview, "Quản lý");
+        _time.Advance(TimeSpan.FromMinutes(5));
+        _maintenance.ApplyImport(preview, "Quản lý");
+
+        var folder = _settings.ResolveBackupFolder();
+        var before = DataMaintenance.BackupsBeforeImport(folder).Select(Path.GetFileName).ToList();
+        Assert.Equal(["sanluong_2026-10-14_080500_truoc-nhap.db", "sanluong_2026-10-14_080000_truoc-nhap.db"], before);
+        using (var first = new ProductionStore(Path.Combine(folder, before[1]!)))
+            Assert.Equal(original, first.Load().Entries.Count);   // bản đầu tiên vẫn là dữ liệu gốc
+        // Bản trước khi nhập không tính vào số bản sao lưu hằng ngày nên không bị xoá bớt.
+        Assert.Equal(["sanluong_2026-10-14.db"], DataMaintenance.Backups(folder).Select(Path.GetFileName).ToList());
+    }
+
+    [Fact]
+    public void Backups_go_to_the_chosen_folder()
+    {
+        var other = Directory.CreateTempSubdirectory("backup-elsewhere-").FullName;
+        try
+        {
+            _settings.BackupFolder = other;
+            _database.Store.ReplaceAll(SampleProduction.Create(), "test");
+            _maintenance.RunDue();
+
+            Assert.True(File.Exists(Path.Combine(other, "sanluong_2026-10-14.db")));
+            Assert.False(Directory.Exists(_settings.DefaultBackupFolder()));
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            try { Directory.Delete(other, true); } catch (IOException) { }
+        }
     }
 
     public void Dispose()

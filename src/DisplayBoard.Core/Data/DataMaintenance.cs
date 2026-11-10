@@ -107,6 +107,31 @@ public sealed class DataMaintenance : IDisposable
         return path;
     }
 
+    /// <summary>
+    /// Sao lưu ngay trước khi nhập file Excel: sanluong_yyyy-MM-dd_HHmmss_truoc-nhap.db. Tên có giờ nên nhập nhiều lần trong
+    /// một ngày không ghi đè lên nhau, và không bị xoá bớt cùng bản sao lưu hằng ngày.
+    /// </summary>
+    public string BackupBeforeImport()
+    {
+        var folder = _config.Current.ResolveBackupFolder();
+        Directory.CreateDirectory(folder);
+        var now = _time.GetLocalNow().DateTime;
+        var name = $"{BackupPrefix}{now:yyyy-MM-dd_HHmmss}{BeforeImportSuffix}";
+        var path = Path.Combine(folder, name + ".db");
+        for (var n = 2; File.Exists(path); n++)
+            path = Path.Combine(folder, $"{name}-{n}.db");
+        _database.Store.Backup(path);
+        return path;
+    }
+
+    public const string BeforeImportSuffix = "_truoc-nhap";
+
+    /// <summary>Các bản sao lưu trước khi nhập Excel, mới nhất trước.</summary>
+    public static IReadOnlyList<string> BackupsBeforeImport(string folder) =>
+        Directory.Exists(folder)
+            ? Directory.GetFiles(folder, $"{BackupPrefix}*{BeforeImportSuffix}*.db").OrderDescending(StringComparer.Ordinal).ToList()
+            : [];
+
     /// <summary>Các bản sao lưu, mới nhất trước.</summary>
     public static IReadOnlyList<string> Backups(string folder) =>
         Directory.Exists(folder)
@@ -149,10 +174,17 @@ public sealed class DataMaintenance : IDisposable
                 _logger.LogInformation("Tự xuất Excel {Path}", LastExport);
                 Changed?.Invoke(this, EventArgs.Empty);
             }
-            LastError = null;
+            if (LastError is not null)
+            {
+                LastError = null;
+                Changed?.Invoke(this, EventArgs.Empty);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
+            // Thư mục sao lưu ở USB/ổ mạng chưa cắm thì lỗi lặp lại mỗi phút: chỉ báo khi lỗi đổi.
+            if (LastError == ex.Message)
+                return;
             _logger.LogError(ex, "Lỗi khi sao lưu hoặc tự xuất Excel");
             LastError = ex.Message;
             Changed?.Invoke(this, EventArgs.Empty);
@@ -181,7 +213,10 @@ public sealed class DataMaintenance : IDisposable
     public void ApplyImport(ImportPreview preview, string user)
     {
         if (!_database.Store.IsEmpty)
-            BackupNow();
+        {
+            var backup = BackupBeforeImport();
+            _logger.LogInformation("Sao lưu trước khi nhập vào {Path}", backup);
+        }
         _database.Store.ReplaceAll(preview.Result.Data, user, Path.GetFileName(preview.Path));
 
         _logger.LogInformation("Nhập dữ liệu từ {Path}: {Entries} dòng nhập liệu, {Defects} phiếu lỗi", preview.Path,

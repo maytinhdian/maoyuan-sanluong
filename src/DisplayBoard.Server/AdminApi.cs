@@ -332,7 +332,14 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
 
     // ---------- Phụ ----------
 
-    private EntryUser? Manager(HttpContext http) => auth.Authenticate(http) is { Manager: true } user ? user : null;
+    private EntryUser? Manager(HttpContext http) =>
+        auth.Authenticate(http) is { Manager: true } user && ManagerPinProblem(user) is null ? user : null;
+
+    /// <summary>PIN quản lý cũ (bản 4.0.0 cho phép 4 số) phải đổi sang PIN dài hơn mới vào được trang quản lý.</summary>
+    private static string? ManagerPinProblem(EntryUser user) =>
+        user.Pin.Trim().Length < EntryUser.MinManagerPinLength
+            ? $"PIN của {user.Name} quá ngắn cho quyền quản lý. Đổi sang PIN ít nhất {EntryUser.MinManagerPinLength} số ở app trên máy chủ (tab Nhập liệu) rồi đăng nhập lại."
+            : null;
 
     private Task<IResult> Run(HttpContext http, Func<EntryUser, object> action) => Run(http, user => Task.FromResult(action(user)));
 
@@ -343,6 +350,8 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
             return Error("Phiên đăng nhập đã hết. Nhập lại mã PIN.", StatusCodes.Status401Unauthorized);
         if (!user.Manager)
             return Error($"{user.Name} không phải quản lý. Trang này chỉ dành cho quản lý.", StatusCodes.Status403Forbidden);
+        if (ManagerPinProblem(user) is { } pinProblem)
+            return Error(pinProblem, StatusCodes.Status403Forbidden);
         try
         {
             var result = await action(user).ConfigureAwait(false);
