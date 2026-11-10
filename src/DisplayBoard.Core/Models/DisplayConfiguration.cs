@@ -49,6 +49,12 @@ public sealed class DataEntrySettings
 
 public sealed class EntryUser
 {
+    /// <summary>Độ dài tối thiểu của PIN tổ trưởng.</summary>
+    public const int MinPinLength = 4;
+
+    /// <summary>PIN quản lý dài hơn vì quản lý sửa được mọi số liệu và thay toàn bộ dữ liệu khi nhập file Excel.</summary>
+    public const int MinManagerPinLength = 6;
+
     public string Name { get; set; } = "";
     public string Pin { get; set; } = "";
 
@@ -89,6 +95,12 @@ public sealed class DisplayConfiguration
 
     /// <summary>Số bản sao lưu hằng ngày giữ lại.</summary>
     public int BackupCount { get; set; } = 30;
+
+    /// <summary>
+    /// Thư mục lưu bản sao lưu. Nên đặt ở ổ khác, USB hoặc thư mục OneDrive để ổ máy chủ hỏng vẫn còn bản sao lưu.
+    /// Null = thư mục SaoLuu trong thư mục dữ liệu.
+    /// </summary>
+    public string? BackupFolder { get; set; }
 
     /// <summary>Tên hiện ở cửa sổ chính và khay hệ thống. Null = "Display Board".</summary>
     public string? AppName { get; set; }
@@ -142,7 +154,15 @@ public sealed class DisplayConfiguration
 
     public string ResolveDatabaseFile() => Path.Combine(ResolveDataFolder(), "sanluong.db");
 
-    public string ResolveBackupFolder() => Path.Combine(ResolveDataFolder(), "SaoLuu");
+    public string ResolveBackupFolder() => string.IsNullOrWhiteSpace(BackupFolder) ? DefaultBackupFolder() : BackupFolder.Trim();
+
+    /// <summary>Thư mục SaoLuu trong thư mục dữ liệu (cùng ổ đĩa với file dữ liệu).</summary>
+    public string DefaultBackupFolder() => Path.Combine(ResolveDataFolder(), "SaoLuu");
+
+    /// <summary>Bản sao lưu đang nằm cùng thư mục gốc (cùng ổ đĩa) với file dữ liệu.</summary>
+    public bool BackupOnSameDrive() =>
+        string.Equals(Path.GetPathRoot(Path.GetFullPath(ResolveBackupFolder())), Path.GetPathRoot(Path.GetFullPath(ResolveDataFolder())),
+            StringComparison.OrdinalIgnoreCase);
 
     public string ResolveExportFolder() => string.IsNullOrWhiteSpace(Export.Folder) ? Path.Combine(ResolveDataFolder(), "XuatExcel") : Export.Folder;
 

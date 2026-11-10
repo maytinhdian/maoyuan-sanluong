@@ -337,7 +337,7 @@
                                     <Button Content="Xoá người đang chọn" Command="{Binding RemoveEntryUserCommand}" />
                                 </StackPanel>
                                 <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
-                                           Text="Mỗi người một mã PIN riêng (ít nhất 4 số). Chuyền ghi đúng tên trong danh sách chuyền (trang quản lý), nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
+                                           Text="Mỗi người một mã PIN riêng: tổ trưởng ít nhất 4 số, người được tích Quản lý ít nhất 6 số. Sai PIN 5 lần thì điện thoại đó bị khoá 15 phút. Chuyền ghi đúng tên trong danh sách chuyền (trang quản lý), nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Header="PHIẾU GẦN ĐÂY">
@@ -432,12 +432,18 @@
                                 <Button DockPanel.Dock="Right" Content="Chọn…" Command="{Binding ChooseExportFolderCommand}" Margin="8,0,0,0" />
                                 <TextBox Text="{Binding ExportFolder}" FontWeight="Normal" VerticalContentAlignment="Center" ToolTip="Để trống: thư mục XuatExcel trong thư mục dữ liệu" />
                             </DockPanel>
-                            <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="Số bản sao lưu hằng ngày giữ lại" Style="{StaticResource Label}" Width="280" />
                                 <TextBox Text="{Binding BackupCount}" Width="120" />
                             </StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Left" Text="Thư mục sao lưu" Style="{StaticResource Label}" Width="280" />
+                                <Button DockPanel.Dock="Right" Content="Chọn…" Command="{Binding ChooseBackupFolderCommand}" Margin="8,0,0,0" />
+                                <TextBox Text="{Binding BackupFolder}" FontWeight="Normal" VerticalContentAlignment="Center"
+                                         ToolTip="Để trống: thư mục SaoLuu trong thư mục dữ liệu (cùng ổ đĩa)" />
+                            </DockPanel>
                             <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Mỗi ngày một file SanLuong_năm-tháng-ngày.xlsx, chứa mọi số liệu đến hết ngày đó. Sao lưu cơ sở dữ liệu nằm trong thư mục SaoLuu." />
+                                       Text="Mỗi ngày một file SanLuong_năm-tháng-ngày.xlsx, chứa mọi số liệu đến hết ngày đó. Sao lưu cơ sở dữ liệu: để trống thì nằm trong thư mục SaoLuu, cùng ổ đĩa với dữ liệu. Nên chọn ổ khác, USB hoặc thư mục OneDrive để ổ máy chủ hỏng vẫn còn bản sao lưu." />
                         </StackPanel>
                     </GroupBox>
                     <GroupBox Header="THƯ MỤC ẢNH">

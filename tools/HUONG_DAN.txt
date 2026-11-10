@@ -13,6 +13,7 @@ Excel chỉ dùng để xuất ra xem/kiểm tra: file xuất đúng mẫu V20, 
    Ảnh (thư mục images) và file nội dung phụ cạnh file Excel được chép sang theo.
    Muốn thử trước: chọn samples\Theo_doi_san_luong_V20_mau.xlsx.
 3. Tab Nhập liệu: thêm người và mã PIN. Tích ô "Quản lý" cho người được vào trang quản lý.
+   PIN tổ trưởng ít nhất 4 số, PIN quản lý ít nhất 6 số. Sai PIN 5 lần thì máy đó bị khoá 15 phút.
 4. Tổ trưởng nhập trên điện thoại: http://<IP máy chủ>:5080/nhap (chỉ nhập cho ngày hôm nay).
    Quản lý mở trang quản lý: http://<IP máy chủ>:5080/quan-ly (hoặc nút "Mở trang quản lý" trên app):
    - Theo ngày: sửa kế hoạch, sản lượng từng giờ, hàng lỗi của bất kỳ ngày nào.
@@ -25,6 +26,9 @@ THƯ MỤC DỮ LIỆU (mặc định C:\Users\Public\Documents\DisplayBoard)
 - sanluong.db     : toàn bộ số liệu. Không mở/sửa file này bằng chương trình khác.
 - images          : ảnh sản phẩm (đặt tên theo mã, vd 883.jpg) và ảnh hàng lỗi (images\hang_loi).
 - SaoLuu          : bản sao lưu tự động mỗi ngày, giữ 30 bản gần nhất.
+                    NÊN chọn "Thư mục sao lưu" ở tab Cài đặt sang ổ khác, USB hoặc thư mục OneDrive:
+                    để mặc định thì bản sao lưu cùng ổ đĩa với dữ liệu, hỏng ổ là mất cả hai.
+                    Trước mỗi lần nhập file Excel có thêm bản ..._truoc-nhap.db (không tự xoá).
                     Khôi phục: thoát app, chép bản sao lưu đè lên sanluong.db (đổi tên thành sanluong.db).
 - XuatExcel       : file Excel tự xuất mỗi ngày lúc 22:00 (đổi giờ ở tab Cài đặt).
 - display-content.xlsx : thông báo, khẩu hiệu, tên công ty (mẫu: samples\display-content.xlsx).

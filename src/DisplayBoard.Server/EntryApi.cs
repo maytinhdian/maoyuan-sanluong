@@ -16,7 +16,8 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
 {
     private const string TokenHeader = "X-Entry-Token";
     private const int MaxFailures = 5;
-    private static readonly TimeSpan LockTime = TimeSpan.FromMinutes(1);
+    // 5 lần sai thì khoá 15 phút: dò hết PIN 4 số mất khoảng 3 tuần, PIN quản lý 6 số mất hàng chục năm.
+    private static readonly TimeSpan LockTime = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan SessionTime = TimeSpan.FromDays(30);
 
     private readonly ConcurrentDictionary<string, Session> _sessions = new(StringComparer.Ordinal);
@@ -48,7 +49,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
             var ip = http.Connection.RemoteIpAddress?.ToString() ?? "?";
             var now = time.GetUtcNow();
             if (_failures.TryGetValue(ip, out var failed) && failed.Count >= MaxFailures && failed.Until > now)
-                return Error("Nhập sai PIN nhiều lần. Chờ 1 phút rồi thử lại.", StatusCodes.Status429TooManyRequests);
+                return Error($"Nhập sai PIN nhiều lần. Chờ {LockTime.TotalMinutes:0} phút rồi thử lại.", StatusCodes.Status429TooManyRequests);
             var user = entry.Login(request.Pin);
             if (user is null)
             {

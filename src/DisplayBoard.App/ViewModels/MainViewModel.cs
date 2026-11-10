@@ -107,6 +107,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _exportTime = "22:00";
     [ObservableProperty] private string? _exportFolder;
     [ObservableProperty] private string _backupCount = "30";
+    [ObservableProperty] private string? _backupFolder;
     [ObservableProperty] private string? _maintenanceText;
 
     /// <summary>Thư mục dữ liệu đang dùng (để trống là thư mục mặc định).</summary>
@@ -150,6 +151,7 @@ public sealed partial class MainViewModel : ObservableObject
         ExportTime = config.Export.Time;
         ExportFolder = config.Export.Folder;
         BackupCount = config.BackupCount.ToString();
+        BackupFolder = config.BackupFolder;
         IsMirror = config.DisplayMode == DisplayMode.Mirror;
         DefaultViewSeconds = config.DefaultViewSeconds.ToString();
         MaxPagedViewSeconds = config.MaxPagedViewSeconds.ToString();
@@ -197,6 +199,7 @@ public sealed partial class MainViewModel : ObservableObject
             Folder = string.IsNullOrWhiteSpace(ExportFolder) ? null : ExportFolder.Trim()
         },
         BackupCount = ParseInt(BackupCount, 30, 1, 3650),
+        BackupFolder = string.IsNullOrWhiteSpace(BackupFolder) ? null : BackupFolder.Trim(),
         DisplayMode = IsMirror ? DisplayMode.Mirror : DisplayMode.Independent,
         AutoReload = _config.Current.AutoReload,
         DebounceMilliseconds = _config.Current.DebounceMilliseconds,
@@ -368,6 +371,14 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ChooseBackupFolder()
+    {
+        var dialog = new OpenFolderDialog { Title = "Chọn thư mục sao lưu (nên ở ổ khác, USB hoặc OneDrive)" };
+        if (dialog.ShowDialog() == true)
+            BackupFolder = dialog.FolderName;
+    }
+
+    [RelayCommand]
     private void ChooseExportFolder()
     {
         var dialog = new OpenFolderDialog { Title = "Chọn thư mục lưu file Excel tự xuất" };
@@ -379,7 +390,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var parts = new List<string>();
         if (_maintenance.LastBackup is { } backup)
-            parts.Add($"Sao lưu: {Path.GetFileName(backup)}");
+            parts.Add($"Sao lưu: {backup}");
+        if (_config.Current.BackupOnSameDrive())
+            parts.Add("Bản sao lưu đang cùng ổ đĩa với dữ liệu, nên chọn thư mục sao lưu ở ổ khác/USB/OneDrive (tab Cài đặt)");
         if (_maintenance.LastExport is { } export)
             parts.Add($"Tự xuất Excel: {Path.GetFileName(export)}");
         if (_maintenance.LastError is { } error)
@@ -492,14 +505,16 @@ public sealed partial class MainViewModel : ObservableObject
         AddLog($"Xoá {tv.DisplayName}. Bấm Lưu để áp dụng.");
     }
 
-    /// <summary>Mỗi người cần tên và PIN riêng (ít nhất 4 ký tự) vì đăng nhập chỉ bằng PIN.</summary>
+    /// <summary>Mỗi người cần tên và PIN riêng (ít nhất 4 ký tự, quản lý ít nhất 6) vì đăng nhập chỉ bằng PIN.</summary>
     private static string? EntryUsersProblem(DataEntrySettings settings)
     {
         var users = settings.Users;
         if (users.FirstOrDefault(u => u.Name.Length == 0) is { } noName)
             return $"Người nhập liệu có PIN {noName.Pin} chưa có tên.";
-        if (users.FirstOrDefault(u => u.Pin.Length < 4) is { } shortPin)
-            return $"Mã PIN của {shortPin.Name} cần ít nhất 4 ký tự.";
+        if (users.FirstOrDefault(u => u.Pin.Length < EntryUser.MinPinLength) is { } shortPin)
+            return $"Mã PIN của {shortPin.Name} cần ít nhất {EntryUser.MinPinLength} ký tự.";
+        if (users.FirstOrDefault(u => u.Manager && u.Pin.Length < EntryUser.MinManagerPinLength) is { } shortManager)
+            return $"{shortManager.Name} là quản lý nên mã PIN cần ít nhất {EntryUser.MinManagerPinLength} ký tự.";
         if (users.GroupBy(u => u.Pin).FirstOrDefault(g => g.Count() > 1) is { } same)
             return $"{string.Join(" và ", same.Select(u => u.Name))} đang trùng mã PIN. Mỗi người cần một mã PIN riêng.";
         if (users.GroupBy(u => u.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } twice)
