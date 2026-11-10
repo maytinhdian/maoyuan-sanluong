@@ -27,6 +27,9 @@ public sealed class DataMaintenance : IDisposable
     private readonly TimeProvider _time;
     private readonly ILogger<DataMaintenance> _logger;
     private readonly Lock _lock = new();
+
+    /// <summary>Hai quản lý xác nhận nhập cùng lúc thì chạy lần lượt: không chọn trùng tên bản sao lưu, không nhập chồng lên nhau.</summary>
+    private readonly Lock _importLock = new();
     private ITimer? _timer;
 
     public DataMaintenance(ProductionDatabase database, IConfigurationService config, TimeProvider time, ILogger<DataMaintenance> logger)
@@ -112,6 +115,12 @@ public sealed class DataMaintenance : IDisposable
     /// một ngày không ghi đè lên nhau, và không bị xoá bớt cùng bản sao lưu hằng ngày.
     /// </summary>
     public string BackupBeforeImport()
+    {
+        lock (_importLock)
+            return BackupBeforeImportCore();
+    }
+
+    private string BackupBeforeImportCore()
     {
         var folder = _config.Current.ResolveBackupFolder();
         Directory.CreateDirectory(folder);
@@ -212,12 +221,15 @@ public sealed class DataMaintenance : IDisposable
     /// </summary>
     public void ApplyImport(ImportPreview preview, string user)
     {
-        if (!_database.Store.IsEmpty)
+        lock (_importLock)
         {
-            var backup = BackupBeforeImport();
-            _logger.LogInformation("Sao lưu trước khi nhập vào {Path}", backup);
+            if (!_database.Store.IsEmpty)
+            {
+                var backup = BackupBeforeImportCore();
+                _logger.LogInformation("Sao lưu trước khi nhập vào {Path}", backup);
+            }
+            _database.Store.ReplaceAll(preview.Result.Data, user, Path.GetFileName(preview.Path));
         }
-        _database.Store.ReplaceAll(preview.Result.Data, user, Path.GetFileName(preview.Path));
 
         _logger.LogInformation("Nhập dữ liệu từ {Path}: {Entries} dòng nhập liệu, {Defects} phiếu lỗi", preview.Path,
             preview.Result.Data.Entries.Count, preview.Result.Data.Defects.Count);
