@@ -56,8 +56,11 @@ public static class DisplayCalculator
         decimal? targetToNow = hoursEntered is null || hourlyTarget is null || dailyTarget is null
             ? null : Math.Min(dailyTarget.Value, hoursEntered.Value * hourlyTarget.Value); // M = MIN(G, L*F)
 
-        // O: ngày làm trước của chuyền; AK: dòng của ngày đó; P: thiếu hôm trước.
-        var previousDay = data.Entries.Where(e => Same(e.LineCode, line.Code) && e.Date < d).Select(e => (DateOnly?)e.Date).Max();
+        // O: ngày làm trước của chuyền trong cùng tháng; AK: dòng của ngày đó; P: thiếu hôm trước.
+        // Chỉ bù trong tháng: qua tháng mới thì phần thiếu tháng trước coi như tháng đó không đạt, không mang sang.
+        var monthStart = new DateOnly(d.Year, d.Month, 1);
+        var previousDay = data.Entries.Where(e => Same(e.LineCode, line.Code) && e.Date < d && e.Date >= monthStart)
+            .Select(e => (DateOnly?)e.Date).Max();
         decimal? carried = null;
         if (previousDay is not null && Entry(data, previousDay.Value, line.Code) is { } prev)
         {
@@ -67,7 +70,6 @@ public static class DisplayCalculator
             carried = prev.HasHours ? Math.Max(0, prevTarget - prev.HoursTotal) : 0;
         }
 
-        var monthStart = new DateOnly(d.Year, d.Month, 1);
         decimal? monthTarget = null, monthCumulative = null, previousMonthShortfall = null, neededPerDay = null;
         var workingDaysLeft = WorkingDays(data.Calendar, d, monthStart.AddMonths(1).AddDays(-1));       // AM
         if (product is not null)

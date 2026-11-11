@@ -39,6 +39,20 @@ public sealed class DisplayCalculatorTests
     }
 
     [Fact]
+    public void Shortfall_is_only_carried_within_the_month()
+    {
+        var data = SampleProduction.Create();
+        // Ngày làm đầu tiên của tháng 10: thiếu cuối tháng 9 coi như tháng 9 không đạt, không cần bù.
+        var first = DisplayCalculator.Compute(data with { DisplayDateOverride = new(2026, 10, 1) });
+        Assert.NotEmpty(first.Lines);
+        Assert.All(first.Lines, l => Assert.Null(l.PreviousDay));
+        Assert.All(first.Lines, l => Assert.Null(l.CarriedShortfall));
+        // Những ngày sau trong tháng vẫn bù từ ngày làm trước của cùng tháng.
+        var later = DisplayCalculator.Compute(data with { DisplayDateOverride = new(2026, 10, 2) });
+        Assert.Contains(later.Lines, l => l.PreviousDay == new DateOnly(2026, 10, 1));
+    }
+
+    [Fact]
     public void Inactive_lines_are_not_shown()
     {
         var sheet = DisplayCalculator.Compute(SampleProduction.Create());

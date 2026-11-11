@@ -113,6 +113,8 @@ Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở
 | `defects` | Hàng lỗi hôm nay. File V20: lưới ảnh QC chụp (sheet HANG_LOI, ảnh trong `images\hang_loi`), 6 ảnh/trang, kèm loại lỗi, số lượng và tổng số lỗi từng chuyền. File V19: bảng số lỗi và tỷ lệ lỗi từng chuyền |
 | `defects-4`, `defects-2` | Hàng lỗi như trên nhưng ảnh chiếm cả màn hình, tổng số lỗi ghi ở chân trang: `defects-4` là 4 ảnh xếp một hàng (ô dọc, hợp ảnh chụp dọc bằng điện thoại), `defects-2` là 2 ảnh rất lớn/trang |
 
+**Phần thiếu hôm trước (cần bù)** chỉ tính trong cùng tháng: lấy ngày làm gần nhất trước đó của chuyền trong tháng. Ngày làm đầu tiên của tháng không mang phần thiếu của tháng trước sang (tháng trước coi như không đạt).
+
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 
 ## Cấu hình và log

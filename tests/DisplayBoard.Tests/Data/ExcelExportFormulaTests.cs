@@ -19,7 +19,7 @@ public sealed class ExcelExportFormulaTests(ITestOutputHelper output) : IDisposa
         "2026-09-01",   // ngày đầu: chưa có ngày làm trước, chưa có tháng trước
         "2026-09-14",   // sau Chủ nhật làm bù
         "2026-09-30",   // cuối tháng
-        "2026-10-01",   // đầu tháng mới: thiếu tháng trước, thiếu hôm trước từ tháng trước
+        "2026-10-01",   // đầu tháng mới: thiếu tháng trước, không mang thiếu hôm trước từ tháng trước
         "2026-10-12",   // sau ngày nghỉ T7 10/10
         "2026-10-14",   // hôm nay: đang nhập dở giờ
     };
