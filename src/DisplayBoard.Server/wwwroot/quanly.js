@@ -318,13 +318,13 @@
       const cell = tr.querySelector('td[data-label="% hoàn thành"]');
       if (!cell || row.rate == null) return;
       const cls = row.rate >= 100 ? 'ok' : row.rate >= 90 ? 'low' : 'bad';
-      cell.innerHTML = '<div class="rate"><span class="num ' + cls + '">' + row.rate + '%</span>' +
+      cell.innerHTML = '<div class="rate"><span class="num ' + cls + '">' + Math.round(row.rate) + '%</span>' +
         '<span class="track"><i class="' + cls + '" style="width:' + Math.min(100, row.rate) + '%"></i></span></div>';
     });
   }
 
-  // % hoàn thành của mục tiêu tháng (làm tròn), rỗng khi chưa đặt mục tiêu.
-  const rateOf = (done, target) => !target ? null : Math.round((done || 0) * 100 / target);
+  // % hoàn thành của mục tiêu tháng, chưa làm tròn (màu xét theo số thật như TV), rỗng khi chưa đặt mục tiêu.
+  const rateOf = (done, target) => !target ? null : (done || 0) * 100 / target;
 
   async function saveTargets(button) {
     await busy(button, async () => {
