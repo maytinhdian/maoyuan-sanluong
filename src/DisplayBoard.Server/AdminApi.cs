@@ -16,6 +16,8 @@ namespace DisplayBoard.Server;
 internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeProvider time)
 {
     private static readonly TimeSpan PreviewLifetime = TimeSpan.FromMinutes(30);
+    /// <summary>Sửa phiếu lỗi và danh sách ảnh của nó tuần tự: đọc lại phiếu mới nhất rồi mới ghi, không ghi đè thay đổi của người khác.</summary>
+    private static readonly object DefectLock = new();
     private readonly ConcurrentDictionary<string, (ImportPreview Preview, DateTimeOffset At)> _imports = new(StringComparer.Ordinal);
 
     private ProductionStore Store => maintenance.Database.Store;
@@ -89,30 +91,19 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
 
         app.MapPost("/api/quanly/defect", (HttpContext http, DefectRequest request) => Run(http, user =>
         {
-            var data = Store.Load();
-            var line = data.FindLine(request.Line) ?? throw new EntryException($"Không có chuyền \"{request.Line}\".");
-            if (request.Quantity is not > 0)
-                throw new EntryException("Số lượng hàng lỗi phải lớn hơn 0.");
-            TimeOnly? at = string.IsNullOrWhiteSpace(request.Time) ? null
-                : TimeOnly.TryParse(request.Time, CultureInfo.InvariantCulture, out var t) ? t : throw new EntryException($"Giờ \"{request.Time}\" không đúng.");
-            var old = data.Defects.FirstOrDefault(d => d.Id == request.Id);
-            var row = new DefectRow
-            {
-                Id = request.Id, Date = request.Date, Time = at, LineCode = line.Code, DefectType = request.DefectType?.Trim(),
-                Quantity = request.Quantity, Note = request.Note, ImageFiles = old?.ImageFiles,
-            };
-            if (old is null)
-                Store.AddDefect(row, user.Name);
-            else
-                Store.UpdateDefect(row, user.Name);
-            return Day(Store.Load(), request.Date);
+            lock (DefectLock)
+                return SaveDefect(request, user);
         }));
 
         app.MapDelete("/api/quanly/defect/{id:long}", (HttpContext http, long id) => Run(http, user =>
         {
-            var defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
-            Store.DeleteDefect(id, user.Name);
-            DeletePhotosNoLongerUsed(PhotoFiles(defect.ImageFiles));
+            DefectRow defect;
+            lock (DefectLock)
+            {
+                defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+                Store.DeleteDefect(id, user.Name);
+                DeletePhotosNoLongerUsed(PhotoFiles(defect.ImageFiles));
+            }
             return Day(Store.Load(), defect.Date);
         }));
 
@@ -131,27 +122,45 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
             if (!http.Request.HasFormContentType)
                 throw new EntryException("Chưa chọn ảnh.");
             var form = await http.Request.ReadFormAsync(http.RequestAborted).ConfigureAwait(false);
-            var files = PhotoFiles(defect.ImageFiles);
-            var room = EntryService.MaxPhotos - files.Count;
-            if (room <= 0 || form.Files.Count > room)
-                throw new EntryException($"Mỗi phiếu lỗi tối đa {EntryService.MaxPhotos} ảnh (phiếu này còn thêm được {Math.Max(0, room)} ảnh).");
+            var room = RoomFor(defect);
+            if (form.Files.Count > room)
+                throw new EntryException(TooManyPhotos(room));
             var photos = await EntryApi.ReadPhotosAsync(form.Files, room, http.RequestAborted).ConfigureAwait(false);
             if (photos.Count == 0)
                 throw new EntryException("Chưa chọn ảnh.");
             var names = await auth.Service.SaveDefectPhotosAsync(Store.Load().LineName(defect.LineCode), photos, http.RequestAborted).ConfigureAwait(false);
-            Store.UpdateDefect(defect with { ImageFiles = string.Join("; ", files.Concat(names)) }, user.Name);
+            lock (DefectLock)
+            {
+                // Đọc lại phiếu sau khi lưu ảnh: trong lúc tải ảnh lên có thể người khác đã sửa, xoá phiếu hoặc thêm ảnh.
+                try
+                {
+                    defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+                    if (names.Count > RoomFor(defect))
+                        throw new EntryException(TooManyPhotos(RoomFor(defect)));
+                }
+                catch
+                {
+                    foreach (var name in names)
+                        auth.Service.DeleteDefectPhoto(name);
+                    throw;
+                }
+                Store.UpdateDefect(defect with { ImageFiles = string.Join("; ", PhotoFiles(defect.ImageFiles).Concat(names)) }, user.Name);
+            }
             return Day(Store.Load(), defect.Date);
         }));
 
         app.MapDelete("/api/quanly/defect/{id:long}/photos", (HttpContext http, long id, string? file) => Run(http, user =>
         {
-            var data = Store.Load();
-            var defect = data.Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
-            var files = PhotoFiles(defect.ImageFiles);
-            if (files.RemoveAll(f => f == file) == 0)
-                throw new EntryException("Ảnh này không còn trong phiếu.");
-            Store.UpdateDefect(defect with { ImageFiles = files.Count == 0 ? null : string.Join("; ", files) }, user.Name);
-            DeletePhotosNoLongerUsed([file!]);
+            DefectRow defect;
+            lock (DefectLock)
+            {
+                defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+                var files = PhotoFiles(defect.ImageFiles);
+                if (files.RemoveAll(f => f == file) == 0)
+                    throw new EntryException("Ảnh này không còn trong phiếu.");
+                Store.UpdateDefect(defect with { ImageFiles = files.Count == 0 ? null : string.Join("; ", files) }, user.Name);
+                DeletePhotosNoLongerUsed([file!]);
+            }
             return Day(Store.Load(), defect.Date);
         }));
 
@@ -383,14 +392,46 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
             ? $"PIN của {user.Name} quá ngắn cho quyền quản lý. Đổi sang PIN ít nhất {EntryUser.MinManagerPinLength} số ở app trên máy chủ (tab Nhập liệu) rồi đăng nhập lại."
             : null;
 
+    private object SaveDefect(DefectRequest request, EntryUser user)
+    {
+        var data = Store.Load();
+        var line = data.FindLine(request.Line) ?? throw new EntryException($"Không có chuyền \"{request.Line}\".");
+        if (request.Quantity is not > 0)
+            throw new EntryException("Số lượng hàng lỗi phải lớn hơn 0.");
+        TimeOnly? at = string.IsNullOrWhiteSpace(request.Time) ? null
+            : TimeOnly.TryParse(request.Time, CultureInfo.InvariantCulture, out var t) ? t : throw new EntryException($"Giờ \"{request.Time}\" không đúng.");
+        var old = data.Defects.FirstOrDefault(d => d.Id == request.Id);
+        var row = new DefectRow
+        {
+            Id = request.Id, Date = request.Date, Time = at, LineCode = line.Code, DefectType = request.DefectType?.Trim(),
+            Quantity = request.Quantity, Note = request.Note, ImageFiles = old?.ImageFiles,
+        };
+        if (old is null)
+            Store.AddDefect(row, user.Name);
+        else
+            Store.UpdateDefect(row, user.Name);
+        return Day(Store.Load(), request.Date);
+    }
+
+    private static int RoomFor(DefectRow defect)
+    {
+        var room = EntryService.MaxPhotos - PhotoFiles(defect.ImageFiles).Count;
+        return room > 0 ? room : throw new EntryException(TooManyPhotos(0));
+    }
+
+    private static string TooManyPhotos(int room) =>
+        $"Mỗi phiếu lỗi tối đa {EntryService.MaxPhotos} ảnh (phiếu này còn thêm được {Math.Max(0, room)} ảnh).";
+
     private static List<string> PhotoFiles(string? imageFiles) =>
         (imageFiles ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     /// <summary>Xoá file ảnh không còn phiếu lỗi nào dùng (một file có thể được nhập lại vào nhiều phiếu từ Excel cũ).</summary>
     private void DeletePhotosNoLongerUsed(IEnumerable<string> files)
     {
-        var used = Store.Load().Defects.SelectMany(d => PhotoFiles(d.ImageFiles)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in files.Where(f => !used.Contains(f)))
+        // So theo tên không đuôi: phiếu nhập từ Excel cũ có thể ghi "anh1" mà file thật là anh1.jpg (ImageResolver tự thử đuôi ảnh).
+        var used = Store.Load().Defects.SelectMany(d => PhotoFiles(d.ImageFiles)).Select(f => Path.GetFileNameWithoutExtension(f))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files.Where(f => !used.Contains(Path.GetFileNameWithoutExtension(f))))
             auth.Service.DeleteDefectPhoto(file);
     }
 
