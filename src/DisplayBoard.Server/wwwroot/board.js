@@ -427,6 +427,7 @@
   function hm(t) { return t ? String(t).substr(0, 5) : ''; }
 
   // Hàng lỗi có ảnh: 6 ảnh/trang kèm cột tổng bên trái; 4 hoặc 2 ảnh/trang thì ảnh chiếm cả màn hình, tổng ghi ở chân trang.
+  // 4 ảnh xếp một hàng (ô dọc) vì ảnh chụp bằng điện thoại thường là ảnh dọc.
   function defectsView(per) {
     return {
       title: function () { return 'HÀNG LỖI HÔM NAY'; }, icon: 'search',
@@ -459,17 +460,17 @@
             (d.defectType ? '<span class="tag ell">' + esc(d.defectType) + '</span>' : '') +
             (isNum(d.quantity) ? '<span class="qty">×' + num(d.quantity) + '</span>' : '') + '</div>' +
             '<div class="cap"><span style="width:8px;height:30px;border-radius:3px;margin-right:12px;flex:none;align-self:center;background:' + color(d.color) + '"></span>' +
-            '<span class="sb ell" style="flex:1">' + esc(d.line + (d.productCode ? ' · ' + d.productCode : '')) + '</span>' +
+            '<span class="sb ell" style="flex:1">' + esc(d.line) + (d.productCode ? '<span class="pc"><span class="sep"> · </span>' + esc(d.productCode) + '</span>' : '') + '</span>' +
             '<span class="t2 tm">' + hm(d.time) + '</span></div></div>';
         }).join('');
         var grid = per === 2 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:1fr'
-          : per === 4 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)' : '';
+          : per === 4 ? 'grid-template-columns:repeat(4,1fr);grid-template-rows:1fr' : '';
         var foot = big
           ? 'Tổng số lỗi <b class="c-' + st(m.defectStatus) + '">' + num(m.defects) + ' ' + esc(s.unit) + '</b> · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' +
             pct2(m.defectRate) + '</b> · ' + photos.length + ' ảnh hàng lỗi hôm nay'
           : photos.length + ' ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng';
         return '<div style="flex:1;display:flex;margin:26px 40px 0;min-height:0">' + side +
-          '<div class="dgrid' + (big ? ' big' : '') + '" style="' + grid + '">' + cards + '</div></div>' +
+          '<div class="dgrid' + (big ? ' big' : '') + (per === 4 ? ' four' : '') + '" style="' + grid + '">' + cards + '</div></div>' +
           '<div class="t2" style="font-size:' + (big ? 30 : 24) + 'px;margin:14px 40px 22px;display:flex"><span style="flex:1">' + foot + '</span>' +
           (pc > 1 ? '<span>Trang ' + (page + 1) + '/' + pc + '</span>' : '') + '</div>';
       }
@@ -680,8 +681,11 @@
       var iw = inner.offsetWidth, ih = inner.offsetHeight;
       var k = Math.min(1, aw / iw, ah / ih);
       if (k > 0 && k < 1) {
+        // Thu từ góc trên trái rồi trả lại phần thừa ở phải/dưới: ô chỉ còn đúng kích thước sau khi thu.
+        // (Trước đây trả đều hai bên trong khi gốc thu ở mép trái nên chữ đầu dòng bị lẹm.)
+        inner.style.transformOrigin = '0 0';
         inner.style.transform = 'scale(' + k + ')';
-        inner.style.margin = (-(ih * (1 - k)) / 2) + 'px ' + (-(iw * (1 - k)) / 2) + 'px';
+        inner.style.margin = '0 ' + (-(iw * (1 - k))) + 'px ' + (-(ih * (1 - k))) + 'px 0';
       }
     }
     var tiles = root.querySelectorAll('.fitw');

@@ -268,6 +268,46 @@ public sealed class EntryService
         return job;
     }
 
+    /// <summary>Trang quản lý thêm ảnh cho phiếu lỗi có sẵn: lưu như ảnh gửi từ /nhap, trả về tên file.</summary>
+    public Task<IReadOnlyList<string>> SaveDefectPhotosAsync(string line, IReadOnlyList<EntryPhoto> photos, CancellationToken ct = default)
+    {
+        if (photos.Count > MaxPhotos)
+            throw new EntryException($"Mỗi phiếu lỗi tối đa {MaxPhotos} ảnh.");
+        return SavePhotosAsync(line, _time.GetLocalNow().DateTime, photos, ct);
+    }
+
+    /// <summary>
+    /// Đường dẫn ảnh hàng lỗi theo tên file đã lưu trong phiếu. Chỉ nhận tên file trần (không thư mục, không "..")
+    /// để không đọc được file ngoài images\hang_loi; không có file thì null.
+    /// </summary>
+    public string? DefectPhotoPath(string? file)
+    {
+        if (!IsPlainFileName(file))
+            return null;
+        var path = Path.Combine(_config.Current.ResolveImagesFolder()!, ImageResolver.DefectFolder, file!);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>Xoá file ảnh hàng lỗi (bỏ ảnh khỏi phiếu, xoá phiếu). Lỗi xoá file chỉ ghi log, không chặn việc sửa dữ liệu.</summary>
+    public void DeleteDefectPhoto(string? file)
+    {
+        if (DefectPhotoPath(file) is not { } path)
+            return;
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Không xoá được ảnh hàng lỗi {File}", file);
+        }
+    }
+
+    private static bool IsPlainFileName(string? file) =>
+        !string.IsNullOrWhiteSpace(file) && file.Trim() == file && file != "." && file != ".."
+        && Path.GetFileName(file) == file && file.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
+        && file.IndexOfAny(['/', '\\', ':']) < 0;
+
     /// <summary>Lưu ảnh vào images\hang_loi trong thư mục dữ liệu. Chỉ nhận JPEG/PNG (kiểm tra nội dung, không tin đuôi file).</summary>
     private async Task<IReadOnlyList<string>> SavePhotosAsync(string line, DateTime now, IReadOnlyList<EntryPhoto> photos, CancellationToken ct)
     {

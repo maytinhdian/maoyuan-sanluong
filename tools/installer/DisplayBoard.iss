@@ -3,7 +3,7 @@
 ; Kết quả: dist/DisplayBoard-Setup-<version>.exe
 
 #ifndef AppVersion
-  #define AppVersion "4.0.4"
+  #define AppVersion "4.0.5"
 #endif
 
 [Setup]

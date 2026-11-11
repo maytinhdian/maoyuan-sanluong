@@ -24,7 +24,7 @@ App Windows chạy trên một máy chủ ở xưởng: lưu sản lượng củ
 
 - Tổ trưởng mở `http://<IP máy chủ>:5080/nhap` trên điện thoại, đăng nhập bằng mã PIN (đặt ở tab **Nhập liệu** của app, mỗi người một PIN, có thể giới hạn chuyền).
 - Tab **Sản lượng**: chọn chuyền, app tự chọn giờ đang làm theo ca (CAU_HINH_CA), nhập số rồi **Ghi vào Excel**: số vào ô `GIỜ n` của dòng hôm nay ở `NHAP_LIEU`. Chuyền chưa có dòng hôm nay thì app tự tạo dòng mới, chép mã sản phẩm, ca, mục tiêu giờ từ ngày làm trước (sửa bằng **Sửa kế hoạch**). Số lớn hơn 3 lần mục tiêu giờ bị chặn.
-- Tab **Hàng lỗi**: loại lỗi, số lượng, tối đa 4 ảnh chụp bằng camera (thu nhỏ còn 1600px trên điện thoại). Ảnh lưu vào `images\hang_loi`, thêm một dòng vào `HANG_LOI`; nhiều ảnh ghi chung một ô `TÊN FILE ẢNH`, cách nhau bởi `; `.
+- Tab **Hàng lỗi**: loại lỗi, số lượng, tối đa 4 ảnh: chụp mới bằng camera hoặc chọn ảnh có sẵn trong máy (thu nhỏ còn 1600px trên điện thoại). Ảnh lưu vào `images\hang_loi`, thêm một dòng vào `HANG_LOI`; nhiều ảnh ghi chung một ô `TÊN FILE ẢNH`, cách nhau bởi `; `.
 - Tab **Đã gửi**: trạng thái từng phiếu (đang ghi, đang chờ Excel, đã ghi, lỗi).
 - Máy chủ ghi qua **chính Microsoft Excel trên máy chủ** (COM), không sửa file trực tiếp: file đang mở thì ghi vào cửa sổ Excel đó rồi lưu, chưa mở thì mở ngầm, ghi, lưu, đóng. Nhờ vậy công thức tự tính lại và TV cập nhật ngay. Có người đang sửa ô trong Excel thì phiếu chờ và tự ghi khi họ bấm Enter/Esc (chờ tối đa 15 phút). Cần cài Excel bản desktop trên máy chủ.
 - Chỉ ghi vào ô nhập tay (NGÀY, CHUYỀN, MÃ SẢN PHẨM, MÃ CA, MỤC TIÊU MỖI GIỜ, GIỜ 1–12; ở HANG_LOI: NGÀY, GIỜ, CHUYỀN, LOẠI LỖI, SỐ LƯỢNG, TÊN FILE ẢNH, GHI CHÚ). Cột tìm theo tiêu đề tiếng Việt nên dùng được file V20 trở lên.
@@ -111,7 +111,7 @@ Bộ cài (`DisplayBoard-Setup-<phiên bản>.exe`, dùng Inno Setup, script ở
 | `lines` | Thẻ từng chuyền: mã hàng, thực tế/mục tiêu, %, tiến độ theo giờ, phần thiếu hôm trước |
 | `hourly` | Sản lượng từng giờ (GIỜ 1–12) của mỗi chuyền, tô màu so với mục tiêu mỗi giờ, kèm % tiến độ theo giờ |
 | `defects` | Hàng lỗi hôm nay. File V20: lưới ảnh QC chụp (sheet HANG_LOI, ảnh trong `images\hang_loi`), 6 ảnh/trang, kèm loại lỗi, số lượng và tổng số lỗi từng chuyền. File V19: bảng số lỗi và tỷ lệ lỗi từng chuyền |
-| `defects-4`, `defects-2` | Hàng lỗi như trên nhưng 4 hoặc 2 ảnh lớn/trang, ảnh chiếm cả màn hình, tổng số lỗi ghi ở chân trang |
+| `defects-4`, `defects-2` | Hàng lỗi như trên nhưng ảnh chiếm cả màn hình, tổng số lỗi ghi ở chân trang: `defects-4` là 4 ảnh xếp một hàng (ô dọc, hợp ảnh chụp dọc bằng điện thoại), `defects-2` là 2 ảnh rất lớn/trang |
 
 Mỗi TV có một danh sách nội dung tự xoay (mặc định 15 giây/trang). Nội dung không có dữ liệu được tự bỏ qua.
 

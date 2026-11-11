@@ -285,6 +285,7 @@
       box.insertBefore(el, $('addPhoto'));
     });
     $('addPhoto').classList.toggle('hidden', state.photos.length >= 4);
+    $('pickPhoto').classList.toggle('hidden', state.photos.length >= 4);
   }
 
   function renderJobs() {
@@ -479,7 +480,9 @@
   $('savePlan').onclick = savePlan;
   $('sendHour').onclick = sendHour;
   $('sendDefect').onclick = sendDefect;
-  $('photoInput').addEventListener('change', (e) => { addPhotos(Array.from(e.target.files || [])); e.target.value = ''; });
+  // Hai ô: "Chụp ảnh" mở thẳng camera; "Chọn ảnh có sẵn" mở thư viện ảnh, chọn được nhiều ảnh một lần.
+  ['photoInput', 'photoPick'].forEach((id) =>
+    $(id).addEventListener('change', (e) => { addPhotos(Array.from(e.target.files || [])); e.target.value = ''; }));
 
   if (state.token) start().then(() => schedulePoll(20000)); else showLogin();
 })();
