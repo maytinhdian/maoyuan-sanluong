@@ -91,9 +91,10 @@
         <input id="dQty" class="inp mid" type="number" inputmode="numeric" min="1" value="1">
         <button class="btnr" data-step="1" data-for="dQty">+</button>
       </div>
-      <label class="lbl">ẢNH (chụp bằng camera, tối đa 4 ảnh)<span class="zh">照片</span></label>
+      <label class="lbl">ẢNH (chụp mới hoặc chọn ảnh có sẵn, tối đa 4 ảnh)<span class="zh">照片</span></label>
       <div class="photos" id="photos">
-        <label class="ph add" id="addPhoto"><span class="ic">📷</span>Chụp ảnh<input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden></label>
+        <label class="ph add" id="addPhoto"><span class="ic">📷</span>Chụp ảnh<input id="photoInput" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="ph add" id="pickPhoto"><span class="ic">🖼️</span>Chọn ảnh có sẵn<input id="photoPick" type="file" accept="image/*" multiple hidden></label>
       </div>
       <label class="lbl">GHI CHÚ</label>
       <textarea id="dNote" maxlength="200" placeholder="Không bắt buộc"></textarea>

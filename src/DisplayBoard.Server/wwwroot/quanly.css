@@ -73,6 +73,17 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--acc); }
 .track i { display: block; height: 100%; }
 .track i.ok { background: var(--met); } .track i.low { background: var(--near); } .track i.bad { background: var(--bad); }
 
+/* Ảnh phiếu lỗi */
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.thumb { position: relative; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--input); border: 1px solid var(--bd); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+.thumb .x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .7); color: #fff; font-size: 12px; cursor: pointer; }
+.thumb.add { display: flex; align-items: center; justify-content: center; border-style: dashed; color: var(--t2); font-size: 12.5px; cursor: pointer; }
+.thumb.add:hover { border-color: var(--acc); color: #fff; }
+.viewer { position: fixed; inset: 0; background: rgba(0, 0, 0, .88); z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; cursor: zoom-out; }
+.viewer img { max-width: 100%; max-height: calc(100% - 40px); border-radius: 8px; }
+.viewer .cap { color: var(--t2); font-size: 13px; }
+
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14532D; border: 1px solid var(--met); padding: 10px 18px; border-radius: 10px; z-index: 20; max-width: 90vw; }
 .toast.bad { background: #7F1D1D; border-color: var(--bad); }
 
@@ -90,7 +101,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--acc); }
   .cards tr.dirty td, .cards tr.off td { background: none; }
   .cards td { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; padding: 0; border: 0; white-space: normal; min-width: 0; }
   .cards td.c1 { grid-column: span 1; } .cards td.c2 { grid-column: span 2; }
-  .cards td.img:empty { display: none; }
+  .cards .thumb { width: 76px; height: 76px; }
   .cards td[data-label]::before { content: attr(data-label); font-size: 12px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cards td.head { font-size: 17px; border-bottom: 1px solid var(--bd); padding-bottom: 6px; }
   .cards .num { text-align: left; font-size: 17px; }

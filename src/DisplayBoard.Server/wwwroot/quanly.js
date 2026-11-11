@@ -268,7 +268,7 @@
         '<td class="c2"' + lbl('Loại lỗi') + '>' + cell({ type: 'select', options: types }, d.defectType) + '</td>' +
         '<td class="c2"' + lbl('Số lượng') + '><input class="n" inputmode="decimal" value="' + esc(d.quantity == null ? '' : d.quantity) + '"></td>' +
         '<td' + lbl('Ghi chú') + '><input class="w" value="' + esc(d.note || '') + '"></td>' +
-        '<td class="small t2 img"' + lbl('Ảnh') + '>' + esc(d.imageFiles || '') + '</td>' +
+        '<td class="pics"' + lbl('Ảnh') + '><div class="thumbs"></div></td>' +
         '<td class="act"><button class="btn primary save">Lưu</button> ' + (d.id ? '<button class="btn danger del">Xoá</button>' : '') + '</td>';
       tr.addEventListener('input', () => tr.classList.add('dirty'));
       if (!d.id) tr.classList.add('dirty');
@@ -281,6 +281,7 @@
         renderDay();
         toast('Đã lưu phiếu hàng lỗi');
       });
+      renderDefectPhotos(tr.querySelector('.thumbs'), d);
       const del = tr.querySelector('.del');
       if (del) del.onclick = (ev) => {
         if (!confirm('Xoá phiếu hàng lỗi này?')) return;
@@ -295,6 +296,76 @@
     };
     day.defects.forEach(add);
     $('addDefect').onclick = () => add({}).querySelector('input').focus();
+  }
+
+  // Ảnh của một phiếu lỗi: ảnh nhỏ (bấm để xem to, ✕ để bỏ) và ô "+ Ảnh" để thêm (tối đa 4).
+  // Ảnh lấy qua API có mã phiên nên tải bằng fetch rồi gắn vào <img>.
+  const MAX_PHOTOS = 4;
+  const photoFiles = (d) => String(d.imageFiles || '').split(';').map((x) => x.trim()).filter(Boolean);
+
+  function renderDefectPhotos(box, d) {
+    const files = photoFiles(d);
+    box.innerHTML = '';
+    files.forEach((file) => {
+      const el = document.createElement('div');
+      el.className = 'thumb';
+      el.title = file;
+      el.innerHTML = '<img alt=""><button class="x" title="Bỏ ảnh này">✕</button>';
+      loadPhoto(file).then((url) => { if (url) el.querySelector('img').src = url; });
+      el.querySelector('img').onclick = () => viewPhoto(el.querySelector('img').src, file);
+      el.querySelector('.x').onclick = (ev) => {
+        if (!confirm('Bỏ ảnh ' + file + ' khỏi phiếu lỗi?')) return;
+        busy(ev.target, async () => {
+          state.day = await api('/api/quanly/defect/' + d.id + '/photos?file=' + encodeURIComponent(file), { method: 'DELETE' });
+          renderDay();
+          toast('Đã bỏ ảnh');
+        });
+      };
+      box.appendChild(el);
+    });
+    if (!d.id) {
+      box.insertAdjacentHTML('beforeend', '<span class="t2 small">Lưu phiếu trước rồi thêm ảnh.</span>');
+      return;
+    }
+    if (files.length >= MAX_PHOTOS) return;
+    const add = document.createElement('label');
+    add.className = 'thumb add';
+    add.innerHTML = '<span>＋ Ảnh</span><input type="file" accept="image/*" multiple hidden>';
+    add.querySelector('input').onchange = (ev) => {
+      const picked = Array.from(ev.target.files || []).slice(0, MAX_PHOTOS - files.length);
+      ev.target.value = '';
+      if (picked.length === 0) return;
+      busy(null, async () => {
+        const form = new FormData();
+        picked.forEach((f) => form.append('photos', f, f.name));
+        state.day = await api('/api/quanly/defect/' + d.id + '/photos', { method: 'POST', body: form });
+        renderDay();
+        toast('Đã thêm ' + picked.length + ' ảnh');
+      });
+    };
+    box.appendChild(add);
+  }
+
+  const photoCache = new Map();
+  async function loadPhoto(file) {
+    if (photoCache.has(file)) return photoCache.get(file);
+    try {
+      const res = await api('/api/quanly/defect-photo?file=' + encodeURIComponent(file), { raw: true });
+      const url = URL.createObjectURL(await res.blob());
+      photoCache.set(file, url);
+      return url;
+    } catch { return null; }
+  }
+
+  function viewPhoto(url, file) {
+    if (!url) return;
+    const box = document.createElement('div');
+    box.className = 'viewer';
+    box.innerHTML = '<img alt=""><div class="cap"></div>';
+    box.querySelector('img').src = url;
+    box.querySelector('.cap').textContent = file + ' · bấm để đóng';
+    box.onclick = () => box.remove();
+    document.body.appendChild(box);
   }
 
   // ---------- Mục tiêu tháng ----------
