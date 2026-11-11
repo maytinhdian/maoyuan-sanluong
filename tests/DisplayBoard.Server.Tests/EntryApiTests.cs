@@ -309,6 +309,23 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Month_targets_with_the_same_product_twice_are_refused_with_a_clear_message()
+    {
+        await LoginAsync("999999");
+        await PostAsync("/api/quanly/targets", new { month = "2026-09-01", targets = new[] { new { productCode = "883", target = 50000, note = "" } } });
+
+        var response = await _http.PostAsJsonAsync("/api/quanly/targets", new
+        {
+            month = "2026-09-01",
+            targets = new[] { new { productCode = "883", target = 60000, note = "" }, new { productCode = "883", target = 70000, note = "" } },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Trùng mã sản phẩm", await ErrorAsync(response));
+        Assert.Equal(50000, Assert.Single(_database.Store.Load().MonthTargets, t => t.Month == new DateOnly(2026, 9, 1)).Target);
+    }
+
+    [Fact]
     public async Task Manager_downloads_excel_for_a_day()
     {
         await LoginAsync("999999");
