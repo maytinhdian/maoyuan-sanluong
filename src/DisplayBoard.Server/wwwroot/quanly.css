@@ -66,6 +66,13 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--acc); }
 .grid .ok { color: var(--met); font-weight: 600; } .grid .low { color: var(--near); font-weight: 600; } .grid .bad { color: var(--bad); font-weight: 600; }
 .grid .wrap { white-space: normal; min-width: 240px; max-width: 520px; font-size: 12.5px; }
 
+/* % hoàn thành mục tiêu tháng: số + thanh tiến độ */
+.rate { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.rate .num { min-width: 44px; }
+.track { flex: 1; height: 8px; background: var(--input); border: 1px solid var(--bd); border-radius: 5px; overflow: hidden; }
+.track i { display: block; height: 100%; }
+.track i.ok { background: var(--met); } .track i.low { background: var(--near); } .track i.bad { background: var(--bad); }
+
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14532D; border: 1px solid var(--met); padding: 10px 18px; border-radius: 10px; z-index: 20; max-width: 90vw; }
 .toast.bad { background: #7F1D1D; border-color: var(--bad); }
 
