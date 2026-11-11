@@ -357,6 +357,56 @@ public sealed class EntryApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, (await _http.PostAsJsonAsync("/api/quanly/import/" + preview.GetProperty("id").GetString(), new { })).StatusCode);
     }
 
+    [Fact]
+    public async Task Manager_adds_views_and_removes_defect_photos()
+    {
+        await LoginAsync("999999");
+        var day = await PostAsync("/api/quanly/defect", new { id = 0, date = Today, time = "09:30", line = "Chuyền 3", defectType = "Bung chỉ", quantity = 2, note = "" });
+        var id = day.GetProperty("defects").EnumerateArray().Last().GetProperty("id").GetInt64();
+
+        using (var form = new MultipartFormDataContent { { Jpeg(), "photos", "anh1.jpg" }, { Jpeg(), "photos", "anh2.jpg" } })
+        {
+            var added = await _http.PostAsync($"/api/quanly/defect/{id}/photos", form);
+            Assert.True(added.IsSuccessStatusCode, await added.Content.ReadAsStringAsync());
+        }
+        var files = _database.Store.Load().Defects.Single(d => d.Id == id).ImageFiles!.Split("; ");
+        Assert.Equal(["chuyen3_20260930_134200_1.jpg", "chuyen3_20260930_134200_2.jpg"], files);
+        var folder = Path.Combine(_folder, "images", "hang_loi");
+        Assert.True(File.Exists(Path.Combine(folder, files[0])));
+
+        var photo = await _http.GetAsync("/api/quanly/defect-photo?file=" + files[0]);
+        Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
+        Assert.Equal("image/jpeg", photo.Content.Headers.ContentType!.MediaType);
+        // Chỉ đọc được file trong images\hang_loi.
+        Assert.Equal(HttpStatusCode.NotFound, (await _http.GetAsync("/api/quanly/defect-photo?file=..%2Fsanluong.db")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await _http.GetAsync("/api/quanly/defect-photo?file=..")).StatusCode);
+
+        // Tối đa 4 ảnh mỗi phiếu.
+        using (var form = new MultipartFormDataContent { { Jpeg(), "photos", "a.jpg" }, { Jpeg(), "photos", "b.jpg" }, { Jpeg(), "photos", "c.jpg" } })
+        {
+            var tooMany = await _http.PostAsync($"/api/quanly/defect/{id}/photos", form);
+            Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+            Assert.Contains("tối đa 4 ảnh", await ErrorAsync(tooMany));
+        }
+
+        var removed = await _http.DeleteAsync($"/api/quanly/defect/{id}/photos?file=" + files[0]);
+        Assert.True(removed.IsSuccessStatusCode, await removed.Content.ReadAsStringAsync());
+        Assert.Equal(files[1], _database.Store.Load().Defects.Single(d => d.Id == id).ImageFiles);
+        Assert.False(File.Exists(Path.Combine(folder, files[0])));
+
+        // Xoá phiếu thì xoá luôn ảnh của phiếu.
+        Assert.True((await _http.DeleteAsync($"/api/quanly/defect/{id}")).IsSuccessStatusCode);
+        Assert.False(File.Exists(Path.Combine(folder, files[1])));
+    }
+
+    [Fact]
+    public async Task Defect_photo_needs_a_manager()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _http.GetAsync("/api/quanly/defect-photo?file=x.jpg")).StatusCode);
+        await LoginAsync("1234");
+        Assert.Equal(HttpStatusCode.Forbidden, (await _http.GetAsync("/api/quanly/defect-photo?file=x.jpg")).StatusCode);
+    }
+
     private DayEntry? Entry(string line)
     {
         var data = _database.Store.Load();

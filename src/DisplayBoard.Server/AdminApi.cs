@@ -110,9 +110,49 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
 
         app.MapDelete("/api/quanly/defect/{id:long}", (HttpContext http, long id) => Run(http, user =>
         {
-            var date = Store.Load().Defects.FirstOrDefault(d => d.Id == id)?.Date ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+            var defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
             Store.DeleteDefect(id, user.Name);
-            return Day(Store.Load(), date);
+            DeletePhotosNoLongerUsed(PhotoFiles(defect.ImageFiles));
+            return Day(Store.Load(), defect.Date);
+        }));
+
+        // Ảnh phiếu lỗi: xem, thêm (tối đa 4 ảnh mỗi phiếu), bỏ. Ảnh lưu ở images\hang_loi như ảnh gửi từ /nhap.
+        app.MapGet("/api/quanly/defect-photo", (HttpContext http, string? file) =>
+        {
+            if (Deny(http) is { } denied)
+                return denied;
+            var path = auth.Service.DefectPhotoPath(file);
+            return path is null ? Error("Không tìm thấy ảnh.", StatusCodes.Status404NotFound) : Results.File(path, ContentTypes.ForFile(path));
+        });
+
+        app.MapPost("/api/quanly/defect/{id:long}/photos", (HttpContext http, long id) => Run(http, async user =>
+        {
+            var defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+            if (!http.Request.HasFormContentType)
+                throw new EntryException("Chưa chọn ảnh.");
+            var form = await http.Request.ReadFormAsync(http.RequestAborted).ConfigureAwait(false);
+            var files = PhotoFiles(defect.ImageFiles);
+            var room = EntryService.MaxPhotos - files.Count;
+            if (room <= 0 || form.Files.Count > room)
+                throw new EntryException($"Mỗi phiếu lỗi tối đa {EntryService.MaxPhotos} ảnh (phiếu này còn thêm được {Math.Max(0, room)} ảnh).");
+            var photos = await EntryApi.ReadPhotosAsync(form.Files, room, http.RequestAborted).ConfigureAwait(false);
+            if (photos.Count == 0)
+                throw new EntryException("Chưa chọn ảnh.");
+            var names = await auth.Service.SaveDefectPhotosAsync(Store.Load().LineName(defect.LineCode), photos, http.RequestAborted).ConfigureAwait(false);
+            Store.UpdateDefect(defect with { ImageFiles = string.Join("; ", files.Concat(names)) }, user.Name);
+            return Day(Store.Load(), defect.Date);
+        }));
+
+        app.MapDelete("/api/quanly/defect/{id:long}/photos", (HttpContext http, long id, string? file) => Run(http, user =>
+        {
+            var data = Store.Load();
+            var defect = data.Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
+            var files = PhotoFiles(defect.ImageFiles);
+            if (files.RemoveAll(f => f == file) == 0)
+                throw new EntryException("Ảnh này không còn trong phiếu.");
+            Store.UpdateDefect(defect with { ImageFiles = files.Count == 0 ? null : string.Join("; ", files) }, user.Name);
+            DeletePhotosNoLongerUsed([file!]);
+            return Day(Store.Load(), defect.Date);
         }));
 
         app.MapGet("/api/quanly/targets", (HttpContext http, DateOnly month) => Run(http, _ => Targets(Store.Load(), FirstDay(month))));
@@ -343,17 +383,39 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
             ? $"PIN của {user.Name} quá ngắn cho quyền quản lý. Đổi sang PIN ít nhất {EntryUser.MinManagerPinLength} số ở app trên máy chủ (tab Nhập liệu) rồi đăng nhập lại."
             : null;
 
-    private Task<IResult> Run(HttpContext http, Func<EntryUser, object> action) => Run(http, user => Task.FromResult(action(user)));
+    private static List<string> PhotoFiles(string? imageFiles) =>
+        (imageFiles ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-    private async Task<IResult> Run(HttpContext http, Func<EntryUser, Task<object>> action)
+    /// <summary>Xoá file ảnh không còn phiếu lỗi nào dùng (một file có thể được nhập lại vào nhiều phiếu từ Excel cũ).</summary>
+    private void DeletePhotosNoLongerUsed(IEnumerable<string> files)
     {
-        var user = auth.Authenticate(http);
-        if (user is null)
+        var used = Store.Load().Defects.SelectMany(d => PhotoFiles(d.ImageFiles)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files.Where(f => !used.Contains(f)))
+            auth.Service.DeleteDefectPhoto(file);
+    }
+
+    /// <summary>Kiểm tra đăng nhập quản lý; null là được phép.</summary>
+    private IResult? Deny(HttpContext http) => Deny(http, out _);
+
+    private IResult? Deny(HttpContext http, out EntryUser user)
+    {
+        var found = auth.Authenticate(http);
+        user = found!;
+        if (found is null)
             return Error("Phiên đăng nhập đã hết. Nhập lại mã PIN.", StatusCodes.Status401Unauthorized);
         if (!user.Manager)
             return Error($"{user.Name} không phải quản lý. Trang này chỉ dành cho quản lý.", StatusCodes.Status403Forbidden);
         if (ManagerPinProblem(user) is { } pinProblem)
             return Error(pinProblem, StatusCodes.Status403Forbidden);
+        return null;
+    }
+
+    private Task<IResult> Run(HttpContext http, Func<EntryUser, object> action) => Run(http, user => Task.FromResult(action(user)));
+
+    private async Task<IResult> Run(HttpContext http, Func<EntryUser, Task<object>> action)
+    {
+        if (Deny(http, out var user) is { } denied)
+            return denied;
         try
         {
             var result = await action(user).ConfigureAwait(false);

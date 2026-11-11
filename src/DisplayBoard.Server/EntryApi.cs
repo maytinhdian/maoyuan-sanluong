@@ -14,6 +14,26 @@ namespace DisplayBoard.Server;
 /// </summary>
 internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> config, TimeProvider time)
 {
+    /// <summary>Dịch vụ nhập liệu, trang quản lý dùng chung để lưu và đọc ảnh hàng lỗi.</summary>
+    public EntryService Service => entry;
+
+    /// <summary>Đọc ảnh gửi lên (multipart), tối đa <paramref name="max"/> ảnh, mỗi ảnh tối đa <see cref="EntryService.MaxPhotoBytes"/>.</summary>
+    internal static async Task<List<EntryPhoto>> ReadPhotosAsync(IFormFileCollection files, int max, CancellationToken ct)
+    {
+        if (files.Count > max)
+            throw new EntryException($"Mỗi lần gửi tối đa {max} ảnh.");
+        var photos = new List<EntryPhoto>();
+        foreach (var file in files)
+        {
+            if (file.Length > EntryService.MaxPhotoBytes)
+                throw new EntryException($"Ảnh lớn quá {EntryService.MaxPhotoBytes / 1024 / 1024} MB.");
+            using var memory = new MemoryStream();
+            await file.CopyToAsync(memory, ct).ConfigureAwait(false);
+            photos.Add(new EntryPhoto(memory.ToArray(), file.FileName));
+        }
+        return photos;
+    }
+
     private const string TokenHeader = "X-Entry-Token";
     private const int MaxFailures = 5;
     // 5 lần sai thì khoá 15 phút: dò hết PIN 6 số mất hàng chục năm.
@@ -82,17 +102,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
                 var form = await http.Request.ReadFormAsync(ct).ConfigureAwait(false);
                 if (!decimal.TryParse(form["quantity"], System.Globalization.CultureInfo.InvariantCulture, out var quantity))
                     throw new EntryException("Chưa nhập số lượng.");
-                if (form.Files.Count > EntryService.MaxPhotos)
-                    throw new EntryException($"Mỗi lần gửi tối đa {EntryService.MaxPhotos} ảnh.");
-                var photos = new List<EntryPhoto>();
-                foreach (var file in form.Files)
-                {
-                    if (file.Length > EntryService.MaxPhotoBytes)
-                        throw new EntryException($"Ảnh lớn quá {EntryService.MaxPhotoBytes / 1024 / 1024} MB.");
-                    using var memory = new MemoryStream();
-                    await file.CopyToAsync(memory, ct).ConfigureAwait(false);
-                    photos.Add(new EntryPhoto(memory.ToArray(), file.FileName));
-                }
+                var photos = await ReadPhotosAsync(form.Files, EntryService.MaxPhotos, ct).ConfigureAwait(false);
                 return await entry.SubmitDefectAsync(user, Required(form["line"], "chuyền"), Required(form["defectType"], "loại lỗi"),
                     quantity, form["note"].ToString(), photos, ct).ConfigureAwait(false);
             }));

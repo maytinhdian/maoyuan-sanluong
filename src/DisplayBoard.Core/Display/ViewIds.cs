@@ -13,7 +13,7 @@ public static class ViewIds
     public const string Lines = "lines";
     public const string Hourly = "hourly";
     public const string Defects = "defects";
-    /// <summary>Hàng lỗi, 4 ảnh lớn/trang (lưới 2×2).</summary>
+    /// <summary>Hàng lỗi, 4 ảnh/trang xếp một hàng (ô dọc, hợp ảnh chụp dọc bằng điện thoại).</summary>
     public const string Defects4 = "defects-4";
     /// <summary>Hàng lỗi, 2 ảnh rất lớn/trang.</summary>
     public const string Defects2 = "defects-2";

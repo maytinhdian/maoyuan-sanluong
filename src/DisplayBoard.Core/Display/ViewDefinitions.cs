@@ -84,7 +84,7 @@ public static class ViewCatalog
         new ViewDefinition(ViewIds.Lines, "So sánh các chuyền", s => s.HasMultipleLines),
         new ViewDefinition(ViewIds.Hourly, "Sản lượng theo giờ", s => s.HasHourlyData),
         new DefectsViewDefinition(ViewIds.Defects, "Hàng lỗi (6 ảnh/trang)", 6),
-        new DefectsViewDefinition(ViewIds.Defects4, "Hàng lỗi (4 ảnh lớn/trang)", 4),
+        new DefectsViewDefinition(ViewIds.Defects4, "Hàng lỗi (4 ảnh dọc/trang)", 4),
         new DefectsViewDefinition(ViewIds.Defects2, "Hàng lỗi (2 ảnh rất lớn/trang)", 2),
     ];
 }

@@ -24,7 +24,8 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
         ViewId = viewId;
         _perPage = DefectsViewDefinition.PhotosPerPageOf(viewId);
         // 6 ảnh: lưới 3×2 + cột tổng bên trái. 4 ảnh: 2×2, 2 ảnh: 2×1, ảnh chiếm cả màn hình và chữ to hơn.
-        (GridColumns, GridRows) = _perPage switch { 2 => (2, 1), 4 => (2, 2), _ => (3, 2) };
+        // 4 ảnh xếp một hàng (ô dọc): ảnh chụp bằng điện thoại thường là ảnh dọc. Giống trang TV trên trình duyệt.
+        (GridColumns, GridRows) = _perPage switch { 2 => (2, 1), 4 => (4, 1), _ => (3, 2) };
         IsLarge = _perPage < 6;
         SideWidth = new System.Windows.GridLength(IsLarge ? 0 : 444);
         _timer = new DispatcherTimer { Interval = DefectsViewDefinition.PageDuration };

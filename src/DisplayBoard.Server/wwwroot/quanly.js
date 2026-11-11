@@ -337,13 +337,33 @@
       if (picked.length === 0) return;
       busy(null, async () => {
         const form = new FormData();
-        picked.forEach((f) => form.append('photos', f, f.name));
+        for (let i = 0; i < picked.length; i++) form.append('photos', await shrink(picked[i]), 'anh' + (i + 1) + '.jpg');
         state.day = await api('/api/quanly/defect/' + d.id + '/photos', { method: 'POST', body: form });
         renderDay();
         toast('Đã thêm ' + picked.length + ' ảnh');
       });
     };
     box.appendChild(add);
+  }
+
+  // Ảnh máy ảnh/điện thoại thường 3–5 MB: thu nhỏ còn cạnh dài 1600px, JPEG (như trang /nhap) trước khi gửi.
+  async function shrink(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = url; });
+      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+      if (!blob) throw new Error();
+      return blob;
+    } catch {
+      throw new Error('Không đọc được ảnh ' + file.name + '.');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   const photoCache = new Map();
