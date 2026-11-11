@@ -134,8 +134,8 @@
     const body = table.tBodies[0];
     const add = (row) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = columns.map((c) => '<td>' + cell(c, row[c.key]) + '</td>').join('') +
-        '<td><button class="btn danger" title="Xoá dòng">✕</button></td>';
+      tr.innerHTML = columns.map((c) => '<td' + lbl(c.label) + (c.span ? ' class="' + c.span + '"' : '') + '>' + cell(c, row[c.key]) + '</td>').join('') +
+        '<td class="act"><button class="btn danger" title="Xoá dòng">✕</button></td>';
       tr.querySelector('.danger').onclick = () => tr.remove();
       tr.addEventListener('input', () => tr.classList.add('dirty'));
       if (extra) extra(tr, row);
@@ -152,6 +152,9 @@
       })
     };
   }
+
+  // Nhãn cho từng ô: trên điện thoại bảng hiện thành thẻ, nhãn này thay cho dòng tiêu đề.
+  const lbl = (label) => ' data-label="' + esc(label) + '"';
 
   function cell(c, value) {
     if (c.type === 'check') return '<input type="checkbox"' + (value ? ' checked' : '') + '>';
@@ -196,7 +199,7 @@
     const reasons = c.reasons.map((r) => ({ value: r.name, label: r.name }));
     const sel = (opts, v) => cell({ type: 'select', options: opts }, v);
     const head = ['Chuyền', 'Mã sản phẩm', 'Ca', 'MT/giờ'].concat(Array.from({ length: 12 }, (_, i) => 'G' + (i + 1)))
-      .concat(['Tổng', 'MT ngày', '%', 'Lỗi', 'Công nhân', 'Lý do', 'Dừng máy (phút)', 'Trạng thái', 'Ghi chú', '']);
+      .concat(['Tổng', 'MT ngày', '%', 'Lỗi', 'Công nhân', 'Dừng máy (phút)', 'Lý do', 'Trạng thái', 'Ghi chú', '']);
     const t = $('dayTable');
     t.innerHTML = '<thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody></tbody>';
     day.lines.forEach((l) => {
@@ -206,19 +209,21 @@
       // % đạt như cột % HOÀN THÀNH của HIEN_THI (đã nhân 100).
       const rate = l.dailyRate == null ? '' : Math.round(l.dailyRate) + '%';
       const rateCls = l.dailyRate == null ? '' : l.dailyRate >= 100 ? 'ok' : l.dailyRate >= 90 ? 'low' : 'bad';
-      tr.innerHTML = '<td><b>' + esc(l.name) + '</b>' + (l.active ? '' : ' <span class="t2 small">(ngừng)</span>') + '</td>' +
-        '<td>' + sel(products, e.productCode) + '</td><td>' + sel(shifts, e.shiftCode) + '</td>' +
-        '<td><input class="n" inputmode="decimal" value="' + esc(e.hourlyTarget == null ? '' : e.hourlyTarget) + '"></td>' +
-        Array.from({ length: 12 }, (_, i) => '<td><input class="h" inputmode="decimal" title="' + esc((e.slots || [])[i] || '') + '" value="' +
-          esc(e.hours[i] == null ? '' : e.hours[i]) + '"></td>').join('') +
-        '<td class="num"><b>' + (l.entry ? fmt(e.actual) : '') + '</b></td><td class="num">' + fmt(e.dailyTarget) + '</td>' +
-        '<td class="num ' + rateCls + '">' + rate + '</td><td class="num">' + fmt(l.defects) + '</td>' +
-        '<td><input class="n" inputmode="decimal" value="' + esc(e.workers == null ? '' : e.workers) + '"></td>' +
-        '<td>' + sel(reasons, e.reason) + '</td>' +
-        '<td><input class="n" inputmode="decimal" value="' + esc(e.downtimeMinutes == null ? '' : e.downtimeMinutes) + '"></td>' +
-        '<td><input class="s" value="' + esc(e.status || '') + '"></td>' +
-        '<td><input class="w" value="' + esc(e.note || '') + '"></td>' +
-        '<td><button class="btn primary save">Lưu</button> ' + (l.entry ? '<button class="btn danger del" title="Xoá dòng của chuyền ngày này">Xoá</button>' : '') + '</td>';
+      const td = (label, cls, html) => '<td' + (label ? lbl(label) : '') + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>';
+      const slots = e.slots || [];
+      tr.innerHTML = td('', 'head', '<b>' + esc(l.name) + '</b>' + (l.active ? '' : ' <span class="t2 small">(ngừng)</span>')) +
+        td('Mã sản phẩm', '', sel(products, e.productCode)) + td('Ca', 'c2', sel(shifts, e.shiftCode)) +
+        td('MT/giờ', 'c2', '<input class="n" inputmode="decimal" value="' + esc(e.hourlyTarget == null ? '' : e.hourlyTarget) + '">') +
+        Array.from({ length: 12 }, (_, i) => td('G' + (i + 1) + (slots[i] ? ' · ' + slots[i].split('-')[0] : ''), 'c1 hr',
+          '<input class="h" inputmode="decimal" title="' + esc(slots[i] || '') + '" value="' + esc(e.hours[i] == null ? '' : e.hours[i]) + '">')).join('') +
+        td('Tổng', 'num c1', '<b>' + (l.entry ? fmt(e.actual) : '') + '</b>') + td('MT ngày', 'num c1', fmt(e.dailyTarget)) +
+        td('% đạt', 'num c1 ' + rateCls, rate) + td('Lỗi', 'num c1', fmt(l.defects)) +
+        td('Công nhân', 'c2', '<input class="n" inputmode="decimal" value="' + esc(e.workers == null ? '' : e.workers) + '">') +
+        td('Dừng máy (phút)', 'c2', '<input class="n" inputmode="decimal" value="' + esc(e.downtimeMinutes == null ? '' : e.downtimeMinutes) + '">') +
+        td('Lý do', '', sel(reasons, e.reason)) +
+        td('Trạng thái', '', '<input class="s" value="' + esc(e.status || '') + '">') +
+        td('Ghi chú', '', '<input class="w" value="' + esc(e.note || '') + '">') +
+        td('', 'act', '<button class="btn primary save">Lưu</button> ' + (l.entry ? '<button class="btn danger del" title="Xoá dòng của chuyền ngày này">Xoá</button>' : ''));
       tr.addEventListener('input', () => tr.classList.add('dirty'));
       tr.querySelector('.save').onclick = (ev) => busy(ev.target, () => saveEntry(l, tr));
       const del = tr.querySelector('.del');
@@ -238,10 +243,10 @@
   async function saveEntry(line, tr) {
     const inputs = tr.querySelectorAll('input, select');
     const v = Array.from(inputs).map((i) => i.value);
-    // Thứ tự ô: mã SP, ca, MT/giờ, 12 giờ, công nhân, lý do, dừng máy, trạng thái, ghi chú.
+    // Thứ tự ô: mã SP, ca, MT/giờ, 12 giờ, công nhân, dừng máy, lý do, trạng thái, ghi chú.
     const body = {
       line: line.code, date: state.day.date, productCode: text(v[0]), shiftCode: text(v[1]), hourlyTarget: num(v[2]),
-      hours: v.slice(3, 15).map(num), workers: num(v[15]), reason: text(v[16]), downtimeMinutes: num(v[17]), status: text(v[18]), note: text(v[19])
+      hours: v.slice(3, 15).map(num), workers: num(v[15]), downtimeMinutes: num(v[16]), reason: text(v[17]), status: text(v[18]), note: text(v[19])
     };
     if ([body.hourlyTarget, body.workers, body.downtimeMinutes].concat(body.hours).some((n) => n != null && isNaN(n)))
       throw new Error(line.name + ': có ô không phải số.');
@@ -258,13 +263,13 @@
     t.innerHTML = '<thead><tr><th>Giờ</th><th>Chuyền</th><th>Loại lỗi</th><th>Số lượng</th><th>Ghi chú</th><th>Ảnh</th><th></th></tr></thead><tbody></tbody>';
     const add = (d) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td><input class="s" placeholder="09:30" value="' + esc(d.time || '') + '"></td>' +
-        '<td>' + cell({ type: 'select', options: lines }, d.line) + '</td>' +
-        '<td>' + cell({ type: 'select', options: types }, d.defectType) + '</td>' +
-        '<td><input class="n" inputmode="decimal" value="' + esc(d.quantity == null ? '' : d.quantity) + '"></td>' +
-        '<td><input class="w" value="' + esc(d.note || '') + '"></td>' +
-        '<td class="small t2">' + esc(d.imageFiles || '') + '</td>' +
-        '<td><button class="btn primary save">Lưu</button> ' + (d.id ? '<button class="btn danger del">Xoá</button>' : '') + '</td>';
+      tr.innerHTML = '<td class="c2"' + lbl('Giờ') + '><input class="s" placeholder="09:30" value="' + esc(d.time || '') + '"></td>' +
+        '<td class="c2"' + lbl('Chuyền') + '>' + cell({ type: 'select', options: lines }, d.line) + '</td>' +
+        '<td class="c2"' + lbl('Loại lỗi') + '>' + cell({ type: 'select', options: types }, d.defectType) + '</td>' +
+        '<td class="c2"' + lbl('Số lượng') + '><input class="n" inputmode="decimal" value="' + esc(d.quantity == null ? '' : d.quantity) + '"></td>' +
+        '<td' + lbl('Ghi chú') + '><input class="w" value="' + esc(d.note || '') + '"></td>' +
+        '<td class="small t2 img"' + lbl('Ảnh') + '>' + esc(d.imageFiles || '') + '</td>' +
+        '<td class="act"><button class="btn primary save">Lưu</button> ' + (d.id ? '<button class="btn danger del">Xoá</button>' : '') + '</td>';
       tr.addEventListener('input', () => tr.classList.add('dirty'));
       if (!d.id) tr.classList.add('dirty');
       tr.querySelector('.save').onclick = (ev) => busy(ev.target, async () => {
@@ -304,8 +309,8 @@
     $('workDays').textContent = 'Ngày làm việc trong tháng: ' + r.workingDays;
     targetGrid = editGrid($('targetTable'), [
       { key: 'productCode', label: 'Mã sản phẩm', type: 'select', options: products },
-      { key: 'target', label: 'Mục tiêu tháng', type: 'num', cls: 'm' },
-      { key: 'done', label: 'Đã làm', type: 'readonly' },
+      { key: 'target', label: 'Mục tiêu tháng', type: 'num', cls: 'm', span: 'c2' },
+      { key: 'done', label: 'Đã làm', type: 'readonly', span: 'c2' },
       { key: 'note', label: 'Ghi chú', type: 'text', cls: 'w' }
     ], r.targets.map((t) => Object.assign({}, t, { done: fmt(t.done) })));
   }

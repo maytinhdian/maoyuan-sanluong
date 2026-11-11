@@ -14,7 +14,7 @@
     <div class="app" id="loginApp">Quản lý</div>
     <h1>Trang quản lý</h1>
     <p class="t2">Nhập mã PIN của người được đánh dấu "Quản lý" trong app trên máy chủ.</p>
-    <input id="pin" class="pin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="••••">
+    <input id="pin" class="pin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="••••••">
     <div id="loginError" class="msg bad hidden"></div>
     <button id="loginBtn" class="btn primary big">Vào trang quản lý</button>
   </div>
@@ -46,10 +46,10 @@
         <button class="btn" id="copyPlan" title="Chuyền nào chưa có dòng ngày này thì lấy mã sản phẩm, ca, mục tiêu của ngày làm gần nhất">Chép kế hoạch ngày trước</button>
       </div>
       <p class="t2 small">Sửa ô rồi bấm <b>Lưu</b> ở cuối dòng. Để trống mã sản phẩm, ca hoặc mục tiêu thì chuyền đó không lên TV ngày này.</p>
-      <div class="scroll"><table class="grid" id="dayTable"></table></div>
+      <div class="scroll"><table class="grid cards" id="dayTable"></table></div>
 
       <h3>Hàng lỗi ngày này</h3>
-      <div class="scroll"><table class="grid" id="defectTable"></table></div>
+      <div class="scroll"><table class="grid cards" id="defectTable"></table></div>
       <button class="btn" id="addDefect">+ Thêm phiếu lỗi</button>
     </div>
 
@@ -59,7 +59,7 @@
         <label>Tháng <input type="month" id="targetMonth"></label>
         <span class="t2" id="workDays"></span>
       </div>
-      <div class="scroll"><table class="grid" id="targetTable"></table></div>
+      <div class="scroll"><table class="grid cards" id="targetTable"></table></div>
       <div class="bar">
         <button class="btn" id="addTarget">+ Thêm mã sản phẩm</button>
         <button class="btn primary" id="saveTargets">Lưu mục tiêu tháng</button>

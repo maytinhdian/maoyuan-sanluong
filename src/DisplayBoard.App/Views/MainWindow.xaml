@@ -337,7 +337,7 @@
                                     <Button Content="Xoá người đang chọn" Command="{Binding RemoveEntryUserCommand}" />
                                 </StackPanel>
                                 <TextBlock FontWeight="Normal" Foreground="#555" Margin="0,8,0,0" TextWrapping="Wrap"
-                                           Text="Mỗi người một mã PIN riêng: tổ trưởng ít nhất 4 số, người được tích Quản lý ít nhất 6 số. Sai PIN 5 lần thì điện thoại đó bị khoá 15 phút. Chuyền ghi đúng tên trong danh sách chuyền (trang quản lý), nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
+                                           Text="Mỗi người một mã PIN riêng, ít nhất 6 số (PIN 4 số của bản cũ phải đổi trước khi bấm Lưu). Sai PIN 5 lần thì điện thoại đó bị khoá 15 phút. Chuyền ghi đúng tên trong danh sách chuyền (trang quản lý), nhiều chuyền cách nhau bởi dấu chấm phẩy, ví dụ: Chuyền 3; Chuyền 4. Đổi PIN hoặc xoá người thì điện thoại của người đó phải đăng nhập lại." />
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Header="PHIẾU GẦN ĐÂY">

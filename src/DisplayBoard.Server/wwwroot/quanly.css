@@ -71,4 +71,26 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--acc); }
 
 @media (max-width: 700px) {
   .hdr { gap: 4px; } .tabs { order: 3; flex-basis: 100%; }
+  .body { padding: 10px 10px 60px; }
+  .bar input, .bar select, .bar .btn { min-height: 40px; }
+
+  /* Điện thoại: bảng Theo ngày, Hàng lỗi, Mục tiêu tháng hiện mỗi dòng một thẻ, nhãn lấy từ data-label. */
+  .cards thead { display: none; }
+  .cards, .cards tbody { display: block; width: 100%; }
+  .cards tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; background: var(--card);
+    border: 1px solid var(--bd); border-radius: 12px; padding: 10px 12px 12px; margin-bottom: 10px; }
+  .cards tr.dirty { border-color: var(--near); }
+  .cards tr.dirty td, .cards tr.off td { background: none; }
+  .cards td { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; padding: 0; border: 0; white-space: normal; min-width: 0; }
+  .cards td.c1 { grid-column: span 1; } .cards td.c2 { grid-column: span 2; }
+  .cards td.img:empty { display: none; }
+  .cards td[data-label]::before { content: attr(data-label); font-size: 12px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cards td.head { font-size: 17px; border-bottom: 1px solid var(--bd); padding-bottom: 6px; }
+  .cards .num { text-align: left; font-size: 17px; }
+  .cards input, .cards select { width: 100% !important; max-width: none !important; height: 44px; font-size: 16px; border-radius: 8px; }
+  .cards td.hr input { text-align: center; padding: 4px 2px; }
+  .cards input[type=checkbox] { width: 24px !important; height: 24px; }
+  .cards td.act { flex-direction: row; gap: 8px; margin-top: 4px; }
+  .cards td.act .btn { flex: 1; padding: 11px; font-size: 15px; }
+  .grid:not(.cards) input, .grid:not(.cards) select { min-height: 38px; }
 }
