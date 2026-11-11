@@ -309,11 +309,22 @@
     $('workDays').textContent = 'Ngày làm việc trong tháng: ' + r.workingDays;
     targetGrid = editGrid($('targetTable'), [
       { key: 'productCode', label: 'Mã sản phẩm', type: 'select', options: products },
-      { key: 'target', label: 'Mục tiêu tháng', type: 'num', cls: 'm', span: 'c2' },
+      { key: 'target', label: 'Mục tiêu tháng', type: 'num', cls: 'm' },
       { key: 'done', label: 'Đã làm', type: 'readonly', span: 'c2' },
+      { key: 'rate', label: '% hoàn thành', type: 'readonly', span: 'c2' },
       { key: 'note', label: 'Ghi chú', type: 'text', cls: 'w' }
-    ], r.targets.map((t) => Object.assign({}, t, { done: fmt(t.done) })));
+    ], r.targets.map((t) => Object.assign({}, t, { done: fmt(t.done), rate: rateOf(t.done, t.target) })), (tr, row) => {
+      // Tô màu như cột % trên TV: đủ 100% xanh, từ 90% vàng, dưới 90% đỏ; kèm thanh tiến độ.
+      const cell = tr.querySelector('td[data-label="% hoàn thành"]');
+      if (!cell || row.rate == null) return;
+      const cls = row.rate >= 100 ? 'ok' : row.rate >= 90 ? 'low' : 'bad';
+      cell.innerHTML = '<div class="rate"><span class="num ' + cls + '">' + Math.round(row.rate) + '%</span>' +
+        '<span class="track"><i class="' + cls + '" style="width:' + Math.min(100, row.rate) + '%"></i></span></div>';
+    });
   }
+
+  // % hoàn thành của mục tiêu tháng, chưa làm tròn (màu xét theo số thật như TV), rỗng khi chưa đặt mục tiêu.
+  const rateOf = (done, target) => !target ? null : (done || 0) * 100 / target;
 
   async function saveTargets(button) {
     await busy(button, async () => {
