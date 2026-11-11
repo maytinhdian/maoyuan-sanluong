@@ -121,6 +121,8 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
         {
             var month = FirstDay(request.Month);
             var data = Store.Load();
+            // Mỗi mã sản phẩm một dòng mỗi tháng: hai dòng cùng mã thì báo rõ, không để SQLite từ chối cả lần lưu (lỗi 500).
+            Unique((request.Targets ?? []).Select(t => t.ProductCode), "mã sản phẩm trong tháng");
             var targets = new List<MonthTarget>();
             foreach (var t in request.Targets ?? [])
             {
@@ -360,6 +362,11 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
         catch (Exception ex) when (ex is EntryException or InvalidOperationException or ArgumentException)
         {
             return Error(ex.Message, StatusCodes.Status400BadRequest);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex)
+        {
+            // Dữ liệu vi phạm ràng buộc (trùng khoá...): không ghi gì (transaction đã huỷ), báo lỗi thay vì "Lỗi máy chủ (500)".
+            return Error($"Không lưu được, dữ liệu chưa thay đổi: {ex.Message}", StatusCodes.Status400BadRequest);
         }
     }
 
