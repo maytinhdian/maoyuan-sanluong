@@ -181,7 +181,7 @@ fx = {
  24: lambda r: f'=IF(A{r}="","",COUNT(H{r}:S{r}))',
  25: lambda r: f'=IF(OR(X{r}="",E{r}="",G{r}=""),"",MIN(G{r},X{r}*E{r}))',
  26: lambda r: f'=IF(OR(T{r}="",N(Y{r})=0),"",T{r}/Y{r})',
- 27: lambda r: (lambda p: f'=IF(OR(A{r}="",B{r}=""),"",IF({p}=0,"",{p}))')(f'SUMPRODUCT(MAX(($B$5:$B${N}=B{r})*($A$5:$A${N}<A{r})*$A$5:$A${N}))'),
+ 27: lambda r: (lambda p: f'=IF(OR(A{r}="",B{r}=""),"",IF({p}=0,"",{p}))')(f'SUMPRODUCT(MAX(($B$5:$B${N}=B{r})*($A$5:$A${N}<A{r})*($A$5:$A${N}>=DATE(YEAR(A{r}),MONTH(A{r}),1))*$A$5:$A${N}))'),
  28: lambda r: f'=IF(N(AA{r})=0,"",SUMIFS($W$5:$W${N},$B$5:$B${N},B{r},$A$5:$A${N},AA{r}))',
  31: lambda r: (f'=IF(OR(A{r}="",B{r}=""),"",IF(COUNTIFS($A$5:$A${N},A{r},$B$5:$B${N},B{r})>1,"TRÙNG NGÀY + CHUYỀN",'
                 f'IF(G{r}="","THIẾU MÃ CA / MỤC TIÊU GIỜ",'
@@ -333,7 +333,7 @@ hx = {
  12: lambda r: f'=IF({X}{r}="","",COUNT(V{r}:AG{r}))',
  13: lambda r: f'=IF(OR(L{r}="",F{r}="",G{r}=""),"",MIN(G{r},L{r}*F{r}))',
  14: lambda r: f'=IF(OR(H{r}="",N(M{r})=0),"",H{r}/M{r})',
- 15: lambda r: (lambda p: f'=IF(OR(B{r}="",A{r}=""),"",IF({p}=0,"",{p}))')(f'SUMPRODUCT(MAX(({R("B")}=B{r})*({R("A")}<A{r})*{R("A")}))'),
+ 15: lambda r: (lambda p: f'=IF(OR(B{r}="",A{r}=""),"",IF({p}=0,"",{p}))')(f'SUMPRODUCT(MAX(({R("B")}=B{r})*({R("A")}<A{r})*({R("A")}>={MS(r)})*{R("A")}))'),
  16: lambda r: (f'=IF(AK{r}="","",IF(COUNT(INDEX({HS},AK{r},0))=0,0,MAX(0,IFERROR(ROUND('
                f'{CA_H(f"INDEX({R(chr(68))},AK{r})")}*INDEX({R("E")},AK{r}),0),0)-SUM(INDEX({HS},AK{r},0)))))'),
  17: lambda r: f'=IF(C{r}="","",SUMIFS(MUC_TIEU_THANG!$C$5:$C${MN},MUC_TIEU_THANG!$B$5:$B${MN},C{r},MUC_TIEU_THANG!$A$5:$A${MN},">="&{MS(r)},MUC_TIEU_THANG!$A$5:$A${MN},"<"&DATE(YEAR(A{r}),MONTH(A{r})+1,1)))',
@@ -524,7 +524,7 @@ lines = [
  ('Mỗi chuyền một dòng mỗi ngày: NGÀY, CHUYỀN, MÃ SẢN PHẨM, MÃ CA, MỤC TIÊU MỖI GIỜ.', ''),
  ('Sau mỗi giờ, gõ số lượng làm được vào cột GIỜ 1 … GIỜ 12 (GIỜ 1 = đợt đầu tiên của ca).', ''),
  ('Máy tự tính: mục tiêu ngày = giờ ca × mục tiêu mỗi giờ (làm tròn), thực tế, % đạt, còn thiếu, tiến độ theo giờ,', ''),
- ('và THIẾU HÔM TRƯỚC = số còn thiếu của ngày làm việc gần nhất trước đó của cùng chuyền.', ''),
+ ('và THIẾU HÔM TRƯỚC = số còn thiếu của ngày làm việc gần nhất trước đó của cùng chuyền trong cùng tháng (qua tháng mới không mang sang).', ''),
  ('Cột KIỂM TRA phải là OK. Nếu báo TRÙNG / THIẾU MÃ CA / CHƯA CÓ MỤC TIÊU THÁNG thì sửa dòng đó.', ''),
  ('', ''),
  ('4. Màn hình TV – sheet HIEN_THI', 'h'),
