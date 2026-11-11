@@ -505,16 +505,16 @@ public sealed partial class MainViewModel : ObservableObject
         AddLog($"Xoá {tv.DisplayName}. Bấm Lưu để áp dụng.");
     }
 
-    /// <summary>Mỗi người cần tên và PIN riêng (ít nhất 4 ký tự, quản lý ít nhất 6) vì đăng nhập chỉ bằng PIN.</summary>
+    /// <summary>Mỗi người cần tên và PIN riêng (ít nhất 6 số) vì đăng nhập chỉ bằng PIN.</summary>
     private static string? EntryUsersProblem(DataEntrySettings settings)
     {
         var users = settings.Users;
         if (users.FirstOrDefault(u => u.Name.Length == 0) is { } noName)
             return $"Người nhập liệu có PIN {noName.Pin} chưa có tên.";
         if (users.FirstOrDefault(u => u.Pin.Length < EntryUser.MinPinLength) is { } shortPin)
-            return $"Mã PIN của {shortPin.Name} cần ít nhất {EntryUser.MinPinLength} ký tự.";
+            return $"Mã PIN của {shortPin.Name} cần ít nhất {EntryUser.MinPinLength} số. Đặt PIN mới rồi báo lại cho người đó.";
         if (users.FirstOrDefault(u => u.Manager && u.Pin.Length < EntryUser.MinManagerPinLength) is { } shortManager)
-            return $"{shortManager.Name} là quản lý nên mã PIN cần ít nhất {EntryUser.MinManagerPinLength} ký tự.";
+            return $"{shortManager.Name} là quản lý nên mã PIN cần ít nhất {EntryUser.MinManagerPinLength} số.";
         if (users.GroupBy(u => u.Pin).FirstOrDefault(g => g.Count() > 1) is { } same)
             return $"{string.Join(" và ", same.Select(u => u.Name))} đang trùng mã PIN. Mỗi người cần một mã PIN riêng.";
         if (users.GroupBy(u => u.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } twice)
@@ -528,7 +528,7 @@ public sealed partial class MainViewModel : ObservableObject
         var pins = EntryUsers.Select(u => u.Pin).ToHashSet();
         string pin;
         do
-            pin = Random.Shared.Next(1000, 10000).ToString();
+            pin = Random.Shared.Next(100000, 1000000).ToString();
         while (pins.Contains(pin));
         var user = new EntryUserViewModel { Name = $"Tổ trưởng {EntryUsers.Count + 1}", Pin = pin };
         EntryUsers.Add(user);

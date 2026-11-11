@@ -49,8 +49,11 @@ public sealed class DataEntrySettings
 
 public sealed class EntryUser
 {
-    /// <summary>Độ dài tối thiểu của PIN tổ trưởng.</summary>
-    public const int MinPinLength = 4;
+    /// <summary>
+    /// Độ dài tối thiểu của PIN mọi người (từ 4.0.3, trước là 4). PIN cũ ngắn hơn vẫn đăng nhập /nhap được,
+    /// nhưng app không cho lưu danh sách người nhập liệu cho đến khi đổi.
+    /// </summary>
+    public const int MinPinLength = 6;
 
     /// <summary>PIN quản lý dài hơn vì quản lý sửa được mọi số liệu và thay toàn bộ dữ liệu khi nhập file Excel.</summary>
     public const int MinManagerPinLength = 6;

@@ -13,7 +13,7 @@ Excel chỉ dùng để xuất ra xem/kiểm tra: file xuất đúng mẫu V20, 
    Ảnh (thư mục images) và file nội dung phụ cạnh file Excel được chép sang theo.
    Muốn thử trước: chọn samples\Theo_doi_san_luong_V20_mau.xlsx.
 3. Tab Nhập liệu: thêm người và mã PIN. Tích ô "Quản lý" cho người được vào trang quản lý.
-   PIN tổ trưởng ít nhất 4 số, PIN quản lý ít nhất 6 số. Sai PIN 5 lần thì máy đó bị khoá 15 phút.
+   Mỗi PIN ít nhất 6 số (PIN 4 số của bản cũ phải đổi sang 6 số). Sai PIN 5 lần thì máy đó bị khoá 15 phút.
 4. Tổ trưởng nhập trên điện thoại: http://<IP máy chủ>:5080/nhap (chỉ nhập cho ngày hôm nay).
    Quản lý mở trang quản lý: http://<IP máy chủ>:5080/quan-ly (hoặc nút "Mở trang quản lý" trên app):
    - Theo ngày: sửa kế hoạch, sản lượng từng giờ, hàng lỗi của bất kỳ ngày nào.

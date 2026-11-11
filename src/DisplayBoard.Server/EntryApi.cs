@@ -16,7 +16,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
 {
     private const string TokenHeader = "X-Entry-Token";
     private const int MaxFailures = 5;
-    // 5 lần sai thì khoá 15 phút: dò hết PIN 4 số mất khoảng 3 tuần, PIN quản lý 6 số mất hàng chục năm.
+    // 5 lần sai thì khoá 15 phút: dò hết PIN 6 số mất hàng chục năm.
     private static readonly TimeSpan LockTime = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan SessionTime = TimeSpan.FromDays(30);
 

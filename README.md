@@ -15,7 +15,7 @@ App Windows chạy trên một máy chủ ở xưởng: lưu sản lượng củ
   - mục tiêu tháng, danh mục chuyền / sản phẩm / ca / lý do / loại lỗi, lịch nghỉ và làm bù;
   - chọn ngày TV hiển thị, xem nhật ký sửa, tải file Excel theo ngày hoặc tháng;
   - nhập dữ liệu từ file Excel V20 của bản 3.x (đọc và so số trước, xác nhận mới thay dữ liệu).
-- **Mã PIN:** tổ trưởng ít nhất 4 ký tự, quản lý ít nhất 6 ký tự (PIN quản lý ngắn hơn bị từ chối ở trang quản lý cho đến khi đổi). Sai PIN 5 lần thì địa chỉ máy đó bị khoá 15 phút.
+- **Mã PIN:** mọi người ít nhất 6 số (từ 4.0.3). PIN 4 số của bản cũ: app không cho lưu danh sách người nhập liệu cho đến khi đổi; tổ trưởng vẫn đăng nhập `/nhap` được trong lúc chờ đổi, còn quản lý bị từ chối ở trang quản lý. Sai PIN 5 lần thì địa chỉ máy đó bị khoá 15 phút.
 - **Sao lưu:** mỗi ngày một bản `sanluong_năm-tháng-ngày.db`, giữ 30 bản gần nhất (đổi ở tab Cài đặt). Mặc định nằm trong `SaoLuu` của thư mục dữ liệu, tức cùng ổ đĩa; nên chọn **Thư mục sao lưu** ở ổ khác, USB hoặc thư mục OneDrive. Trước mỗi lần nhập file Excel, app sao lưu thêm một bản `sanluong_năm-tháng-ngày_giờphútgiây_truoc-nhap.db`; các bản này không bị xoá tự động.
   Khôi phục: thoát app, chép bản sao lưu vào thư mục dữ liệu và đổi tên thành `sanluong.db`.
 - **Tự xuất Excel:** mỗi ngày lúc 22:00 (đổi ở tab Cài đặt) ra `XuatExcel\SanLuong_năm-tháng-ngày.xlsx`, đúng mẫu V20, các cột tính vẫn là công thức.
