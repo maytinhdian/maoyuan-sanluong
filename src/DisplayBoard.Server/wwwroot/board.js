@@ -681,8 +681,11 @@
       var iw = inner.offsetWidth, ih = inner.offsetHeight;
       var k = Math.min(1, aw / iw, ah / ih);
       if (k > 0 && k < 1) {
+        // Thu từ góc trên trái rồi trả lại phần thừa ở phải/dưới: ô chỉ còn đúng kích thước sau khi thu.
+        // (Trước đây trả đều hai bên trong khi gốc thu ở mép trái nên chữ đầu dòng bị lẹm.)
+        inner.style.transformOrigin = '0 0';
         inner.style.transform = 'scale(' + k + ')';
-        inner.style.margin = (-(ih * (1 - k)) / 2) + 'px ' + (-(iw * (1 - k)) / 2) + 'px';
+        inner.style.margin = '0 ' + (-(iw * (1 - k))) + 'px ' + (-(ih * (1 - k))) + 'px 0';
       }
     }
     var tiles = root.querySelectorAll('.fitw');
