@@ -99,7 +99,10 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
     private void ShowPage(int page)
     {
         Page = page > PageCount || page < 1 ? 1 : page;
-        Photos = _allPhotos.Skip((Page - 1) * _perPage).Take(_perPage).ToList();
+        var photos = _allPhotos.Skip((Page - 1) * _perPage).Take(_perPage).ToList();
+        // Trang không đổi (chỉ một trang, hoặc dữ liệu làm mới mà ô vẫn vậy): giữ danh sách cũ để video đang phát không bị phát lại từ đầu.
+        if (!photos.Select(p => p.Key).SequenceEqual(Photos.Select(p => p.Key)))
+            Photos = photos;
         PageText = PageCount > 1 ? $"Trang {Page}/{PageCount}" : null;
     }
 
@@ -123,6 +126,8 @@ public sealed class DefectPhotoCard(DefectPhoto d)
     public string? ImagePath { get; } = d.IsVideo ? null : d.ImagePath;
     public Uri? VideoUri { get; } = d.IsVideo && d.ImagePath is not null ? new Uri(d.ImagePath) : null;
     public bool IsVideo { get; } = d.IsVideo;
+    /// <summary>Nội dung ô; cùng Key thì không cần dựng lại ô (video tiếp tục phát).</summary>
+    public string Key { get; } = string.Join("|", d.Line, d.ProductCode, d.Color, d.DefectType, d.Quantity, d.Time, d.ImageFile, d.ImagePath);
     /// <summary>Hiện khi Excel ghi tên file nhưng không tìm thấy ảnh/video.</summary>
     public string? MissingText { get; } = d.ImagePath is null ? $"Không tìm thấy {(d.IsVideo ? "video" : "ảnh")}\n{d.ImageFile}" : null;
 }
