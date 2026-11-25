@@ -155,6 +155,17 @@
                                 <Grid Background="#0B1424">
                                     <Image Source="{Binding ImagePath, Converter={StaticResource PathToImageLarge}}" Stretch="Uniform"
                                            Visibility="{Binding ImagePath, Converter={StaticResource NullToVisibility}}" />
+                                    <!-- Video hàng lỗi: tự phát, tắt tiếng, hết thì phát lại (xem DefectsView.xaml.cs). -->
+                                    <MediaElement Source="{Binding VideoUri}" Stretch="Uniform" IsMuted="True" LoadedBehavior="Manual" UnloadedBehavior="Close"
+                                                  Visibility="{Binding VideoUri, Converter={StaticResource NullToVisibility}}"
+                                                  Tag="{Binding ElementName=VideoError}"
+                                                  Loaded="Video_Loaded" MediaEnded="Video_Ended" MediaFailed="Video_Failed" />
+                                    <TextBlock x:Name="VideoError" Text="Máy này không phát được video" Style="{StaticResource BoardText}" FontSize="24" TextAlignment="Center" TextWrapping="Wrap"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Foreground="{StaticResource NearBrush}" Visibility="Collapsed" />
+                                    <Border Background="#D90A1830" CornerRadius="8" Padding="12,2" Margin="14" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                            Visibility="{Binding VideoUri, Converter={StaticResource NullToVisibility}}">
+                                        <TextBlock Text="▶ VIDEO" Style="{StaticResource BoardText}" FontSize="22" FontWeight="Bold" />
+                                    </Border>
                                     <TextBlock Text="{Binding MissingText}" Style="{StaticResource BoardText}" FontSize="24" TextAlignment="Center" TextWrapping="Wrap"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Foreground="{StaticResource NearBrush}"
                                                Visibility="{Binding MissingText, Converter={StaticResource NullToVisibility}}" />

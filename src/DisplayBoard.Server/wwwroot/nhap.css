@@ -64,6 +64,9 @@ textarea { height: 64px; resize: vertical; }
 .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .ph { height: 96px; border-radius: 12px; background: #000 center/cover no-repeat; position: relative; }
 .ph .x { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; line-height: 26px; }
+.ph.video { overflow: hidden; }
+.ph.video video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
+.ph.video .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 16px; line-height: 36px; text-align: center; pointer-events: none; }
 .ph.add { background: var(--header); border: 2px dashed var(--bd); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--t2); font-size: 12px; gap: 4px; cursor: pointer; }
 .ph.add .ic { font-size: 28px; }
 

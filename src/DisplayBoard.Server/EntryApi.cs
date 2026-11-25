@@ -5,6 +5,7 @@ using DisplayBoard.Core.Entry;
 using DisplayBoard.Core.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace DisplayBoard.Server;
 
@@ -17,21 +18,32 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
     /// <summary>Dịch vụ nhập liệu, trang quản lý dùng chung để lưu và đọc ảnh hàng lỗi.</summary>
     public EntryService Service => entry;
 
-    /// <summary>Đọc ảnh gửi lên (multipart), tối đa <paramref name="max"/> ảnh, mỗi ảnh tối đa <see cref="EntryService.MaxPhotoBytes"/>.</summary>
-    internal static async Task<List<EntryPhoto>> ReadPhotosAsync(IFormFileCollection files, int max, CancellationToken ct)
+    /// <summary>
+    /// Đọc ảnh/video gửi lên (multipart), tối đa <paramref name="max"/> tệp. Không chép vào bộ nhớ: ASP.NET đã để tệp lớn ở file tạm,
+    /// EntryService đọc thẳng từ đó, kiểm tra loại và dung lượng rồi lưu.
+    /// </summary>
+    internal static Task<List<EntryPhoto>> ReadPhotosAsync(IFormFileCollection files, int max, CancellationToken ct)
     {
         if (files.Count > max)
-            throw new EntryException($"Mỗi lần gửi tối đa {max} ảnh.");
+            throw new EntryException($"Mỗi lần gửi tối đa {max} ảnh/video.");
         var photos = new List<EntryPhoto>();
         foreach (var file in files)
         {
-            if (file.Length > EntryService.MaxPhotoBytes)
-                throw new EntryException($"Ảnh lớn quá {EntryService.MaxPhotoBytes / 1024 / 1024} MB.");
-            using var memory = new MemoryStream();
-            await file.CopyToAsync(memory, ct).ConfigureAwait(false);
-            photos.Add(new EntryPhoto(memory.ToArray(), file.FileName));
+            if (file.Length > EntryService.MaxVideoBytes)
+                throw new EntryException($"Tệp {file.FileName} lớn quá {EntryService.MaxVideoBytes / 1024 / 1024} MB.");
+            photos.Add(new EntryPhoto(file.FileName, file.Length, file.OpenReadStream));
         }
-        return photos;
+        return Task.FromResult(photos);
+    }
+
+    /// <summary>
+    /// Phiếu lỗi có thể kèm video nên nâng giới hạn tải lên của máy chủ (mặc định 30 MB) cho đủ 4 video 100 MB.
+    /// Gọi trước khi đọc form.
+    /// </summary>
+    internal static void AllowMediaUpload(HttpContext http)
+    {
+        if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+            limit.MaxRequestBodySize = EntryService.MaxPhotos * EntryService.MaxVideoBytes + 1024 * 1024;
     }
 
     private const string TokenHeader = "X-Entry-Token";
@@ -99,6 +111,7 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
             {
                 if (!http.Request.HasFormContentType)
                     throw new EntryException("Thiếu dữ liệu phiếu hàng lỗi.");
+                AllowMediaUpload(http);
                 var form = await http.Request.ReadFormAsync(ct).ConfigureAwait(false);
                 if (!decimal.TryParse(form["quantity"], System.Globalization.CultureInfo.InvariantCulture, out var quantity))
                     throw new EntryException("Chưa nhập số lượng.");
@@ -128,9 +141,15 @@ internal sealed class EntryApi(EntryService entry, Func<DisplayConfiguration> co
     }
 
     /// <summary>Người dùng của mã phiên, lấy theo cấu hình hiện tại (đã bị xoá hoặc đổi PIN thì không còn).</summary>
-    internal EntryUser? Authenticate(HttpContext http)
+    /// <param name="allowQueryToken">
+    /// Cho phép mã phiên ở tham số ?token= (chỉ dùng cho xem ảnh/video hàng lỗi): thẻ &lt;video&gt; của trình duyệt
+    /// tự tải từng đoạn video và không gửi kèm header được.
+    /// </param>
+    internal EntryUser? Authenticate(HttpContext http, bool allowQueryToken = false)
     {
         var token = http.Request.Headers[TokenHeader].ToString();
+        if (token.Length == 0 && allowQueryToken)
+            token = http.Request.Query["token"].ToString();
         if (token.Length == 0 || !_sessions.TryGetValue(token, out var session))
             return null;
         var settings = config().DataEntry;

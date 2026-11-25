@@ -30,7 +30,9 @@
     }
     let res;
     try {
-      res = await fetch(path, { method: options.method || 'GET', headers, body, cache: 'no-store' });
+      res = options.onProgress
+        ? await send(path, options.method || 'GET', headers, body, options.onProgress)
+        : await fetch(path, { method: options.method || 'GET', headers, body, cache: 'no-store' });
     } catch {
       throw new Error('Không kết nối được máy chủ.');
     }
@@ -43,6 +45,19 @@
     }
     if (!res.ok) throw new Error((data && data.error) || ('Lỗi máy chủ (' + res.status + ').'));
     return data;
+  }
+
+  // Gửi bằng XMLHttpRequest để báo % tải lên (video có thể vài chục MB); trả về giống fetch (status, ok, json()).
+  function send(path, method, headers, body, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, path);
+      Object.keys(headers).forEach((k) => xhr.setRequestHeader(k, headers[k]));
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      xhr.onload = () => resolve({ status: xhr.status, ok: xhr.status >= 200 && xhr.status < 300, json: async () => JSON.parse(xhr.responseText) });
+      xhr.onerror = xhr.ontimeout = () => reject(new Error());
+      xhr.send(body);
+    });
   }
 
   let toastTimer;
@@ -298,9 +313,12 @@
     $('addDefect').onclick = () => add({}).querySelector('input').focus();
   }
 
-  // Ảnh của một phiếu lỗi: ảnh nhỏ (bấm để xem to, ✕ để bỏ) và ô "+ Ảnh" để thêm (tối đa 4).
-  // Ảnh lấy qua API có mã phiên nên tải bằng fetch rồi gắn vào <img>.
-  const MAX_PHOTOS = 4;
+  // Ảnh/video của một phiếu lỗi: ô nhỏ (bấm để xem to/phát, ✕ để bỏ) và ô "+ Ảnh/Video" để thêm (tối đa 4 tệp).
+  // Ảnh lấy qua API có mã phiên nên tải bằng fetch rồi gắn vào <img>. Video phát thẳng từ máy chủ (mã phiên ở ?token=).
+  const MAX_PHOTOS = 4, MAX_VIDEO_MB = 100;
+  const VIDEO_EXT = /\.(mp4|mov|m4v|webm|mkv|avi|3gp)$/i;
+  const isVideoFile = (f) => /^video\//.test(f.type) || VIDEO_EXT.test(f.name);
+  const mediaUrl = (file) => '/api/quanly/defect-photo?file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(state.token || '');
   const photoFiles = (d) => String(d.imageFiles || '').split(';').map((x) => x.trim()).filter(Boolean);
 
   function renderDefectPhotos(box, d) {
@@ -308,39 +326,57 @@
     box.innerHTML = '';
     files.forEach((file) => {
       const el = document.createElement('div');
-      el.className = 'thumb';
+      const video = VIDEO_EXT.test(file);
+      el.className = 'thumb' + (video ? ' video' : '');
       el.title = file;
-      el.innerHTML = '<img alt=""><button class="x" title="Bỏ ảnh này">✕</button>';
-      loadPhoto(file).then((url) => { if (url) el.querySelector('img').src = url; });
-      el.querySelector('img').onclick = () => viewPhoto(el.querySelector('img').src, file);
+      if (video) {
+        el.innerHTML = '<div class="play">▶<small></small></div><button class="x" title="Bỏ video này">✕</button>';
+        el.querySelector('small').textContent = file.split('.').pop().toUpperCase();
+        el.querySelector('.play').onclick = () => viewVideo(file);
+      } else {
+        el.innerHTML = '<img alt=""><button class="x" title="Bỏ ảnh này">✕</button>';
+        loadPhoto(file).then((url) => { if (url) el.querySelector('img').src = url; });
+        el.querySelector('img').onclick = () => viewPhoto(el.querySelector('img').src, file);
+      }
+      const what = video ? 'video' : 'ảnh';
       el.querySelector('.x').onclick = (ev) => {
-        if (!confirm('Bỏ ảnh ' + file + ' khỏi phiếu lỗi?')) return;
+        if (!confirm('Bỏ ' + what + ' ' + file + ' khỏi phiếu lỗi?')) return;
         busy(ev.target, async () => {
           state.day = await api('/api/quanly/defect/' + d.id + '/photos?file=' + encodeURIComponent(file), { method: 'DELETE' });
           renderDay();
-          toast('Đã bỏ ảnh');
+          toast('Đã bỏ ' + what);
         });
       };
       box.appendChild(el);
     });
     if (!d.id) {
-      box.insertAdjacentHTML('beforeend', '<span class="t2 small">Lưu phiếu trước rồi thêm ảnh.</span>');
+      box.insertAdjacentHTML('beforeend', '<span class="t2 small">Lưu phiếu trước rồi thêm ảnh/video.</span>');
       return;
     }
     if (files.length >= MAX_PHOTOS) return;
     const add = document.createElement('label');
     add.className = 'thumb add';
-    add.innerHTML = '<span>＋ Ảnh</span><input type="file" accept="image/*" multiple hidden>';
+    add.innerHTML = '<span>＋ Ảnh/<br>Video</span><input type="file" accept="image/*,video/*" multiple hidden>';
     add.querySelector('input').onchange = (ev) => {
       const picked = Array.from(ev.target.files || []).slice(0, MAX_PHOTOS - files.length);
       ev.target.value = '';
       if (picked.length === 0) return;
+      const big = picked.find((f) => isVideoFile(f) && f.size > MAX_VIDEO_MB * 1024 * 1024);
+      if (big) { toast('Video ' + big.name + ' quá ' + MAX_VIDEO_MB + ' MB.', true); return; }
+      const videos = picked.filter(isVideoFile).length;
       busy(null, async () => {
         const form = new FormData();
-        for (let i = 0; i < picked.length; i++) form.append('photos', await shrink(picked[i]), 'anh' + (i + 1) + '.jpg');
-        state.day = await api('/api/quanly/defect/' + d.id + '/photos', { method: 'POST', body: form });
+        for (let i = 0; i < picked.length; i++) {
+          if (isVideoFile(picked[i])) form.append('photos', picked[i], picked[i].name);
+          else form.append('photos', await shrink(picked[i]), 'anh' + (i + 1) + '.jpg');
+        }
+        state.day = await api('/api/quanly/defect/' + d.id + '/photos', {
+          method: 'POST', body: form,
+          onProgress: videos > 0 ? (f) => toast('Đang tải lên ' + Math.round(f * 100) + '%…') : null
+        });
         renderDay();
-        toast('Đã thêm ' + picked.length + ' ảnh');
+        const photos = picked.length - videos;
+        toast('Đã thêm ' + [photos ? photos + ' ảnh' : '', videos ? videos + ' video' : ''].filter(Boolean).join(' và '));
       });
     };
     box.appendChild(add);
@@ -385,6 +421,27 @@
     box.querySelector('img').src = url;
     box.querySelector('.cap').textContent = file + ' · bấm để đóng';
     box.onclick = () => box.remove();
+    document.body.appendChild(box);
+  }
+
+  // Phát video ngay trên trang (trình duyệt tự tải từng đoạn). Định dạng trình duyệt không phát được (avi, có khi mkv/HEVC) thì cho tải về.
+  function viewVideo(file) {
+    const url = mediaUrl(file);
+    const box = document.createElement('div');
+    box.className = 'viewer';
+    box.innerHTML = '<video controls autoplay playsinline></video><div class="cap"><span></span> · <a target="_blank" rel="noopener">Tải về</a> · bấm ra ngoài để đóng</div>';
+    const video = box.querySelector('video');
+    const name = box.querySelector('.cap span');
+    name.textContent = file;
+    box.querySelector('a').href = url;
+    box.querySelector('a').download = file;
+    video.onerror = () => { name.textContent = file + ' · trình duyệt này không phát được video, bấm Tải về để xem bằng máy'; video.remove(); };
+    video.src = url;
+    box.onclick = (ev) => {
+      if (ev.target !== box) return;
+      video.pause(); video.removeAttribute('src'); video.load();
+      box.remove();
+    };
     document.body.appendChild(box);
   }
 

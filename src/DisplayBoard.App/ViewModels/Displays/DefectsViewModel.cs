@@ -62,6 +62,7 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
     public double CaptionFontSize => IsLarge ? 40 : 30;
     public double TimeFontSize => IsLarge ? 32 : 24;
     public double FooterFontSize => IsLarge ? 30 : 24;
+    private string MediaWord => _allPhotos.Any(p => p.IsVideo) ? "ảnh/video" : "ảnh";
 
     protected override void OnUpdate(DisplayDataSnapshot snapshot)
     {
@@ -89,8 +90,8 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
         _allPhotos = snapshot.DefectPhotos.Select(d => new DefectPhotoCard(d)).ToList();
         HasPhotos = _allPhotos.Count > 0;
         FooterText = IsLarge
-            ? $"Tổng số lỗi {TotalDefects} {Unit} · tỷ lệ lỗi {TotalRate} · {_allPhotos.Count} ảnh hàng lỗi hôm nay"
-            : $"{_allPhotos.Count} ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng";
+            ? $"Tổng số lỗi {TotalDefects} {Unit} · tỷ lệ lỗi {TotalRate} · {_allPhotos.Count} {MediaWord} hàng lỗi hôm nay"
+            : $"{_allPhotos.Count} {MediaWord} hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng";
         PageCount = DefectsViewDefinition.PageCount(snapshot, _perPage);
         ShowPage(Page);
     }
@@ -111,7 +112,7 @@ public sealed partial class DefectsViewModel : DisplayViewModelBase
     public override void OnDeactivated() => _timer.Stop();
 }
 
-/// <summary>Một ô ảnh hàng lỗi.</summary>
+/// <summary>Một ô ảnh hoặc video hàng lỗi (video tự phát, tắt tiếng, lặp lại).</summary>
 public sealed class DefectPhotoCard(DefectPhoto d)
 {
     public string Title { get; } = d.ProductCode.Length > 0 ? $"{d.Line} · {d.ProductCode}" : d.Line;
@@ -119,9 +120,11 @@ public sealed class DefectPhotoCard(DefectPhoto d)
     public string? DefectType { get; } = d.DefectType;
     public string? Quantity { get; } = d.Quantity is null ? null : "×" + Format.Number(d.Quantity);
     public string Time { get; } = d.Time?.ToString("HH:mm") ?? "";
-    public string? ImagePath { get; } = d.ImagePath;
-    /// <summary>Hiện khi Excel ghi tên file nhưng không tìm thấy ảnh.</summary>
-    public string? MissingText { get; } = d.ImagePath is null ? $"Không tìm thấy ảnh\n{d.ImageFile}" : null;
+    public string? ImagePath { get; } = d.IsVideo ? null : d.ImagePath;
+    public Uri? VideoUri { get; } = d.IsVideo && d.ImagePath is not null ? new Uri(d.ImagePath) : null;
+    public bool IsVideo { get; } = d.IsVideo;
+    /// <summary>Hiện khi Excel ghi tên file nhưng không tìm thấy ảnh/video.</summary>
+    public string? MissingText { get; } = d.ImagePath is null ? $"Không tìm thấy {(d.IsVideo ? "video" : "ảnh")}\n{d.ImageFile}" : null;
 }
 
 public sealed class DefectRow(ProductDaily p, int index, decimal maxRate)

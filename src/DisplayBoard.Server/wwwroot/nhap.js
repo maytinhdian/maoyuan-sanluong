@@ -16,7 +16,7 @@
     context: null,
     hour: null,
     jobs: [],
-    photos: [], // { blob, url }
+    photos: [], // { blob, url, video, name }
     tab: 'output',
     mine: new Set() // phiếu gửi từ máy này, chờ báo kết quả
   };
@@ -34,7 +34,9 @@
     }
     let res;
     try {
-      res = await fetch(path, { method: options.method || 'GET', headers, body: options.body, cache: 'no-store' });
+      res = options.onProgress
+        ? await send(path, options.method || 'GET', headers, options.body, options.onProgress)
+        : await fetch(path, { method: options.method || 'GET', headers, body: options.body, cache: 'no-store' });
     } catch {
       throw new Error('Không kết nối được máy chủ. Kiểm tra Wi‑Fi.');
     }
@@ -46,6 +48,19 @@
     }
     if (!res.ok) throw new Error((data && data.error) || ('Lỗi máy chủ (' + res.status + ').'));
     return data;
+  }
+
+  // Gửi bằng XMLHttpRequest để báo % tải lên (video có thể vài chục MB); trả về giống fetch (status, ok, json()).
+  function send(path, method, headers, body, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, path);
+      Object.keys(headers).forEach((k) => xhr.setRequestHeader(k, headers[k]));
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      xhr.onload = () => resolve({ status: xhr.status, ok: xhr.status >= 200 && xhr.status < 300, json: async () => JSON.parse(xhr.responseText) });
+      xhr.onerror = xhr.ontimeout = () => reject(new Error());
+      xhr.send(body);
+    });
   }
 
   let toastTimer;
@@ -276,16 +291,21 @@
     box.querySelectorAll('.ph:not(.add)').forEach((el) => el.remove());
     state.photos.forEach((p, i) => {
       const el = document.createElement('div');
-      el.className = 'ph';
-      el.style.backgroundImage = 'url(' + p.url + ')';
+      el.className = 'ph' + (p.video ? ' video' : '');
+      if (p.video) {
+        // Khung đầu của video làm ảnh nhỏ (#t=0.1 để Safari hiện khung hình thay vì ô đen).
+        el.innerHTML = '<video muted playsinline preload="metadata"></video><span class="play">▶</span>';
+        el.querySelector('video').src = p.url + '#t=0.1';
+      } else {
+        el.style.backgroundImage = 'url(' + p.url + ')';
+      }
       const x = document.createElement('button');
-      x.className = 'x'; x.textContent = '×'; x.title = 'Bỏ ảnh';
+      x.className = 'x'; x.textContent = '×'; x.title = p.video ? 'Bỏ video' : 'Bỏ ảnh';
       x.onclick = () => { URL.revokeObjectURL(p.url); state.photos.splice(i, 1); renderPhotos(); };
       el.appendChild(x);
       box.insertBefore(el, $('addPhoto'));
     });
-    $('addPhoto').classList.toggle('hidden', state.photos.length >= 4);
-    $('pickPhoto').classList.toggle('hidden', state.photos.length >= 4);
+    ['addPhoto', 'addVideo', 'pickPhoto'].forEach((id) => $(id).classList.toggle('hidden', state.photos.length >= MAX_FILES));
   }
 
   function renderJobs() {
@@ -386,8 +406,14 @@
     form.append('defectType', $('dType').value);
     form.append('quantity', String(quantity));
     form.append('note', $('dNote').value.trim());
-    state.photos.forEach((p, i) => form.append('photos', p.blob, 'anh' + (i + 1) + '.jpg'));
-    const ok = await submit($('sendDefect'), () => api('/api/nhap/defect', { method: 'POST', body: form }));
+    state.photos.forEach((p, i) => form.append('photos', p.blob, p.video ? p.name : 'anh' + (i + 1) + '.jpg'));
+    const hasVideo = state.photos.some((p) => p.video);
+    const info = $('uploadInfo');
+    const ok = await submit($('sendDefect'), () => api('/api/nhap/defect', {
+      method: 'POST', body: form,
+      onProgress: hasVideo ? (f) => { info.textContent = 'Đang tải lên ' + Math.round(f * 100) + '%… (giữ màn hình mở)'; info.classList.remove('hidden'); } : null
+    }));
+    info.classList.add('hidden');
     if (ok) {
       state.photos.forEach((p) => URL.revokeObjectURL(p.url));
       state.photos = [];
@@ -423,9 +449,21 @@
     }
   }
 
+  const MAX_FILES = 4, MAX_VIDEO_MB = 100;
+  const isVideo = (file) => /^video\//.test(file.type) || /\.(mp4|mov|m4v|webm|mkv|avi|3gp)$/i.test(file.name);
+
   async function addPhotos(files) {
     for (const file of files) {
-      if (state.photos.length >= 4) { toast('Tối đa 4 ảnh mỗi lần gửi.', true); break; }
+      if (state.photos.length >= MAX_FILES) { toast('Tối đa ' + MAX_FILES + ' ảnh/video mỗi lần gửi.', true); break; }
+      if (isVideo(file)) {
+        // Video gửi nguyên tệp (không nén trên điện thoại).
+        if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
+          toast('Video ' + file.name + ' nặng ' + Math.round(file.size / 1048576) + ' MB, quá ' + MAX_VIDEO_MB + ' MB. Quay ngắn lại (khoảng 1 phút).', true);
+          continue;
+        }
+        state.photos.push({ blob: file, url: URL.createObjectURL(file), video: true, name: file.name || 'video.mp4' });
+        continue;
+      }
       try {
         const blob = await shrink(file);
         state.photos.push({ blob, url: URL.createObjectURL(blob) });
@@ -481,7 +519,7 @@
   $('sendHour').onclick = sendHour;
   $('sendDefect').onclick = sendDefect;
   // Hai ô: "Chụp ảnh" mở thẳng camera; "Chọn ảnh có sẵn" mở thư viện ảnh, chọn được nhiều ảnh một lần.
-  ['photoInput', 'photoPick'].forEach((id) =>
+  ['photoInput', 'videoInput', 'photoPick'].forEach((id) =>
     $(id).addEventListener('change', (e) => { addPhotos(Array.from(e.target.files || [])); e.target.value = ''; }));
 
   if (state.token) start().then(() => schedulePoll(20000)); else showLogin();

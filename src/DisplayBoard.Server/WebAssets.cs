@@ -45,6 +45,12 @@ internal static class ContentTypes
         ".webp" => "image/webp",
         ".bmp" => "image/bmp",
         ".ico" => "image/x-icon",
+        ".mp4" or ".m4v" => "video/mp4",
+        ".mov" => "video/quicktime",
+        ".webm" => "video/webm",
+        ".mkv" => "video/x-matroska",
+        ".avi" => "video/x-msvideo",
+        ".3gp" => "video/3gpp",
         _ => "application/octet-stream"
     };
 }

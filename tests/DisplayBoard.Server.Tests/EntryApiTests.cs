@@ -185,6 +185,48 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Defect_with_large_video_saves_video_next_to_photo()
+    {
+        await LoginAsync("1234");
+        using var form = new MultipartFormDataContent
+        {
+            { new StringContent("Chuyền 3"), "line" },
+            { new StringContent("Bung chỉ"), "defectType" },
+            { new StringContent("2"), "quantity" },
+            { Jpeg(), "photos", "anh1.jpg" },
+            { Mp4(35 * 1024 * 1024), "photos", "VID_0001.MP4" },   // lớn hơn giới hạn 30 MB mặc định của máy chủ
+        };
+        var response = await _http.PostAsync("/api/nhap/defect", form);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        var job = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Done", (await WaitAsync(job)).GetProperty("status").GetString());
+        Assert.Contains("1 ảnh · 1 video", job.GetProperty("summary").GetString());
+
+        var folder = Path.Combine(_folder, "images", "hang_loi");
+        Assert.Equal("chuyen3_20260930_134200_1.jpg; chuyen3_20260930_134200_2.mp4", _database.Store.Load().Defects.MaxBy(d => d.Id)!.ImageFiles);
+        Assert.Equal(35 * 1024 * 1024, new FileInfo(Path.Combine(folder, "chuyen3_20260930_134200_2.mp4")).Length);
+    }
+
+    [Fact]
+    public async Task Bad_file_in_batch_removes_files_already_saved()
+    {
+        await LoginAsync("1234");
+        using var form = new MultipartFormDataContent
+        {
+            { new StringContent("Chuyền 3"), "line" },
+            { new StringContent("Bung chỉ"), "defectType" },
+            { new StringContent("1"), "quantity" },
+            { Mp4(1024), "photos", "a.mp4" },
+            { new ByteArrayContent("MZ not a video"u8.ToArray()), "photos", "b.mp4" },
+        };
+        var response = await _http.PostAsync("/api/nhap/defect", form);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Tệp 2 không phải ảnh", await ErrorAsync(response));
+        var folder = Path.Combine(_folder, "images", "hang_loi");
+        Assert.True(!Directory.Exists(folder) || Directory.GetFiles(folder).Length == 0);
+    }
+
+    [Fact]
     public async Task Non_image_upload_is_rejected()
     {
         await LoginAsync("1234");
@@ -400,6 +442,39 @@ public sealed class EntryApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Manager_adds_and_streams_defect_video()
+    {
+        var token = await LoginAsync("999999");
+        var day = await PostAsync("/api/quanly/defect", new { id = 0, date = Today, time = "09:30", line = "Chuyền 3", defectType = "Bung chỉ", quantity = 2, note = "" });
+        var id = day.GetProperty("defects").EnumerateArray().Last().GetProperty("id").GetInt64();
+
+        var mov = new byte[4096];
+        ((byte[])[0, 0, 0, 0x14, .. "ftypqt  "u8]).CopyTo(mov, 0);
+        using (var form = new MultipartFormDataContent { { new ByteArrayContent(mov), "photos", "IMG_0001.MOV" } })
+        {
+            var added = await _http.PostAsync($"/api/quanly/defect/{id}/photos", form);
+            Assert.True(added.IsSuccessStatusCode, await added.Content.ReadAsStringAsync());
+        }
+        var file = _database.Store.Load().Defects.Single(d => d.Id == id).ImageFiles!;
+        Assert.Equal("chuyen3_20260930_134200_1.mov", file);
+
+        // Thẻ <video> không gửi header được: nhận mã phiên ở ?token= và trả từng đoạn (Range).
+        using var player = new HttpClient { BaseAddress = _http.BaseAddress };
+        Assert.Equal(HttpStatusCode.Unauthorized, (await player.GetAsync("/api/quanly/defect-photo?file=" + file)).StatusCode);
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/quanly/defect-photo?file={file}&token={Uri.EscapeDataString(token)}");
+        request.Headers.Range = new RangeHeaderValue(0, 99);
+        var part = await player.SendAsync(request);
+        Assert.Equal(HttpStatusCode.PartialContent, part.StatusCode);
+        Assert.Equal("video/quicktime", part.Content.Headers.ContentType!.MediaType);
+        Assert.Equal(100, (await part.Content.ReadAsByteArrayAsync()).Length);
+        // Mã phiên ở ?token= chỉ dùng được để xem ảnh/video.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await player.GetAsync($"/api/quanly/catalog?token={Uri.EscapeDataString(token)}")).StatusCode);
+
+        Assert.True((await _http.DeleteAsync($"/api/quanly/defect/{id}/photos?file=" + file)).IsSuccessStatusCode);
+        Assert.False(File.Exists(Path.Combine(_folder, "images", "hang_loi", file)));
+    }
+
+    [Fact]
     public async Task Defect_photo_needs_a_manager()
     {
         Assert.Equal(HttpStatusCode.Unauthorized, (await _http.GetAsync("/api/quanly/defect-photo?file=x.jpg")).StatusCode);
@@ -416,13 +491,25 @@ public sealed class EntryApiTests : IAsyncLifetime
     private static async Task<string> ErrorAsync(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString()!;
 
-    private async Task LoginAsync(string pin)
+    private async Task<string> LoginAsync(string pin)
     {
         var response = await _http.PostAsJsonAsync("/api/nhap/login", new { pin });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var token = body.GetProperty("token").GetString()!;
         _http.DefaultRequestHeaders.Remove("X-Entry-Token");
-        _http.DefaultRequestHeaders.Add("X-Entry-Token", body.GetProperty("token").GetString());
+        _http.DefaultRequestHeaders.Add("X-Entry-Token", token);
+        return token;
+    }
+
+    /// <summary>Video MP4 giả: đầu file đúng hộp ftyp, phần sau là số 0.</summary>
+    private static ByteArrayContent Mp4(int length)
+    {
+        var bytes = new byte[length];
+        ((byte[])[0, 0, 0, 0x18, .. "ftypisom"u8]).CopyTo(bytes, 0);
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("video/mp4");
+        return content;
     }
 
     private async Task<JsonElement> PostAsync(string path, object body)

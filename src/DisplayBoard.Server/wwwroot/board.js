@@ -452,10 +452,14 @@
             '<div style="font-size:30px;line-height:2.05">' + lines + '</div></div></div>';
         }
         var cards = photos.slice(page * per, page * per + per).map(function (d) {
-          var img = d.imagePath
+          // Video hàng lỗi: tự phát, tắt tiếng, lặp lại (trình duyệt chỉ cho tự phát khi tắt tiếng).
+          var img = d.imagePath && d.isVideo
+            ? '<video src="' + esc(withKey(d.imagePath, key)) + '" autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000"></video>' +
+              '<span class="vid">▶ VIDEO</span>'
+            : d.imagePath
             ? '<img src="' + esc(withKey(d.imagePath, key)) + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#000">'
             : '<div class="t2" style="font-size:26px;text-align:center;padding:20px">' + icon('warning', '', 'width:64px;height:64px;fill:var(--near)') +
-              '<div style="margin-top:10px">Không tìm thấy ảnh</div><div class="ell" style="font-size:22px">' + esc(d.imageFile) + '</div></div>';
+              '<div style="margin-top:10px">Không tìm thấy ' + (d.isVideo ? 'video' : 'ảnh') + '</div><div class="ell" style="font-size:22px">' + esc(d.imageFile) + '</div></div>';
           return '<div class="ph"><div class="img">' + img +
             (d.defectType ? '<span class="tag ell">' + esc(d.defectType) + '</span>' : '') +
             (isNum(d.quantity) ? '<span class="qty">×' + num(d.quantity) + '</span>' : '') + '</div>' +
@@ -465,10 +469,11 @@
         }).join('');
         var grid = per === 2 ? 'grid-template-columns:repeat(2,1fr);grid-template-rows:1fr'
           : per === 4 ? 'grid-template-columns:repeat(4,1fr);grid-template-rows:1fr' : '';
+        var word = photos.some(function (d) { return d.isVideo; }) ? ' ảnh/video' : ' ảnh';
         var foot = big
           ? 'Tổng số lỗi <b class="c-' + st(m.defectStatus) + '">' + num(m.defects) + ' ' + esc(s.unit) + '</b> · tỷ lệ lỗi <b class="c-' + st(m.defectStatus) + '">' +
-            pct2(m.defectRate) + '</b> · ' + photos.length + ' ảnh hàng lỗi hôm nay'
-          : photos.length + ' ảnh hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng';
+            pct2(m.defectRate) + '</b> · ' + photos.length + word + ' hàng lỗi hôm nay'
+          : photos.length + word + ' hàng lỗi hôm nay · khung đỏ là loại lỗi, góc phải là số lượng';
         return '<div style="flex:1;display:flex;margin:26px 40px 0;min-height:0">' + side +
           '<div class="dgrid' + (big ? ' big' : '') + (per === 4 ? ' four' : '') + '" style="' + grid + '">' + cards + '</div></div>' +
           '<div class="t2" style="font-size:' + (big ? 30 : 24) + 'px;margin:14px 40px 22px;display:flex"><span style="flex:1">' + foot + '</span>' +
