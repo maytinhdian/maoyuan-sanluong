@@ -32,8 +32,14 @@ public sealed record EntryJobInfo(
 
 public sealed record EntryQueueStatus(int Pending, DateTimeOffset? LastWriteAt, string? LastError, string? WaitingReason);
 
-/// <summary>Ảnh gửi lên từ điện thoại.</summary>
-public sealed record EntryPhoto(byte[] Content, string FileName);
+/// <summary>
+/// Ảnh hoặc video hàng lỗi gửi lên từ điện thoại. <paramref name="Open"/> mở nội dung để lưu:
+/// video có thể vài chục MB nên không giữ cả file trong bộ nhớ.
+/// </summary>
+public sealed record EntryPhoto(string FileName, long Length, Func<Stream> Open)
+{
+    public EntryPhoto(byte[] content, string fileName) : this(fileName, content.Length, () => new MemoryStream(content, writable: false)) { }
+}
 
 /// <summary>
 /// Nhập liệu qua trình duyệt (trang /nhap): kiểm tra số liệu rồi ghi thẳng vào SQLite. Bản 4.x không còn hàng đợi chờ Excel:
@@ -42,8 +48,11 @@ public sealed record EntryPhoto(byte[] Content, string FileName);
 /// </summary>
 public sealed class EntryService
 {
+    /// <summary>Số ảnh và video tối đa mỗi phiếu lỗi (tính chung).</summary>
     public const int MaxPhotos = 4;
     public const int MaxPhotoBytes = 8 * 1024 * 1024;
+    /// <summary>Video tối đa 100 MB: khoảng 1 phút quay 1080p trên điện thoại.</summary>
+    public const long MaxVideoBytes = 100L * 1024 * 1024;
     public const int MaxNoteLength = 200;
     private const decimal MaxQuantity = 100_000;
     private const int HistoryLimit = 300;
@@ -202,7 +211,7 @@ public sealed class EntryService
         if (note?.Length > MaxNoteLength)
             throw new EntryException($"Ghi chú dài quá {MaxNoteLength} ký tự.");
         if (photos.Count > MaxPhotos)
-            throw new EntryException($"Mỗi lần gửi tối đa {MaxPhotos} ảnh.");
+            throw new EntryException($"Mỗi lần gửi tối đa {MaxPhotos} ảnh/video.");
 
         var now = _time.GetLocalNow().DateTime;
         var names = await SavePhotosAsync(day.Line, now, photos, ct).ConfigureAwait(false);
@@ -216,7 +225,7 @@ public sealed class EntryService
             ImageFiles = names.Count == 0 ? null : string.Join("; ", names),
             Note = note,
         };
-        var summary = $"Hàng lỗi · {type} · {quantity:N0} cái" + (names.Count > 0 ? $" · {names.Count} ảnh" : "");
+        var summary = $"Hàng lỗi · {type} · {quantity:N0} cái" + MediaSummary(names);
         return Run(user, day.Line, "defect", summary, store =>
         {
             EnsureRow(store, context.Date, def, day, user);
@@ -272,7 +281,7 @@ public sealed class EntryService
     public Task<IReadOnlyList<string>> SaveDefectPhotosAsync(string line, IReadOnlyList<EntryPhoto> photos, CancellationToken ct = default)
     {
         if (photos.Count > MaxPhotos)
-            throw new EntryException($"Mỗi phiếu lỗi tối đa {MaxPhotos} ảnh.");
+            throw new EntryException($"Mỗi phiếu lỗi tối đa {MaxPhotos} ảnh/video.");
         return SavePhotosAsync(line, _time.GetLocalNow().DateTime, photos, ct);
     }
 
@@ -308,7 +317,11 @@ public sealed class EntryService
         && Path.GetFileName(file) == file && file.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
         && file.IndexOfAny(['/', '\\', ':']) < 0;
 
-    /// <summary>Lưu ảnh vào images\hang_loi trong thư mục dữ liệu. Chỉ nhận JPEG/PNG (kiểm tra nội dung, không tin đuôi file).</summary>
+    /// <summary>
+    /// Lưu ảnh và video vào images\hang_loi trong thư mục dữ liệu. Nhận ảnh JPEG/PNG (tối đa <see cref="MaxPhotoBytes"/>)
+    /// và video MP4/MOV/M4V/WebM/MKV/AVI/3GP (tối đa <see cref="MaxVideoBytes"/>), nhận dạng theo nội dung, không tin đuôi file.
+    /// Một tệp hỏng thì bỏ cả lượt gửi và xoá các tệp vừa lưu.
+    /// </summary>
     private async Task<IReadOnlyList<string>> SavePhotosAsync(string line, DateTime now, IReadOnlyList<EntryPhoto> photos, CancellationToken ct)
     {
         if (photos.Count == 0)
@@ -316,26 +329,74 @@ public sealed class EntryService
         var folder = Path.Combine(_config.Current.ResolveImagesFolder()!, ImageResolver.DefectFolder);
         Directory.CreateDirectory(folder);
         var slug = SheetTable.NormalizeHeader(line);
+        var stamp = now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
         var names = new List<string>();
-        for (var i = 0; i < photos.Count; i++)
+        try
         {
-            var photo = photos[i];
-            if (photo.Content.Length > MaxPhotoBytes)
-                throw new EntryException($"Ảnh {i + 1} lớn quá {MaxPhotoBytes / 1024 / 1024} MB.");
-            var ext = ImageExtension(photo.Content) ?? throw new EntryException($"Ảnh {i + 1} không phải ảnh JPG/PNG.");
-            var name = $"{slug}_{now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)}_{i + 1}{ext}";
-            for (var n = 2; File.Exists(Path.Combine(folder, name)); n++)
-                name = $"{slug}_{now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)}_{i + 1}-{n}{ext}";
-            await File.WriteAllBytesAsync(Path.Combine(folder, name), photo.Content, ct).ConfigureAwait(false);
-            names.Add(name);
+            for (var i = 0; i < photos.Count; i++)
+                names.Add(await SaveOneAsync(folder, $"{slug}_{stamp}_{i + 1}", i + 1, photos[i], ct).ConfigureAwait(false));
+        }
+        catch
+        {
+            foreach (var name in names)
+                DeleteDefectPhoto(name);
+            throw;
         }
         return names;
     }
 
-    private static string? ImageExtension(byte[] bytes) =>
-        bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF ? ".jpg"
-        : bytes.Length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 ? ".png"
-        : null;
+    private static async Task<string> SaveOneAsync(string folder, string baseName, int number, EntryPhoto photo, CancellationToken ct)
+    {
+        await using var input = photo.Open();
+        var header = new byte[DefectMedia.HeaderLength];
+        var headerLength = await input.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, ct).ConfigureAwait(false);
+        var span = header.AsSpan(0, headerLength);
+        string ext;
+        long limit;
+        string tooBig;
+        if (DefectMedia.ImageExtension(span) is { } imageExt)
+            (ext, limit, tooBig) = (imageExt, MaxPhotoBytes, $"Ảnh {number} lớn quá {MaxPhotoBytes / 1024 / 1024} MB.");
+        else if (DefectMedia.VideoExtension(span) is { } videoExt)
+            (ext, limit, tooBig) = (videoExt, MaxVideoBytes, $"Video {number} lớn quá {MaxVideoBytes / 1024 / 1024} MB.");
+        else
+            throw new EntryException($"Tệp {number} không phải ảnh (JPG, PNG) hay video (MP4, MOV, WebM, MKV, AVI).");
+        if (photo.Length > limit)
+            throw new EntryException(tooBig);
+
+        var name = baseName + ext;
+        for (var n = 2; File.Exists(Path.Combine(folder, name)); n++)
+            name = $"{baseName}-{n}{ext}";
+        var path = Path.Combine(folder, name);
+        var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        try
+        {
+            await using var _ = output;
+            await output.WriteAsync(header.AsMemory(0, headerLength), ct).ConfigureAwait(false);
+            var buffer = new byte[81920];
+            long total = headerLength;
+            int read;
+            while ((read = await input.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+            {
+                total += read;
+                if (total > limit)
+                    throw new EntryException(tooBig);
+                await output.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            File.Delete(path);
+            throw;
+        }
+        return name;
+    }
+
+    private static string MediaSummary(IReadOnlyList<string> names)
+    {
+        var videos = names.Count(DefectMedia.IsVideo);
+        var photos = names.Count - videos;
+        return (photos > 0 ? $" · {photos} ảnh" : "") + (videos > 0 ? $" · {videos} video" : "");
+    }
 
     private ProductionData Data()
     {

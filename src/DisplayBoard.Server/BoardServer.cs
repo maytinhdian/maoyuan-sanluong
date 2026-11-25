@@ -197,7 +197,8 @@ public sealed class BoardServer : IBoardServer
             if (!_images.TryGetValue(token, out var path) || !File.Exists(path))
                 return Results.NotFound();
             http.Response.Headers.CacheControl = "public, max-age=86400";
-            return Results.File(path, ContentTypes.ForFile(path));
+            // Range: video hàng lỗi được trình duyệt tải từng đoạn.
+            return Results.File(path, ContentTypes.ForFile(path), enableRangeProcessing: true);
         });
 
         app.Map("/ws", async (HttpContext http) =>

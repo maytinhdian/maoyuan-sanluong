@@ -126,6 +126,53 @@ public class DisplaySheetReaderTests
     }
 
     [Fact]
+    public void Defect_video_gets_its_own_tv_cell()
+    {
+        var samples = Path.Combine(TestPaths.RepoRoot(), "samples");
+        using var stream = File.OpenRead(Path.Combine(samples, "Theo_doi_san_luong_V20_mau.xlsx"));
+        var sheet = DisplaySheetReader.Read(stream);
+        sheet = sheet with { DefectLog = [sheet.DefectLog[0] with { ImageFile = "bung_chi_c3.png; bung_chi_c3.mp4" }, .. sheet.DefectLog.Skip(1)] };
+        var images = Path.Combine(Path.GetTempPath(), "db-video-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(images, ImageResolver.DefectFolder));
+        try
+        {
+            foreach (var file in Directory.GetFiles(Path.Combine(samples, "images", ImageResolver.DefectFolder)))
+                File.Copy(file, Path.Combine(images, ImageResolver.DefectFolder, Path.GetFileName(file)));
+            File.WriteAllBytes(Path.Combine(images, ImageResolver.DefectFolder, "bung_chi_c3.mp4"), [0, 0, 0, 0x18, .. "ftypisom"u8]);
+
+            var snapshot = new SnapshotBuilder().Build(sheet, ContentData.Empty, DateTimeOffset.Now, images);
+            Assert.Equal(6, snapshot.DefectPhotos.Count);
+            var video = Assert.Single(snapshot.DefectPhotos, p => p.IsVideo);
+            Assert.Equal("bung_chi_c3.mp4", video.ImageFile);
+            Assert.True(File.Exists(video.ImagePath));
+            Assert.Equal(5, snapshot.DefectPhotos.Count(p => !p.IsVideo));
+        }
+        finally
+        {
+            Directory.Delete(images, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0, 0, 0, 0x20, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'i', (byte)'s', (byte)'o', (byte)'m' }, ".mp4")]
+    [InlineData(new byte[] { 0, 0, 0, 0x14, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'q', (byte)'t', (byte)' ', (byte)' ' }, ".mov")]
+    [InlineData(new byte[] { 0, 0, 0, 0x14, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'M', (byte)'4', (byte)'V', (byte)' ' }, ".m4v")]
+    [InlineData(new byte[] { 0, 0, 0, 0x14, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'3', (byte)'g', (byte)'p', (byte)'4' }, ".3gp")]
+    [InlineData(new byte[] { 0, 0, 0, 0x08, (byte)'w', (byte)'i', (byte)'d', (byte)'e' }, ".mov")]
+    [InlineData(new byte[] { 0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x82, 0x84, (byte)'w', (byte)'e', (byte)'b', (byte)'m' }, ".webm")]
+    [InlineData(new byte[] { 0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x82, 0x88, (byte)'m', (byte)'a', (byte)'t', (byte)'r', (byte)'o', (byte)'s', (byte)'k', (byte)'a' }, ".mkv")]
+    [InlineData(new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 0, 0, 0, 0, (byte)'A', (byte)'V', (byte)'I', (byte)' ' }, ".avi")]
+    [InlineData(new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 0, 0, 0, 0, (byte)'W', (byte)'A', (byte)'V', (byte)'E' }, null)]
+    [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, null)]
+    [InlineData(new byte[] { (byte)'<', (byte)'s', (byte)'c', (byte)'r', (byte)'i', (byte)'p', (byte)'t', (byte)'>' }, null)]
+    public void Defect_video_type_comes_from_file_content(byte[] header, string? expected)
+    {
+        Assert.Equal(expected, DefectMedia.VideoExtension(header));
+        if (expected is not null)
+            Assert.True(DefectMedia.IsVideo("clip" + expected.ToUpperInvariant()));
+    }
+
+    [Fact]
     public void Missing_defect_photo_is_reported_but_still_listed()
     {
         var samples = Path.Combine(TestPaths.RepoRoot(), "samples");

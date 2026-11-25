@@ -107,27 +107,30 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
             return Day(Store.Load(), defect.Date);
         }));
 
-        // Ảnh phiếu lỗi: xem, thêm (tối đa 4 ảnh mỗi phiếu), bỏ. Ảnh lưu ở images\hang_loi như ảnh gửi từ /nhap.
+        // Ảnh/video phiếu lỗi: xem, thêm (tối đa 4 tệp mỗi phiếu), bỏ. Lưu ở images\hang_loi như tệp gửi từ /nhap.
+        // Video phát thẳng trong thẻ <video> (tải từng đoạn) nên nhận mã phiên ở ?token= và hỗ trợ Range.
         app.MapGet("/api/quanly/defect-photo", (HttpContext http, string? file) =>
         {
-            if (Deny(http) is { } denied)
+            if (Deny(http, out _, allowQueryToken: true) is { } denied)
                 return denied;
             var path = auth.Service.DefectPhotoPath(file);
-            return path is null ? Error("Không tìm thấy ảnh.", StatusCodes.Status404NotFound) : Results.File(path, ContentTypes.ForFile(path));
+            return path is null ? Error("Không tìm thấy ảnh hoặc video.", StatusCodes.Status404NotFound)
+                : Results.File(path, ContentTypes.ForFile(path), enableRangeProcessing: true);
         });
 
         app.MapPost("/api/quanly/defect/{id:long}/photos", (HttpContext http, long id) => Run(http, async user =>
         {
             var defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
             if (!http.Request.HasFormContentType)
-                throw new EntryException("Chưa chọn ảnh.");
+                throw new EntryException("Chưa chọn ảnh hoặc video.");
+            EntryApi.AllowMediaUpload(http);
             var form = await http.Request.ReadFormAsync(http.RequestAborted).ConfigureAwait(false);
             var room = RoomFor(defect);
             if (form.Files.Count > room)
                 throw new EntryException(TooManyPhotos(room));
             var photos = await EntryApi.ReadPhotosAsync(form.Files, room, http.RequestAborted).ConfigureAwait(false);
             if (photos.Count == 0)
-                throw new EntryException("Chưa chọn ảnh.");
+                throw new EntryException("Chưa chọn ảnh hoặc video.");
             var names = await auth.Service.SaveDefectPhotosAsync(Store.Load().LineName(defect.LineCode), photos, http.RequestAborted).ConfigureAwait(false);
             lock (DefectLock)
             {
@@ -157,7 +160,7 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
                 defect = Store.Load().Defects.FirstOrDefault(d => d.Id == id) ?? throw new EntryException("Phiếu hàng lỗi không còn.");
                 var files = PhotoFiles(defect.ImageFiles);
                 if (files.RemoveAll(f => f == file) == 0)
-                    throw new EntryException("Ảnh này không còn trong phiếu.");
+                    throw new EntryException("Ảnh/video này không còn trong phiếu.");
                 Store.UpdateDefect(defect with { ImageFiles = files.Count == 0 ? null : string.Join("; ", files) }, user.Name);
                 DeletePhotosNoLongerUsed([file!]);
             }
@@ -420,7 +423,7 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
     }
 
     private static string TooManyPhotos(int room) =>
-        $"Mỗi phiếu lỗi tối đa {EntryService.MaxPhotos} ảnh (phiếu này còn thêm được {Math.Max(0, room)} ảnh).";
+        $"Mỗi phiếu lỗi tối đa {EntryService.MaxPhotos} ảnh/video (phiếu này còn thêm được {Math.Max(0, room)} tệp).";
 
     private static List<string> PhotoFiles(string? imageFiles) =>
         (imageFiles ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
@@ -438,9 +441,9 @@ internal sealed class AdminApi(EntryApi auth, DataMaintenance maintenance, TimeP
     /// <summary>Kiểm tra đăng nhập quản lý; null là được phép.</summary>
     private IResult? Deny(HttpContext http) => Deny(http, out _);
 
-    private IResult? Deny(HttpContext http, out EntryUser user)
+    private IResult? Deny(HttpContext http, out EntryUser user, bool allowQueryToken = false)
     {
-        var found = auth.Authenticate(http);
+        var found = auth.Authenticate(http, allowQueryToken);
         user = found!;
         if (found is null)
             return Error("Phiên đăng nhập đã hết. Nhập lại mã PIN.", StatusCodes.Status401Unauthorized);

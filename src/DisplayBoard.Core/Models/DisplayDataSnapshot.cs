@@ -56,7 +56,7 @@ public sealed record ProductDaily
     public int Rank { get; init; }
 }
 
-/// <summary>Một ảnh hàng lỗi để chiếu (sheet HANG_LOI). ImagePath null = không tìm thấy file ảnh.</summary>
+/// <summary>Một ảnh hoặc video hàng lỗi để chiếu (sheet HANG_LOI). ImagePath null = không tìm thấy file.</summary>
 public sealed record DefectPhoto
 {
     public required string Line { get; init; }
@@ -68,6 +68,8 @@ public sealed record DefectPhoto
     public required string ImageFile { get; init; }
     public string? ImagePath { get; init; }
     public string? Note { get; init; }
+    /// <summary>Tệp là video (theo đuôi file): TV phát tự động, tắt tiếng, lặp lại.</summary>
+    public bool IsVideo => Processing.DefectMedia.IsVideo(ImageFile);
 }
 
 public sealed record Notice(
